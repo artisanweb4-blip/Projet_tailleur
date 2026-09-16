@@ -126,7 +126,9 @@ urlpatterns = [
     # 11. CALENDRIER & ABONNEMENT
     # ==========================================
     path('calendrier/', views.calendrier, name='calendrier'),
-    path('abonnement/expire/', views.abonnement_expire, name='abonnement_expire'),
+    path('abonnement/', views.mon_abonnement, name='mon_abonnement'),
+    path('abonnement/expire/', views.mon_abonnement, name='abonnement_expire'),
+    path('abonnement/<int:plan_id>/souscrire/', views.souscrire_plan, name='souscrire_plan'),
 
 
     path('ventes-directes/<int:pk>/annuler/', views.annuler_vente_directe, name='annuler_vente_directe'),

@@ -17,8 +17,8 @@ from django.urls import reverse
 from django.utils import timezone
 
 from .models import (
-    Accessoire, CatalogueModele, Client, Commande, Depense, Employe,
-    LigneAccessoire, LigneCommande, Mensuration, MouvementStock,
+    Abonnement, Accessoire, CatalogueModele, Client, Commande, Depense,
+    Employe, LigneAccessoire, LigneCommande, Mensuration, MouvementStock,
     Paie, Paiement, PlanAbonnement, Profil,
 )
 from .decorators import droit_requis
@@ -2778,12 +2778,80 @@ def calendrier(request):
 
 
 @login_required
-def abonnement_expire(request):
+def mon_abonnement(request):
+    """Page « Abonnements & Offres » : abonnement en cours + grille des plans.
+
+    Page de compte (comme mon_profil) : visible par tous les rôles de
+    l'atelier. La souscription, elle, est réservée à l'ADMIN (vue
+    `souscrire_plan`, droit « parametres »).
+    """
     atelier = get_user_atelier(request.user)
+    if not atelier:
+        messages.warning(request, "Aucun atelier associé à votre compte.")
+        return redirect('core:mon_profil')
+    abonnement = getattr(atelier, 'abonnement', None)
+    aujourdhui = timezone.now().date()
+    jours_restants = (abonnement.date_fin - aujourdhui).days if abonnement else None
     return render(request, 'core/abonnements.html', {
         'atelier': atelier,
-        'plans': PlanAbonnement.objects.all(),
+        'abonnement_actuel': abonnement,
+        'jours_restants': jours_restants,
+        'abonnement_expire': bool(abonnement) and abonnement.date_fin < aujourdhui,
+        'plans': PlanAbonnement.objects.all().order_by('prix_mensuel'),
+        'aujourdhui': aujourdhui,
     })
+
+
+# Ancienne route /abonnement/expire/ : conservée comme alias pour ne pas
+# casser les favoris existants.
+abonnement_expire = mon_abonnement
+
+
+@login_required
+@droit_requis('parametres')
+def souscrire_plan(request, plan_id):
+    """Souscrire (ou renouveler) un abonnement pour l'atelier — ADMIN seul.
+
+    Règles :
+      * plan gratuit (essai)      -> 14 jours, comme à l'inscription ;
+      * plan payant               -> 30 jours ;
+      * même plan encore actif    -> la date de fin est repoussée (renouvellement) ;
+      * changement de plan / expiré -> la période repart d'aujourd'hui.
+
+    Aucun paiement en ligne n'est branché pour l'instant : la souscription
+    est enregistrée directement (Orange Money / Wave restent à intégrer).
+    """
+    if request.method != 'POST':
+        return redirect('core:mon_abonnement')
+    plan = get_object_or_404(PlanAbonnement, pk=plan_id)
+    atelier = request.atelier
+    aujourdhui = timezone.now().date()
+    jours = 14 if plan.prix_mensuel == 0 else 30
+
+    abonnement = getattr(atelier, 'abonnement', None)
+    if abonnement is None:
+        abonnement = Abonnement(
+            atelier=atelier, plan=plan, statut='ACTIF',
+            date_fin=aujourdhui + timedelta(days=jours),
+        )
+    else:
+        renouvellement = (
+            abonnement.plan_id == plan.id
+            and abonnement.statut == 'ACTIF'
+            and abonnement.date_fin >= aujourdhui
+        )
+        debut_periode = abonnement.date_fin if renouvellement else aujourdhui
+        abonnement.plan = plan
+        abonnement.statut = 'ACTIF'
+        abonnement.date_fin = debut_periode + timedelta(days=jours)
+    abonnement.save()
+
+    messages.success(
+        request,
+        'Abonnement « %s » enregistré — valide jusqu\'au %s.' % (
+            plan.nom, abonnement.date_fin.strftime('%d/%m/%Y')),
+    )
+    return redirect('core:mon_abonnement')
 
 
 # ==========================================

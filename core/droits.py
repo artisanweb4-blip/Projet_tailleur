@@ -66,10 +66,14 @@ LIBELLES = {
 
 # Rattachement de chaque vue à sa fonction. Utilisé par le décorateur
 # `droit_requis` et documenté dans AUDIT.md.
+# Les pages de compte (tableau de bord, mon_profil, mon_abonnement) ne sont
+# pas dans la matrice : elles concernent le compte, pas une fonction métier,
+# et restent accessibles à tout membre connecté de l'atelier. Les actions qui
+# engagent l'atelier, elles, sont rattachées (ex. souscrire_plan -> parametres).
 VUES = {
     # Paramètres de l'atelier
     'parametres': [
-        'parametres_view',
+        'parametres_view', 'souscrire_plan',
     ],
     # Créer / modifier des utilisateurs
     'utilisateurs': [

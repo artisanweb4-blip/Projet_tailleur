@@ -197,8 +197,8 @@
                 </li>
                 {% endif %}
                 <li class="nav-item">
-                    <a href="{% url 'core:abonnement_expire' %}" class="nav-link {% if 'abonnement' in request.resolver_match.url_name %}active{% endif %}">
-                        <i class="bi bi-journal-album"></i> Abonnements & Offres
+                    <a href="{% url 'core:mon_abonnement' %}" class="nav-link {% if 'abonnement' in request.resolver_match.url_name %}active{% endif %}">
+                        <i class="bi bi-journal-album"></i> Abonnements &amp; Offres
                     </a>
                 </li>
             </ul>
