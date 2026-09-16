@@ -72,13 +72,16 @@ class Profil(models.Model):
     )
 
     DESCRIPTIONS_ROLES = {
-        'ADMIN': "Accès complet : paramètres, utilisateurs, employés, "
-                 "catalogue, commandes et comptabilité.",
-        'GESTIONNAIRE': "Clients, mensurations, commandes, ventes directes "
-                        "et suivi des livraisons. Pas d'accès à la comptabilité "
-                        "ni aux paramètres.",
-        'COMPTABLE': "Dépenses, paiements, factures, reçus et rapports "
-                     "financiers. Consultation seule des commandes.",
+        'ADMIN': "Accès complet : paramètres, utilisateurs, employés et paies, "
+                 "catalogue et stock, clients, commandes, ventes directes, "
+                 "paiements, comptabilité, factures et reçus.",
+        'GESTIONNAIRE': "Clients et mensurations, création et suivi des "
+                        "commandes, ventes directes, paiements, factures et "
+                        "reçus. Aucun accès aux paramètres, aux utilisateurs, "
+                        "aux employés, au catalogue ni à la comptabilité.",
+        'COMPTABLE': "Dépenses et comptabilité, paiements, consultation des "
+                     "commandes, factures et reçus. Aucun accès aux clients, "
+                     "au catalogue, aux employés ni aux paramètres.",
     }
 
     ICONES_ROLES = {

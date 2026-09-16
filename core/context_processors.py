@@ -6,6 +6,8 @@ Configuration : voir TEMPLATES.OPTIONS.context_processors dans settings.py.
 
 from django.core.exceptions import ObjectDoesNotExist
 
+from .droits import droits_de
+
 
 def boutique_context(request):
     """Expose `profil` et `atelier` (alias `boutique`) à tous les templates.
@@ -40,4 +42,7 @@ def boutique_context(request):
         'boutique': atelier,
         # base.html s'appuie sur `current_atelier` pour le titre de la page.
         'current_atelier': atelier,
+        # Matrice des droits : {fonction: bool}, pour masquer menus et boutons
+        # interdits au rôle courant. Voir core/droits.py.
+        'peut': droits_de(request.user),
     }

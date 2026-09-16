@@ -154,37 +154,48 @@
                         <i class="bi bi-grid-1x2"></i> Tableau de bord
                     </a>
                 </li>
+                {% if peut.clients %}
                 <li class="nav-item">
                     <a href="{% url 'core:liste_clients' %}" class="nav-link {% if 'client' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-people"></i> Clients
                     </a>
                 </li>
+                {% endif %}
+                {% if peut.catalogue %}
                 <li class="nav-item">
                     <a href="{% url 'core:liste_modeles' %}" class="nav-link">
                         <i class="bi bi-scissors"></i> Modèles & Accessoires
                     </a>
                 </li>
+                {% endif %}
+                {% if peut.commandes_voir %}
                 <li class="nav-item">
                     <a href="{% url 'core:liste_commandes' %}" class="nav-link {% if 'commande' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-bag-check"></i> Commandes & Achats
                     </a>
                 </li>
+                {% endif %}
+                {% if peut.commandes_voir %}
                 <li class="nav-item">
                     <a href="{% url 'core:calendrier' %}" class="nav-link {% if request.resolver_match.url_name == 'calendrier' %}active{% endif %}">
                         <i class="bi bi-calendar-week"></i> Calendrier
                     </a>
                 </li>
+                {% endif %}
+                {% if peut.depenses %}
                 <li class="nav-item">
                   <a href="{% url 'core:liste_depenses' %}" class="nav-link">
                         <i class="bi bi-calculator"></i> Comptabilité
                     </a>
                 </li>
-                </li>
-                     <li class="nav-item">
-                <a href="{% url 'core:liste_employes' %}" class="nav-link">
-                         <i class="bi bi-person-badge me-2"></i>Employés
+                {% endif %}
+                {% if peut.employes %}
+                <li class="nav-item">
+                    <a href="{% url 'core:liste_employes' %}" class="nav-link">
+                        <i class="bi bi-person-badge me-2"></i>Employés
                     </a>
-                    </li>
+                </li>
+                {% endif %}
                 <li class="nav-item">
                     <a href="{% url 'core:abonnement_expire' %}" class="nav-link {% if 'abonnement' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-journal-album"></i> Abonnements & Offres
@@ -199,11 +210,13 @@
                         <i class="bi bi-person-circle"></i> Mon profil
                     </a>
                 </li>
+                {% if peut.parametres %}
                 <li class="nav-item">
                     <a href="{% url 'core:parametres' %}" class="nav-link {% if 'parametre' in request.resolver_match.url_name %}active{% endif %}">
                         <i class="bi bi-gear"></i> Paramètres
                     </a>
                 </li>
+                {% endif %}
             </ul>
         </div>
 

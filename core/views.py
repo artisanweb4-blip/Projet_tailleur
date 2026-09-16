@@ -21,6 +21,7 @@ from .models import (
     LigneAccessoire, LigneCommande, Mensuration, MouvementStock,
     Paie, Paiement, PlanAbonnement, Profil,
 )
+from .decorators import droit_requis
 from .forms import (
     AccessoireForm, AtelierForm, AttributionLigneForm, CatalogueModeleForm,
     ClientForm, CommandeForm, DepenseForm, EmployeForm, InscriptionSaaSForm,
@@ -526,6 +527,7 @@ def dashboard(request):
 # 4. CLIENTS
 # ==========================================
 @login_required
+@droit_requis('clients')
 def liste_clients(request):
     atelier = get_user_atelier(request.user)
     query = request.GET.get('q', '').strip()
@@ -623,6 +625,7 @@ def liste_clients(request):
 
 
 @login_required
+@droit_requis('clients')
 def ajouter_client(request):
     atelier = get_user_atelier(request.user)
     if request.method == 'POST':
@@ -638,6 +641,7 @@ def ajouter_client(request):
 
 
 @login_required
+@droit_requis('clients')
 def detail_client(request, pk):
     """Fiche client : mensurations groupées par personne + commandes."""
     atelier = get_user_atelier(request.user)
@@ -675,6 +679,7 @@ def detail_client(request, pk):
 
 
 @login_required
+@droit_requis('clients')
 def modifier_client(request, pk):
     atelier = get_user_atelier(request.user)
     client = get_object_or_404(Client, pk=pk, atelier=atelier)
@@ -689,6 +694,7 @@ def modifier_client(request, pk):
 
 
 @login_required
+@droit_requis('clients')
 def supprimer_client(request, pk):
     atelier = get_user_atelier(request.user)
     client = get_object_or_404(Client, pk=pk, atelier=atelier)
@@ -717,6 +723,7 @@ def _extraire_champs_dynamiques(request):
 
 
 @login_required
+@droit_requis('clients')
 def ajouter_mensuration(request, client_pk):
     atelier = get_user_atelier(request.user)
     client = get_object_or_404(Client, pk=client_pk, atelier=atelier)
@@ -759,6 +766,7 @@ def ajouter_mensuration(request, client_pk):
 
 
 @login_required
+@droit_requis('clients')
 def modifier_mensuration(request, pk):
     atelier = get_user_atelier(request.user)
     mensuration = get_object_or_404(Mensuration, pk=pk, atelier=atelier)
@@ -798,6 +806,7 @@ def modifier_mensuration(request, pk):
 
 
 @login_required
+@droit_requis('clients')
 def supprimer_mensuration(request, pk):
     atelier = get_user_atelier(request.user)
     mensuration = get_object_or_404(Mensuration, pk=pk, atelier=atelier)
@@ -809,6 +818,7 @@ def supprimer_mensuration(request, pk):
 
 
 @login_required
+@droit_requis('clients')
 def detail_mensuration(request, pk):
     atelier = get_user_atelier(request.user)
     mensuration = get_object_or_404(Mensuration, pk=pk, atelier=atelier)
@@ -820,6 +830,7 @@ def detail_mensuration(request, pk):
 
 
 @login_required
+@droit_requis('clients')
 def mensuration_pdf(request, pk):
     from xhtml2pdf import pisa
     from django.template.loader import render_to_string
@@ -844,6 +855,7 @@ def mensuration_pdf(request, pk):
 
 
 @login_required
+@droit_requis('commandes_voir')
 def api_mensurations_client(request, client_pk):
     """API JSON — mensurations d'un client et de ses proches."""
     atelier = get_user_atelier(request.user)
@@ -868,6 +880,7 @@ def api_mensurations_client(request, client_pk):
 # 5. CATALOGUE & ACCESSOIRES
 # ==========================================
 @login_required
+@droit_requis('catalogue')
 def liste_modeles(request):
     atelier = get_user_atelier(request.user)
 
@@ -913,6 +926,7 @@ def liste_modeles(request):
 
 
 @login_required
+@droit_requis('catalogue')
 def ajouter_accessoire(request):
     atelier = get_user_atelier(request.user)
     if request.method == 'POST':
@@ -939,6 +953,7 @@ def ajouter_accessoire(request):
 
 
 @login_required
+@droit_requis('catalogue')
 def modifier_accessoire(request, pk):
     atelier = get_user_atelier(request.user)
     acc = get_object_or_404(Accessoire, pk=pk, atelier=atelier)
@@ -966,6 +981,7 @@ def modifier_accessoire(request, pk):
 
 
 @login_required
+@droit_requis('catalogue')
 def supprimer_accessoire(request, pk):
     atelier = get_user_atelier(request.user)
     acc = get_object_or_404(Accessoire, pk=pk, atelier=atelier)
@@ -976,6 +992,7 @@ def supprimer_accessoire(request, pk):
 
 
 @login_required
+@droit_requis('catalogue')
 def ajouter_modele(request):
     atelier = get_user_atelier(request.user)
     if request.method == 'POST':
@@ -1002,6 +1019,7 @@ def ajouter_modele(request):
 
 
 @login_required
+@droit_requis('catalogue')
 def modifier_modele(request, pk):
     atelier = get_user_atelier(request.user)
     modele = get_object_or_404(CatalogueModele, pk=pk, atelier=atelier)
@@ -1029,6 +1047,7 @@ def modifier_modele(request, pk):
 
 
 @login_required
+@droit_requis('catalogue')
 def supprimer_modele(request, pk):
     atelier = get_user_atelier(request.user)
     modele = get_object_or_404(CatalogueModele, pk=pk, atelier=atelier)
@@ -1151,6 +1170,7 @@ def _sync_lignes_couture(request, commande, atelier):
 # 6bis. COMMANDES — VUES
 # ==========================================
 @login_required
+@droit_requis('commandes_voir')
 def liste_commandes(request):
     atelier = get_user_atelier(request.user)
     statut_filter = request.GET.get('statut', '')
@@ -1284,6 +1304,7 @@ def liste_commandes(request):
 
 
 @login_required
+@droit_requis('commandes_creer')
 def creer_commande(request):
     """Création d'une commande de COUTURE SUR MESURE uniquement."""
     atelier = get_user_atelier(request.user)
@@ -1353,6 +1374,7 @@ def creer_commande(request):
 
 
 @login_required
+@droit_requis('commandes_voir')
 def detail_commande(request, pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(
@@ -1412,6 +1434,7 @@ def detail_commande(request, pk):
 
 
 @login_required
+@droit_requis('commandes_creer')
 def modifier_commande(request, pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
@@ -1447,6 +1470,7 @@ def modifier_commande(request, pk):
 
 
 @login_required
+@droit_requis('commandes_creer')
 def supprimer_commande(request, pk):
     """Supprime une commande et restitue le stock si nécessaire."""
     atelier = get_user_atelier(request.user)
@@ -1473,6 +1497,7 @@ def supprimer_commande(request, pk):
 
 
 @login_required
+@droit_requis('commandes_creer')
 def ajouter_ligne(request, commande_pk):
     """Ajoute une ou plusieurs coutures à une commande existante."""
     atelier = get_user_atelier(request.user)
@@ -1498,6 +1523,7 @@ def ajouter_ligne(request, commande_pk):
 
 
 @login_required
+@droit_requis('commandes_creer')
 def supprimer_ligne(request, pk):
     atelier = get_user_atelier(request.user)
     ligne = get_object_or_404(LigneCommande, pk=pk, atelier=atelier)
@@ -1531,6 +1557,7 @@ def supprimer_ligne(request, pk):
 
 
 @login_required
+@droit_requis('commandes_creer')
 def attribuer_ligne(request, pk):
     """Attribue ou réattribue une couture à un employé + change son état."""
     atelier = get_user_atelier(request.user)
@@ -1565,6 +1592,7 @@ def attribuer_ligne(request, pk):
 
 
 @login_required
+@droit_requis('paiements')
 def ajouter_paiement(request, commande_pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(Commande, pk=commande_pk, atelier=atelier)
@@ -1612,6 +1640,7 @@ def ajouter_paiement(request, commande_pk):
 
 
 @login_required
+@droit_requis('commandes_creer')
 def finaliser_commande(request, pk):
     """
     Solde la commande, la marque livrée, termine les coutures
@@ -1682,6 +1711,7 @@ def finaliser_commande(request, pk):
 # 6ter. FICHES ATELIER (BON DE TRAVAIL)
 # ==========================================
 @login_required
+@droit_requis('commandes_creer')
 def fiche_atelier_pdf(request, pk):
     """Bon de travail : toutes les coutures de la commande avec mensurations."""
     from xhtml2pdf import pisa
@@ -1721,6 +1751,7 @@ def fiche_atelier_pdf(request, pk):
 
 
 @login_required
+@droit_requis('commandes_creer')
 def fiche_ligne_pdf(request, pk):
     """Bon de travail : une seule couture."""
     from xhtml2pdf import pisa
@@ -1752,6 +1783,7 @@ def fiche_ligne_pdf(request, pk):
 # 7. VENTES DIRECTES
 # ==========================================
 @login_required
+@droit_requis('ventes_directes')
 def liste_ventes_directes(request):
     atelier = get_user_atelier(request.user)
     q = request.GET.get('q', '').strip()
@@ -1850,6 +1882,7 @@ def liste_ventes_directes(request):
 
 
 @login_required
+@droit_requis('ventes_directes')
 def creer_vente_directe(request):
     """Encaisse une vente au comptant et décrémente le stock."""
     atelier = get_user_atelier(request.user)
@@ -1972,6 +2005,7 @@ def creer_vente_directe(request):
 
 
 @login_required
+@droit_requis('ventes_directes')
 def annuler_vente_directe(request, pk):
     """Annule une vente et remet les articles en stock."""
     atelier = get_user_atelier(request.user)
@@ -2012,6 +2046,7 @@ def annuler_vente_directe(request, pk):
 
 
 @login_required
+@droit_requis('ventes_directes')
 def detail_vente_directe(request, pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
@@ -2031,6 +2066,7 @@ def detail_vente_directe(request, pk):
 # 7bis. MOUVEMENTS DE STOCK
 # ==========================================
 @login_required
+@droit_requis('catalogue')
 def historique_stock(request):
     """Journal complet des entrées / sorties de stock."""
     atelier = get_user_atelier(request.user)
@@ -2065,6 +2101,7 @@ def historique_stock(request):
 
 
 @login_required
+@droit_requis('catalogue')
 def ajuster_stock(request):
     """Réapprovisionnement ou correction d'inventaire manuelle."""
     atelier = get_user_atelier(request.user)
@@ -2131,6 +2168,7 @@ def _rendre_pdf(request, template, contexte, nom_fichier):
 
 
 @login_required
+@droit_requis('factures')
 def recu_caisse(request, pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
@@ -2145,6 +2183,7 @@ def recu_caisse(request, pk):
 
 
 @login_required
+@droit_requis('factures')
 def recu_caisse_pdf(request, pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
@@ -2159,6 +2198,7 @@ def recu_caisse_pdf(request, pk):
 
 
 @login_required
+@droit_requis('factures')
 def recu_paiement(request, pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
@@ -2173,6 +2213,7 @@ def recu_paiement(request, pk):
 
 
 @login_required
+@droit_requis('factures')
 def recu_paiement_pdf(request, pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
@@ -2187,6 +2228,7 @@ def recu_paiement_pdf(request, pk):
 
 
 @login_required
+@droit_requis('factures')
 def facture_commande(request, pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
@@ -2201,6 +2243,7 @@ def facture_commande(request, pk):
 
 
 @login_required
+@droit_requis('factures')
 def facture_commande_pdf(request, pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
@@ -2218,6 +2261,7 @@ def facture_commande_pdf(request, pk):
 # 9. PARAMÈTRES & UTILISATEURS
 # ==========================================
 @login_required
+@droit_requis('parametres')
 def parametres_view(request):
     """Paramètres de l'atelier + gestion des comptes d'accès."""
     atelier = get_user_atelier(request.user)
@@ -2285,6 +2329,7 @@ def parametres_view(request):
 
 
 @login_required
+@droit_requis('utilisateurs')
 def ajouter_utilisateur(request):
     """Crée un compte d'accès à l'application."""
     atelier = get_user_atelier(request.user)
@@ -2325,6 +2370,7 @@ def ajouter_utilisateur(request):
 
 
 @login_required
+@droit_requis('utilisateurs')
 def modifier_utilisateur(request, user_id):
     """GET : données JSON pour le modal. POST : enregistre les modifications."""
     atelier = get_user_atelier(request.user)
@@ -2368,6 +2414,7 @@ def modifier_utilisateur(request, user_id):
 
 
 @login_required
+@droit_requis('utilisateurs')
 def supprimer_utilisateur(request, user_id):
     """Supprime un compte d'accès."""
     atelier = get_user_atelier(request.user)
@@ -2399,6 +2446,7 @@ def supprimer_utilisateur(request, user_id):
 # 10. COMPTABILITÉ / DÉPENSES
 # ==========================================
 @login_required
+@droit_requis('depenses')
 def liste_depenses(request):
     atelier = get_user_atelier(request.user)
     mois_selectionne = request.GET.get('mois', '')
@@ -2551,6 +2599,7 @@ def liste_depenses(request):
 
 
 @login_required
+@droit_requis('depenses')
 def ajouter_depense(request):
     atelier = get_user_atelier(request.user)
     if request.method == 'POST':
@@ -2567,6 +2616,7 @@ def ajouter_depense(request):
 
 
 @login_required
+@droit_requis('depenses')
 def modifier_depense(request, pk):
     atelier = get_user_atelier(request.user)
     depense = get_object_or_404(Depense, pk=pk, atelier=atelier)
@@ -2587,6 +2637,7 @@ def modifier_depense(request, pk):
 
 
 @login_required
+@droit_requis('depenses')
 def supprimer_depense(request, pk):
     atelier = get_user_atelier(request.user)
     depense = get_object_or_404(Depense, pk=pk, atelier=atelier)
@@ -2600,6 +2651,7 @@ def supprimer_depense(request, pk):
 # 11. CALENDRIER & ABONNEMENT
 # ==========================================
 @login_required
+@droit_requis('commandes_voir')
 def calendrier(request):
     """Agenda mensuel des livraisons prévues."""
     atelier = get_user_atelier(request.user)
@@ -2738,6 +2790,7 @@ def abonnement_expire(request):
 # 12. EMPLOYÉS DE L'ATELIER
 # ==========================================
 @login_required
+@droit_requis('employes')
 def liste_employes(request):
     atelier = get_user_atelier(request.user)
     q = request.GET.get('q', '').strip()
@@ -2821,6 +2874,7 @@ def liste_employes(request):
 
 
 @login_required
+@droit_requis('employes')
 def ajouter_employe(request):
     atelier = get_user_atelier(request.user)
     if request.method == 'POST':
@@ -2841,6 +2895,7 @@ def ajouter_employe(request):
 
 
 @login_required
+@droit_requis('employes')
 def detail_employe(request, pk):
     atelier = get_user_atelier(request.user)
     emp = get_object_or_404(Employe, pk=pk, atelier=atelier)
@@ -2916,6 +2971,7 @@ def detail_employe(request, pk):
 
 
 @login_required
+@droit_requis('employes')
 def modifier_employe(request, pk):
     atelier = get_user_atelier(request.user)
     emp = get_object_or_404(Employe, pk=pk, atelier=atelier)
@@ -2933,6 +2989,7 @@ def modifier_employe(request, pk):
 
 
 @login_required
+@droit_requis('employes')
 def supprimer_employe(request, pk):
     atelier = get_user_atelier(request.user)
     emp = get_object_or_404(Employe, pk=pk, atelier=atelier)
@@ -2957,6 +3014,7 @@ def supprimer_employe(request, pk):
 
 
 @login_required
+@droit_requis('employes')
 def creer_paie(request, pk):
     """Génère un versement de salaire + la dépense comptable associée."""
     atelier = get_user_atelier(request.user)
@@ -3036,6 +3094,7 @@ def creer_paie(request, pk):
 
 
 @login_required
+@droit_requis('employes')
 def plan_charge(request):
     """Vue d'équipe : répartition des coutures en cours par employé."""
     atelier = get_user_atelier(request.user)
@@ -3101,6 +3160,7 @@ def plan_charge(request):
 
 
 @login_required
+@droit_requis('employes')
 def api_employes(request):
     """Liste des employés actifs pour les selects dynamiques."""
     atelier = get_user_atelier(request.user)

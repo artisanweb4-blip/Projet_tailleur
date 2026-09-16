@@ -1,124 +1,87 @@
+"""
+Décorateurs d'autorisation.
+
+Le contrôle par rôle s'appuie sur `core.droits.MATRICE_DROITS`, la matrice
+produit. Une vue s'annonce avec :
+
+    @login_required
+    @droit_requis('depenses')
+    def liste_depenses(request):
+        ...
+
+Les anciens décorateurs (`boutique_user_required`, `role_requis`,
+`subscription_active_required`) ont été retirés : ils n'étaient importés par
+aucune vue, et contenaient trois `redirect()` vers des noms de routes
+inexistants (`login`, `mon_profil`, `abonnement_expire`) ainsi que des
+relations inverses erronées (`profilutilisateur`, `profile`).
+"""
+
 from functools import wraps
+
 from django.contrib import messages
 from django.shortcuts import redirect
 
+from .droits import LIBELLES, MATRICE_DROITS, peut
 
-def boutique_user_required(view_func):
+
+def droit_requis(fonction):
+    """Restreint une vue aux rôles cochés sur la ligne `fonction` de la matrice.
+
+    Comportement :
+      * anonyme            -> redirection vers la connexion ;
+      * super-admin Django -> redirection vers le back-office plateforme
+                              (il n'a pas d'atelier par conception) ;
+      * compte sans atelier-> redirection vers le profil, avec un message ;
+      * rôle non autorisé  -> redirection vers le tableau de bord, avec un
+                              message précisant la fonction refusée.
+
+    Le refus renvoie toujours une redirection et jamais une 403 nue : c'est un
+    choix d'interface, cohérent avec le reste de l'application.
     """
-    Décorateur qui interdit l'accès aux Super Admins (is_superuser=True),
-    vérifie qu'un atelier est associé au profil, et l'injecte dans request.atelier.
-    """
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect('login')
-        
-        # 1. Bloquer le superadmin s'il tente d'accéder directement aux vues de la boutique
-        if request.user.is_superuser:
-            messages.error(
-                request, 
-                "Les administrateurs système n'ont pas accès à l'interface de gestion boutique."
-            )
-            return redirect('saas_admin:superadmin_dashboard')
+    if fonction not in MATRICE_DROITS:
+        # Erreur de développement : mieux vaut échouer au démarrage
+        # qu'ouvrir ou fermer une vue par accident.
+        raise ValueError(
+            f"droit_requis({fonction!r}) : fonction inconnue de la matrice. "
+            f"Fonctions disponibles : {', '.join(sorted(MATRICE_DROITS))}."
+        )
 
-        # 2. Récupérer le profil et l'atelier
-        profil = getattr(request.user, 'profilutilisateur', None) or getattr(request.user, 'profile', None)
-        atelier = getattr(profil, 'atelier', None) if profil else None
-
-        # Si l'utilisateur n'a pas d'atelier lié, éviter le crash sur request.atelier
-        if not atelier:
-            messages.error(
-                request, 
-                "Aucun atelier n'est associé à votre compte utilisateur."
-            )
-            return redirect('mon_profil')
-
-        # Attach de l'atelier à la requête pour l'utiliser dans les vues
-        request.atelier = atelier
-        return view_func(request, *args, **kwargs)
-
-    return _wrapped_view
-
-
-# Cartographie des alias/variations pour les 3 rôles principaux
-ROLES_MAP = {
-    'ADMIN': ['ADMIN', 'ADMINISTRATEUR', 'ADMIN_GENERAL', 'Admin Général', 'admin_general', 'admin'],
-    'GESTIONNAIRE': ['GESTIONNAIRE', 'Gestionnaire', 'gestionnaire'],
-    'COMPTABLE': ['COMPTABLE', 'Comptable', 'comptable'],
-}
-
-
-def role_requis(*roles_autorises):
-    """
-    Décorateur restreignant l'accès selon les rôles autorisés :
-    - 'ADMIN' (Admin Général)
-    - 'GESTIONNAIRE' (Gestionnaire)
-    - 'COMPTABLE' (Comptable)
-    """
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):
             if not request.user.is_authenticated:
-                return redirect('login')
+                return redirect('core:connexion')
 
-            # Récupération du profil utilisateur (profilutilisateur ou profile)
-            profil = getattr(request.user, 'profilutilisateur', None) or getattr(request.user, 'profile', None)
-            
-            # Récupération de la valeur du rôle
-            user_role = None
-            if profil and hasattr(profil, 'role'):
-                user_role = profil.role
-            elif hasattr(request.user, 'role'):
-                user_role = request.user.role
-
-            if user_role:
-                # Normalisation et construction des rôles autorisés
-                valeurs_acceptees = set()
-                for role in roles_autorises:
-                    role_key = str(role).upper()
-                    valeurs_acceptees.add(role_key)
-                    if role_key in ROLES_MAP:
-                        for alias in ROLES_MAP[role_key]:
-                            valeurs_acceptees.add(alias.upper())
-
-                # Vérification de l'appartenance
-                if str(user_role).upper() in valeurs_acceptees:
-                    return view_func(request, *args, **kwargs)
-
-            # Refus d'accès : Redirection vers 'mon_profil' au lieu de 'dashboard' pour éviter les boucles
-            messages.error(
-                request, 
-                "Vous n'avez pas les autorisations nécessaires pour accéder à cette page."
-            )
-            return redirect('mon_profil')
-            
-        return _wrapped_view
-    return decorator
-
-
-def subscription_active_required(view_func):
-    """
-    Décorateur SaaS : vérifie si l'atelier/boutique de l'utilisateur a un abonnement actif.
-    """
-    @wraps(view_func)
-    def _wrapped_view(request, *args, **kwargs):
-        if not request.user.is_authenticated:
-            return redirect('login')
-
-        profil = getattr(request.user, 'profilutilisateur', None) or getattr(request.user, 'profile', None)
-        atelier = getattr(profil, 'atelier', None) if profil else None
-
-        if atelier:
-            is_active = getattr(atelier, 'is_subscription_active', True)
-            if callable(is_active):
-                is_active = is_active()
-
-            if not is_active:
-                messages.warning(
+            if request.user.is_superuser:
+                messages.info(
                     request,
-                    "Votre abonnement a expiré. Veuillez le renouveler pour continuer à utiliser la plateforme."
+                    "Les administrateurs de la plateforme n'entrent pas dans "
+                    "une boutique : passez par le back-office, ou par "
+                    "l'impersonnalisation depuis la fiche boutique."
                 )
-                return redirect('abonnement_expire')
+                return redirect('saas_admin:superadmin_dashboard')
 
-        return view_func(request, *args, **kwargs)
-    return _wrapped_view
+            profil = getattr(request.user, 'profil', None)
+            atelier = getattr(profil, 'atelier', None) if profil else None
+            if not atelier:
+                messages.error(
+                    request,
+                    "Aucun atelier n'est associé à votre compte utilisateur."
+                )
+                return redirect('core:mon_profil')
+
+            if not peut(request.user, fonction):
+                messages.error(
+                    request,
+                    f"Votre rôle ne permet pas d'accéder à "
+                    f"{LIBELLES[fonction]}. Contactez l'administrateur de "
+                    f"votre atelier si nécessaire."
+                )
+                return redirect('core:dashboard')
+
+            request.atelier = atelier
+            return view_func(request, *args, **kwargs)
+
+        return _wrapped_view
+
+    return decorator
