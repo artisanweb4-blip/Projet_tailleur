@@ -1,4 +1,5 @@
 from datetime import timedelta
+from decimal import Decimal
 
 from django import forms
 from django.contrib.auth.models import User
@@ -16,13 +17,22 @@ from .models import (
 # 1. INSCRIPTION SAAS & AUTHENTIFICATION
 # ==========================================
 class InscriptionSaaSForm(forms.Form):
+    """Inscription SaaS : crée un utilisateur, son atelier et son profil ADMIN.
+
+    `first_name` et `last_name` sont optionnels : le formulaire d'inscription
+    ne demande que l'identifiant, l'email, le mot de passe et les coordonnées
+    de l'atelier. Ils étaient auparavant obligatoires alors qu'aucun template
+    ne les affichait — le POST échouait donc silencieusement (200 renvoyé,
+    aucun compte créé, erreurs invisibles).
+    """
+
     first_name = forms.CharField(
-        label="Prénom", max_length=100,
+        label="Prénom", max_length=100, required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control', 'placeholder': 'Ex: Jean'})
     )
     last_name = forms.CharField(
-        label="Nom", max_length=100,
+        label="Nom", max_length=100, required=False,
         widget=forms.TextInput(attrs={
             'class': 'form-control', 'placeholder': 'Ex: Dupont'})
     )
@@ -89,8 +99,9 @@ class InscriptionSaaSForm(forms.Form):
             username=self.cleaned_data['username'],
             email=self.cleaned_data['email'],
             password=self.cleaned_data['password'],
-            first_name=self.cleaned_data['first_name'],
-            last_name=self.cleaned_data['last_name'],
+            # Champs optionnels : absents de cleaned_data si non renseignés.
+            first_name=self.cleaned_data.get('first_name', ''),
+            last_name=self.cleaned_data.get('last_name', ''),
         )
         atelier = Atelier.objects.create(
             nom=self.cleaned_data['nom_atelier'],
@@ -107,17 +118,27 @@ class InscriptionSaaSForm(forms.Form):
             est_fondateur=True,
         )
 
-        plan_starter = (
+        # Essai gratuit : sans abonnement, la boutique est considérée comme
+        # expirée. Sur une base neuve aucun PlanAbonnement n'existe, donc la
+        # promesse des « 14 jours d'essai gratuit » affichée par le formulaire
+        # n'était jamais tenue. On crée le plan d'essai s'il manque.
+        plan_essai = (
             PlanAbonnement.objects.filter(nom__icontains='Starter').first()
             or PlanAbonnement.objects.first()
-        )
-        if plan_starter:
-            Abonnement.objects.create(
-                atelier=atelier,
-                plan=plan_starter,
-                date_fin=timezone.now().date() + timedelta(days=30),
-                statut='ACTIF',
+            or PlanAbonnement.objects.create(
+                nom='Starter — essai gratuit',
+                prix_mensuel=Decimal('0'),
+                max_commandes_mois=50,
+                max_utilisateurs=3,
+                support_prioritaire=False,
             )
+        )
+        Abonnement.objects.create(
+            atelier=atelier,
+            plan=plan_essai,
+            date_fin=timezone.now().date() + timedelta(days=14),
+            statut='ACTIF',
+        )
         return user, atelier
 
 

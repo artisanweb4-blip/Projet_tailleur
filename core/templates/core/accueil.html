@@ -138,6 +138,23 @@
 <div class="dash-wrap">
 <div class="container-fluid px-3 px-md-4 py-4">
 
+    <!-- ===== Messages flash =====
+         Ni base.html ni ce template n'affichaient les messages : le
+         « Bienvenue chez … » envoyé par la vue inscription_saas était perdu,
+         tout comme les confirmations de création/suppression qui redirigent
+         vers le tableau de bord. Rendu ici (et non dans base.html) pour ne pas
+         créer de doublon avec les 16 templates qui les affichent déjà. -->
+    {% if messages %}
+    <div id="messagesZone" class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- ===== HERO ===== -->
     <div class="hero-card mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
         <div>

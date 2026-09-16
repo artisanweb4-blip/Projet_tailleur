@@ -9,6 +9,7 @@ du projet pour le développement. Voir `.env.example` et le README.
 import os
 from pathlib import Path
 
+from django.contrib import messages
 from django.core.exceptions import ImproperlyConfigured
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -186,6 +187,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = 'core:connexion'
 LOGIN_REDIRECT_URL = 'core:dashboard'
 LOGOUT_REDIRECT_URL = 'core:connexion'
+
+
+# --- MESSAGES FLASH ---
+# Les templates écrivent `class="alert alert-{{ message.tags }}"`. Sans cette
+# correspondance, `messages.error` produit `alert-error`, qui n'existe pas dans
+# Bootstrap : le bandeau s'affiche sans aucun style. 42 appels à messages.error
+# étaient concernés dans l'application.
+MESSAGE_TAGS = {
+    messages.DEBUG: 'secondary',
+    messages.INFO: 'info',
+    messages.SUCCESS: 'success',
+    messages.WARNING: 'warning',
+    messages.ERROR: 'danger',
+}
 
 
 # ==========================================
