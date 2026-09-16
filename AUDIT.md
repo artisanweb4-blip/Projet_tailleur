@@ -24,6 +24,10 @@ Branche : `fix/audit-securite-500` (commits locaux, rien n'a été poussé sur G
 | — | 12 références `{% url %}` cassées | ✅ 11 corrigées — reste `'recherche_clients'` (vue inexistante, voir §10) |
 | — | `export_data.py` inutilisable | ✅ Corrigé (module de settings erroné, export UTF-8, modèles système exclus) |
 | 1 | **Contrôle par rôle non appliqué** | ⏳ **À faire** — harnais de test livré, voir §7 |
+| 16 | **`POST /inscription/` ne créait aucun compte** | ✅ Corrigé (commit `3eaacdd`), voir §6ter |
+| 17 | `MESSAGE_TAGS` absent → 42 messages d'erreur sans style | ✅ Corrigé |
+| 18 | Messages flash jamais affichés sur le tableau de bord | ✅ Corrigé |
+| 19 | Essai gratuit de 14 jours promis mais jamais accordé | ✅ Corrigé |
 | 7 | Deux systèmes d'abonnement parallèles | ⏳ À faire (décision produit nécessaire) |
 | 8 | `TenantMiddleware` mort | ⏳ À faire (supprimer ou implémenter) |
 | 10 | 107 lignes de décorateurs morts et cassés | ⏳ À faire |
@@ -316,6 +320,111 @@ Il ne s'agit pas de fichiers résiduels anodins :
 Le point le plus marquant : `core/urls.py` fait `path('', RedirectView.as_view(pattern_name='core:connexion'))` — **la racine du site envoie directement sur la page de connexion**. Pour un SaaS qui doit acquérir des clients, la landing page existe, est terminée, et est inaccessible. Il suffit probablement de créer une vue `landing_page` qui rend `core/landing.html` et de l'affecter à la racine.
 
 ---
+
+## 6ter. L'inscription SaaS était cassée depuis l'origine
+
+Découvert en intégrant une nouvelle maquette de la page d'inscription : le bug était
+**antérieur** et présent depuis le premier commit. Corrigé par `3eaacdd`.
+
+### Le parcours d'acquisition ne fonctionnait pas
+
+```
+POST /inscription/  ->  200  (au lieu de 302)
+                        aucun compte créé
+                        aucun atelier créé
+                        aucune erreur affichée
+```
+
+Cause : `InscriptionSaaSForm` déclare `first_name` et `last_name` comme **obligatoires**,
+mais aucun template ne les affiche. La vérification mesurée sur le code d'origine :
+
+```
+champs présents dans le HTML : ['confirm_password', 'csrfmiddlewaretoken', 'devise',
+                                'email', 'nom_atelier', 'password',
+                                'telephone_atelier', 'username']
+formulaire valide ? False
+erreurs : {'first_name': ['Ce champ est obligatoire.'],
+           'last_name':  ['Ce champ est obligatoire.']}
+```
+
+Les deux erreurs restaient invisibles : la vue ré-affiche le formulaire, et le template
+ne rend ni ces champs ni `form.non_field_errors`. Un visiteur remplissait tout, cliquait sur
+« Créer mon compte et mon atelier », et la page se rechargeait **sans aucun message**.
+
+C'est le point le plus coûteux de l'audit en termes produit : pour un SaaS, la page
+d'inscription est le haut de l'entonnoir. Elle était intégralement non fonctionnelle.
+
+### L'essai gratuit n'était jamais accordé
+
+`InscriptionSaaSForm.save()` ne créait l'abonnement que si un `PlanAbonnement` existait déjà :
+
+```python
+plan_starter = (PlanAbonnement.objects.filter(nom__icontains='Starter').first()
+                or PlanAbonnement.objects.first())
+if plan_starter:                       # ← faux sur une base neuve
+    Abonnement.objects.create(...)
+```
+
+Sur une base neuve il n'y a aucun plan, donc l'atelier était créé **sans abonnement** —
+alors que la page promet « 14 jours d'essai gratuit ». Combiné au §5.1 (deux systèmes
+d'abonnement parallèles), un nouvel inscrit n'entrait dans aucun des deux.
+
+### Les messages d'erreur n'étaient pas stylés
+
+`MESSAGE_TAGS` n'était pas défini. Les templates écrivent `class="alert alert-{{ message.tags }}"`,
+et Django produit par défaut le tag `error` — donc `alert-error`, **classe inexistante dans
+Bootstrap**. Les **42 appels à `messages.error`** de `core/views.py` s'affichaient en texte
+nu, sans fond rouge ni icône. Répartition mesurée :
+
+| Appel | Occurrences | Classe produite avant | Après |
+|---|---|---|---|
+| `messages.error` | 42 | `alert-error` ❌ | `alert-danger` ✅ |
+| `messages.success` | 39 | `alert-success` ✅ | inchangé |
+| `messages.info` | 5 | `alert-info` ✅ | inchangé |
+| `messages.warning` | 4 | `alert-warning` ✅ | inchangé |
+
+### Les messages n'étaient pas affichés sur le tableau de bord
+
+Ni `base.html` ni `accueil.html` (le template du dashboard) ne contenaient le moindre
+`{% if messages %}`. Vérifié par `grep -c` : **0 occurrence** dans les deux fichiers.
+Seize templates les affichent individuellement, mais pas ceux-là.
+
+Conséquence directe : le `messages.success("Bienvenue chez … ! Votre espace est prêt.")`
+envoyé par `inscription_saas` était **consommé puis perdu**. Le correctif a été placé dans
+`accueil.html` et non dans `base.html` : ce dernier est hérité par les 16 templates qui
+affichent déjà les messages, et un rendu global aurait doublé chaque bandeau.
+
+### État après correctif
+
+Vérifié sur base neuve, en HTTP réel (pas seulement via le client de test Django) :
+
+```
+POST /inscription/  ->  302 vers /dashboard/
+  compte            : créé, mot de passe haché et vérifiable
+  profil            : role=ADMIN, est_fondateur=True, actif=True, telephone renseigné
+  atelier           : créé, slug généré, devise FCFA
+  abonnement        : ACTIF, plan « Starter — essai gratuit », fin à J+14
+  /dashboard/       : 200, « Bienvenue chez … » rendu en alert-success
+
+Cas d'erreur (aucun ne crée de compte) :
+  mots de passe différents   -> 200 + « Les mots de passe ne correspondent pas. »
+  mot de passe trop court    -> 200 + « …au moins 6 caractères (actuellement 3). »
+  identifiant déjà pris      -> 200 + « Ce nom d'utilisateur est déjà pris. »
+```
+
+Restent deux points non corrigés, volontairement :
+
+- **`form.non_field_errors` n'est rendu par aucun template du projet** (0 occurrence).
+  Aujourd'hui sans impact — `clean()` utilise `add_error()` sur des champs précis — mais
+  toute future validation globale serait invisible.
+- **Deux ateliers peuvent porter le même nom** : `Atelier.slug` est `unique` et se
+  déduplique automatiquement (`chez-awa-couture`, `chez-awa-couture-1`), mais `nom` ne
+  l'est pas. Mesure : deux ateliers « Chez Awa Couture » créés sans erreur. À trancher
+  selon l'intention produit.
+
+---
+
+
 
 ## 7. Le problème n°1 en détail : l'autorisation par rôle
 

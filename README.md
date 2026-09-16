@@ -101,6 +101,10 @@ repartir de zéro.
 > il donne accès au back-office `/saas-admin/` et à `/admin/`, pas à l'application métier.
 > Pour utiliser l'application, il faut un compte rattaché à un atelier — d'où `setup_demo`.
 
+Pour tester le **parcours d'inscription réel** (celui d'un nouveau client), pas besoin de
+`setup_demo` : ouvrir http://127.0.0.1:8000/inscription/ et créer un atelier depuis le
+formulaire. Il ouvre un compte `ADMIN` fondateur, son atelier, et un essai gratuit de 14 jours.
+
 Enfin :
 
 ```bash
