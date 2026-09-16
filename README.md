@@ -38,8 +38,11 @@ pip install -r requirements.txt
 
 ### 3. Configuration
 
+`.env` **n'est pas fourni** (il est dans `.gitignore`, pour ne jamais committer de secret).
+Il faut donc le créer :
+
 ```bash
-cp .env.example .env
+cp .env.example .env          # Windows : copy .env.example .env
 ```
 
 Puis éditer `.env`. Pour un **démarrage immédiat sans PostgreSQL** :
@@ -56,12 +59,51 @@ Pour **PostgreSQL**, renseigner `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, 
 > ⚠️ `.env` est dans `.gitignore` et ne doit **jamais** être commité.
 > Le mot de passe PostgreSQL qui était codé en dur dans `settings.py` a été retiré du dépôt :
 > il est considéré comme compromis et doit être changé sur toutes les bases où il a servi.
+>
+> Sans `.env`, l'application démarre quand même — mais sur PostgreSQL par défaut, avec un
+> mot de passe vide. Si vous voyez `OperationalError` ou `FATAL: password authentication
+> failed`, c'est que `.env` manque ou est mal renseigné.
 
 ### 4. Base de données et premier lancement
 
 ```bash
 python manage.py migrate
-python manage.py createsuperuser     # compte super-admin de la plateforme
+```
+
+> **`migrate` est obligatoire avant le premier `runserver`.** Sans lui, la base est vide et
+> la première requête échoue sur `no such table: django_session` — Django l'annonce par
+> `You have NN unapplied migration(s)` au démarrage.
+
+Puis créer un atelier de démonstration avec ses comptes :
+
+```bash
+python manage.py setup_demo
+```
+
+Cette commande crée l'atelier « Atelier Kora Couture » et quatre comptes, tous avec le mot
+de passe `test12345!` :
+
+| Identifiant | Rôle | Périmètre |
+|---|---|---|
+| `aminata` | `ADMIN` | accès complet |
+| `mousso` | `GESTIONNAIRE` | clients, commandes, ventes |
+| `ibra` | `COMPTABLE` | dépenses, paiements, factures |
+| `superadmin` | plateforme | `/saas-admin/dashboard/` |
+
+Elle ajoute aussi de quoi remplir chaque page : un client et sa mensuration, deux modèles,
+un accessoire, un employé, une commande avec sa ligne, une dépense et quatre mouvements de
+stock. Elle est **idempotente** (relançable sans dupliquer) et ne supprime jamais de données.
+
+Options : `--mot-de-passe <valeur>` pour choisir un autre mot de passe, `--vide` pour
+repartir de zéro.
+
+> `python manage.py createsuperuser` crée bien un compte `is_superuser`, mais **sans atelier** :
+> il donne accès au back-office `/saas-admin/` et à `/admin/`, pas à l'application métier.
+> Pour utiliser l'application, il faut un compte rattaché à un atelier — d'où `setup_demo`.
+
+Enfin :
+
+```bash
 python manage.py runserver
 ```
 
@@ -140,22 +182,27 @@ python manage.py test
 
 ### Outils de diagnostic
 
-Les scripts ci-dessous vivent hors du dépôt (dossier `dev/` de l'espace de travail) et
-s'appuient sur une base SQLite jetable, sans jamais toucher à PostgreSQL.
+Les trois scripts de diagnostic ci-dessous vivent hors du dépôt (dossier `dev/` de l'espace
+de travail de l'audit) et s'appuient sur une base SQLite, sans jamais toucher à PostgreSQL.
 
 ```bash
 export PYTHONPATH=$PWD:/chemin/vers/dev
 export DJANGO_SETTINGS_MODULE=dev_settings
 
 python manage.py migrate
-python dev/seed.py               # jeu de données de démo (4 comptes, mot de passe test12345!)
-python dev/rbac.py               # matrice page × rôle : qui voit quoi
-python dev/escalade.py           # écritures croisées entre rôles
-python dev/audit_templates.py    # références {% url %} cassées + templates orphelins
+python manage.py setup_demo        # jeu de données — fourni par le dépôt
+python /chemin/vers/dev/rbac.py            # matrice page × rôle : qui voit quoi
+python /chemin/vers/dev/escalade.py        # écritures croisées entre rôles
+python /chemin/vers/dev/audit_templates.py # {% url %} cassées + templates orphelins
 ```
 
-`dev/seed.py` crée : `aminata` (ADMIN), `mousso` (GESTIONNAIRE), `ibra` (COMPTABLE),
-`superadmin` (super-admin plateforme) — mot de passe commun `test12345!`.
+`dev/rbac.py` affiche les 14 pages principales croisées avec les 4 rôles et signale tout
+crash. `dev/escalade.py` exécute 8 écritures interdites et compte celles qui passent quand
+même — **3/8 actuellement**, ce qui mesure le défaut d'autorisation décrit dans `AUDIT.md` §7.
+Quand le contrôle par rôle sera branché, ce script doit afficher 8/8.
+
+Pour un jeu de données plus riche, `dev/seed.py` fait la même chose que `setup_demo` en
+recréant la base de zéro.
 
 ---
 
