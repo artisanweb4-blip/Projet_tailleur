@@ -171,7 +171,7 @@
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3 fixed-top">
         <div class="container">
-            <a class="navbar-brand fw-bold fs-4" href="{% url 'core:landing_page' %}">
+            <a class="navbar-brand fw-bold fs-4" href="{% url 'core:accueil' %}">
                 <i class="bi bi-scissors text-primary me-2"></i>TailleurPro
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
@@ -185,7 +185,7 @@
                 </ul>
                 <div class="d-flex gap-2">
                     <a href="{% url 'core:connexion' %}" class="btn btn-outline-light px-4">Connexion</a>
-                    <a href="{% url 'core:inscription' %}" class="btn btn-primary px-4 fw-semibold">Créer un compte</a>
+                    <a href="{% url 'core:inscription_saas' %}" class="btn btn-primary px-4 fw-semibold">Créer un compte</a>
                 </div>
             </div>
         </div>
@@ -204,7 +204,7 @@
                         Suivi des mesures clients, gestion des commandes, relances SMS et suivi des finances. Tout ce dont vous avez besoin pour développer votre atelier en un seul endroit.
                     </p>
                     <div class="d-flex flex-wrap gap-3">
-                        <a href="{% url 'core:inscription' %}" class="btn btn-custom-primary">
+                        <a href="{% url 'core:inscription_saas' %}" class="btn btn-custom-primary">
                             Commencer l'essai gratuit <i class="bi bi-arrow-right ms-2"></i>
                         </a>
                         <a href="#features" class="btn btn-outline-light btn-lg px-4 py-3 fs-6">
@@ -328,7 +328,7 @@
                             <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Gestion des commandes</li>
                             <li class="text-muted"><i class="bi bi-x text-secondary me-2"></i> Rappels SMS automatiques</li>
                         </ul>
-                        <a href="{% url 'core:inscription' %}" class="btn btn-outline-primary w-100 py-2">Choisir cette offre</a>
+                        <a href="{% url 'core:inscription_saas' %}" class="btn btn-outline-primary w-100 py-2">Choisir cette offre</a>
                     </div>
                 </div>
 
@@ -347,7 +347,7 @@
                             <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Suivi des paiements & avances</li>
                             <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Rappels SMS automatiques</li>
                         </ul>
-                        <a href="{% url 'core:inscription' %}" class="btn btn-primary w-100 py-2 fw-bold">Essayer 14 jours gratuits</a>
+                        <a href="{% url 'core:inscription_saas' %}" class="btn btn-primary w-100 py-2 fw-bold">Essayer 14 jours gratuits</a>
                     </div>
                 </div>
 
@@ -365,7 +365,7 @@
                             <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Module de facturation personnalisée</li>
                             <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Support prioritaire 24/7</li>
                         </ul>
-                        <a href="{% url 'core:inscription' %}" class="btn btn-outline-primary w-100 py-2">Choisir cette offre</a>
+                        <a href="{% url 'core:inscription_saas' %}" class="btn btn-outline-primary w-100 py-2">Choisir cette offre</a>
                     </div>
                 </div>
             </div>

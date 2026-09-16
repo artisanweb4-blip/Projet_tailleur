@@ -7,8 +7,8 @@
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
         <h2 class="display-6 fw-bold">{{ client.nom }}</h2>
         <div class="d-flex gap-2">
-            <a href="{% url 'modifier_client' client.id %}" class="btn btn-warning btn-lg shadow-sm">✏️ Modifier</a>
-            <a href="{% url 'supprimer_client' client.id %}" class="btn btn-danger btn-lg shadow-sm">🗑️ Supprimer</a>
+            <a href="{% url 'core:modifier_client' client.id %}" class="btn btn-warning btn-lg shadow-sm">✏️ Modifier</a>
+            <a href="{% url 'core:supprimer_client' client.id %}" class="btn btn-danger btn-lg shadow-sm">🗑️ Supprimer</a>
             <a href="{% url 'recherche_clients' %}" class="btn btn-secondary btn-lg shadow-sm">⬅️ Retour</a>
         </div>
     </div>
@@ -62,7 +62,7 @@
                                     </div>
                                  </p>
                                 <td>
-                                    <a href="{% url 'modifier_mensuration' m.id %}" class="btn btn-sm btn-outline-warning rounded-pill">
+                                    <a href="{% url 'core:modifier_mensuration' m.id %}" class="btn btn-sm btn-outline-warning rounded-pill">
                                         <i class="bi bi-pencil"></i> Modifier
                                     </a>
                                  </p>
@@ -118,7 +118,7 @@
                                     {% endif %}
                                  </p>
                                 <td>
-                                    <a href="{% url 'detail_commande' cmd.id %}" class="btn btn-sm btn-outline-primary rounded-pill">
+                                    <a href="{% url 'core:detail_commande' cmd.id %}" class="btn btn-sm btn-outline-primary rounded-pill">
                                         <i class="bi bi-eye"></i> Voir
                                     </a>
                                  </p>
@@ -133,7 +133,7 @@
                     <p class="mb-0 mt-2">Aucune commande pour ce client.</p>
                 </div>
             {% endif %}
-            <a href="{% url 'ajouter_commande' %}?client={{ client.id }}" class="btn btn-primary mt-3 rounded-pill shadow-sm">
+            <a href="{% url 'core:creer_commande' %}?client={{ client.id }}" class="btn btn-primary mt-3 rounded-pill shadow-sm">
                 <i class="bi bi-plus-lg"></i> Nouvelle commande
             </a>
         </div>
@@ -149,7 +149,7 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
             </div>
             <div class="modal-body p-4">
-                <form method="post" action="{% url 'ajouter_mensuration' client.id %}">
+                <form method="post" action="{% url 'core:ajouter_mensuration' client.id %}">
                     {% csrf_token %}
                     
                     <!-- Boutons Homme / Femme -->

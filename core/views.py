@@ -2221,6 +2221,26 @@ def facture_commande_pdf(request, pk):
 def parametres_view(request):
     """Paramètres de l'atelier + gestion des comptes d'accès."""
     atelier = get_user_atelier(request.user)
+
+    # Garde : cette vue accède directement aux attributs de l'atelier
+    # (atelier.DEVISES, AtelierForm(instance=atelier)…). Sans atelier, elle
+    # lève une AttributeError. Le super-admin n'a pas d'atelier par conception :
+    # il est renvoyé vers le back-office de la plateforme.
+    if atelier is None:
+        if request.user.is_superuser:
+            messages.info(
+                request,
+                "Les paramètres d'un atelier se règlent depuis la boutique "
+                "concernée, dans le back-office de la plateforme."
+            )
+            return redirect('saas_admin:superadmin_dashboard')
+        messages.error(
+            request,
+            "Aucun atelier n'est associé à votre compte. "
+            "Contactez l'administrateur de votre atelier."
+        )
+        return redirect('core:connexion')
+
     profil = getattr(request.user, 'profil', None)
     est_admin = _est_admin(request.user)
 

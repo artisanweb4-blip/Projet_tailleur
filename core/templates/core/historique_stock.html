@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Historique du stock — {{ atelier.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hs-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
+
+    /* ===== KPI ===== */
+    .kpi-h {
+        background:#fff; border:1px solid #eef0f6; border-radius:14px;
+        padding:1rem 1.15rem; height:100%;
+    }
+    .kpi-h .lbl  { color:#6b7280; font-size:.79rem; }
+    .kpi-h .val  { font-size:1.5rem; font-weight:700; color:#111827; line-height:1.2; }
+    .kpi-h .hint { color:#9ca3af; font-size:.75rem; }
+    .kpi-ic {
+        width:40px; height:40px; border-radius:11px; color:#fff; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .ic-g { background:linear-gradient(135deg,#10b981,#059669); }
+    .ic-r { background:linear-gradient(135deg,#f43f5e,#e11d48); }
+    .ic-v { background:linear-gradient(135deg,#7c3aed,#6d28d9); }
+    .ic-o { background:linear-gradient(135deg,#f59e0b,#ea580c); }
+
+    /* ===== PANEL ===== */
+    .panel { background:#fff; border:1px solid #eef0f6; border-radius:16px; }
+
+    /* ===== TABLE ===== */
+    .hs-table { width:100%; border-collapse:collapse; }
+    .hs-table thead th {
+        font-size:.74rem; text-transform:uppercase; letter-spacing:.04em;
+        color:#6b7280; font-weight:600; padding:.7rem 1rem;
+        border-bottom:1px solid #eef0f6; background:#fcfcfe; white-space:nowrap;
+    }
+    .hs-table tbody td {
+        padding:.8rem 1rem; border-bottom:1px solid #f4f5f9;
+        font-size:.88rem; color:#374151; vertical-align:middle;
+    }
+    .hs-table tbody tr:last-child td { border-bottom:none; }
+    .hs-table tbody tr:hover { background:#fafbff; }
+
+    .hs-art-ic {
+        width:38px; height:38px; border-radius:10px; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center; font-size:.95rem;
+    }
+    .hs-art-nom { font-weight:600; color:#111827; font-size:.9rem; }
+    .hs-art-sub { color:#9ca3af; font-size:.76rem; }
+
+    .tag-mvt {
+        display:inline-flex; align-items:center; gap:.35rem;
+        padding:.2rem .6rem; border-radius:999px;
+        font-size:.72rem; font-weight:600; white-space:nowrap;
+    }
+    .tag-entree  { background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; }
+    .tag-sortie  { background:#fef2f2; color:#e11d48; border:1px solid #fecdd3; }
+    .tag-correc  { background:#eff6ff; color:#0284c7; border:1px solid #bae6bd; }
+
+    .qte-entree { color:#059669; font-weight:700; }
+    .qte-sortie { color:#e11d48; font-weight:700; }
+
+    .hs-stock-flow {
+        font-variant-numeric:tabular-nums; font-size:.82rem; color:#6b7280;
+        white-space:nowrap;
+    }
+    .hs-stock-flow strong { color:#111827; font-size:.9rem; }
+
+    .hs-auteur {
+        display:inline-flex; align-items:center; justify-content:center;
+        width:28px; height:28px; border-radius:50%;
+        background:#f3f4f6; color:#6b7280; font-size:.7rem; font-weight:700;
+    }
+
+    .empty-h { padding:3.5rem 1rem; text-align:center; color:#9ca3af; }
+
+    /* Responsive : on empile sous md */
+    @media (max-width: 767.98px) {
+        .hs-hide-sm { display:none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="hs-wrap">
+<div class="container-fluid px-md-3">
+
+    <!-- ===== En-tête ===== -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 gap-3">
+        <div>
+            <h1 class="h4 fw-bold text-dark mb-1">
+                <i class="bi bi-clock-history me-2 text-primary"></i>Historique du stock
+            </h1>
+            <p class="text-muted small mb-0">
+                Journal des entrées et sorties —
+                <strong>{{ page_obj.paginator.count }}</strong> mouvement{{ page_obj.paginator.count|pluralize:"s" }}
+                {% if type_filter or q %}(filtré){% endif %}
+            </p>
+        </div>
+        <a href="{% url 'core:liste_modeles' %}" class="btn btn-outline-primary shadow-sm">
+            <i class="bi bi-box-seam me-1"></i> Catalogue &amp; stock
+        </a>
+    </div>
+
+    {% if messages %}
+    <div id="messagesZone">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ===== KPI de la page courante ===== -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-h d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Mouvements enregistrés</div>
+                    <div class="val">{{ page_obj.paginator.count }}</div>
+                    <div class="hint">Tous types confondus</div>
+                </div>
+                <div class="kpi-ic ic-v"><i class="bi bi-journal-text"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-h d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Filtre appliqué</div>
+                    <div class="val fs-5">
+                        {% if type_filter %}
+                            {{ mouvements.0.get_type_mouvement_display|default:"—" }}
+                        {% else %}
+                            Tous
+                        {% endif %}
+                    </div>
+                    <div class="hint">
+                        {% if q %}Recherche : « {{ q }} »{% else %}Aucun type sélectionné{% endif %}
+                    </div>
+                </div>
+                <div class="kpi-ic ic-o"><i class="bi bi-funnel"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-h d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Dernier mouvement</div>
+                    <div class="val fs-5">
+                        {% with mvt=mouvements.0 %}
+                            {% if mvt %}
+                                {{ mvt.date_creation|date:"d/m/Y" }}
+                            {% else %}—{% endif %}
+                        {% endwith %}
+                    </div>
+                    <div class="hint">
+                        {% if mouvements.0 %}
+                            {{ mouvements.0.date_creation|date:"H:i" }} — {{ mouvements.0.nom_article|truncatechars:22 }}
+                        {% else %}
+                            Aucun mouvement
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="kpi-ic ic-g"><i class="bi bi-calendar-check"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-h d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Seuil d'alerte atelier</div>
+                    <div class="val">{{ atelier.seuil_stock_faible }}</div>
+                    <div class="hint">Unités avant alerte stock faible</div>
+                </div>
+                <div class="kpi-ic ic-r"><i class="bi bi-exclamation-triangle"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Filtres ===== -->
+    <div class="panel p-3 mb-3">
+        <form method="get" class="row g-2 align-items-end">
+            <div class="col-12 col-md-5">
+                <label class="form-label small fw-medium text-muted">Recherche</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input type="text" name="q" value="{{ q }}" class="form-control"
+                           placeholder="Article, accessoire ou n° de commande…">
+                </div>
+            </div>
+            <div class="col-8 col-md-4">
+                <label class="form-label small fw-medium text-muted">Type de mouvement</label>
+                <select name="type" class="form-select form-select-sm">
+                    <option value="">Tous les mouvements</option>
+                    {% for code, label in types %}
+                    <option value="{{ code }}" {% if type_filter == code %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-4 col-md-3 d-flex gap-2">
+                <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                    <i class="bi bi-funnel-fill me-1"></i>Filtrer
+                </button>
+                {% if type_filter or q %}
+                <a href="{% url 'core:historique_stock' %}" class="btn btn-light btn-sm"
+                   title="Réinitialiser les filtres">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+
+    <!-- ===== Journal ===== -->
+    <div class="panel">
+        <div class="table-responsive">
+            <table class="hs-table">
+                <thead>
+                    <tr>
+                        <th style="width:34%">Article</th>
+                        <th>Type</th>
+                        <th class="text-center">Quantité</th>
+                        <th class="hs-hide-sm">Stock avant → après</th>
+                        <th class="hs-hide-sm">Commande</th>
+                        <th class="hs-hide-sm">Auteur</th>
+                        <th class="text-end">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in mouvements %}
+                    <tr>
+                        <!-- Article -->
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="hs-art-ic"
+                                      style="background:{% if m.modele %}#f5f3ff;color:#6d28d9{% else %}#eff6ff;color:#0284c7{% endif %}">
+                                    <i class="bi {% if m.modele %}bi-scissors{% else %}bi-bag{% endif %}"></i>
+                                </span>
+                                <div class="min-w-0">
+                                    <div class="hs-art-nom text-truncate">{{ m.nom_article }}</div>
+                                    <div class="hs-art-sub">
+                                        {% if m.modele %}
+                                            Modèle — {{ m.modele.get_type_modele_display }}
+                                        {% elif m.accessoire %}
+                                            Accessoire — {{ m.accessoire.get_categorie_display }}
+                                        {% else %}
+                                            Référence supprimée
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% if m.commentaire %}
+                            <div class="hs-art-sub mt-1 fst-italic">
+                                <i class="bi bi-chat-left-text me-1"></i>{{ m.commentaire }}
+                            </div>
+                            {% endif %}
+                        </td>
+
+                        <!-- Type -->
+                        <td>
+                            {% if m.type_mouvement == 'INVENTAIRE' %}
+                                <span class="tag-mvt tag-correc">
+                                    <i class="bi bi-sliders"></i>{{ m.get_type_mouvement_display }}
+                                </span>
+                            {% elif m.est_entree %}
+                                <span class="tag-mvt tag-entree">
+                                    <i class="bi bi-arrow-down-left"></i>{{ m.get_type_mouvement_display }}
+                                </span>
+                            {% else %}
+                                <span class="tag-mvt tag-sortie">
+                                    <i class="bi bi-arrow-up-right"></i>{{ m.get_type_mouvement_display }}
+                                </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Quantité -->
+                        <td class="text-center">
+                            <span class="{% if m.est_entree %}qte-entree{% else %}qte-sortie{% endif %}">
+                                {% if m.est_entree %}+{% endif %}{{ m.quantite }}
+                            </span>
+                        </td>
+
+                        <!-- Stock avant / après -->
+                        <td class="hs-hide-sm">
+                            <span class="hs-stock-flow">
+                                {{ m.stock_avant }} <i class="bi bi-arrow-right mx-1 opacity-50"></i>
+                                <strong>{{ m.stock_apres }}</strong>
+                            </span>
+                        </td>
+
+                        <!-- Commande liée -->
+                        <td class="hs-hide-sm">
+                            {% if m.commande %}
+                            <a href="{% url 'core:detail_commande' m.commande.pk %}"
+                               class="text-decoration-none small">
+                                <i class="bi bi-receipt me-1"></i>{{ m.commande.code }}
+                            </a>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Auteur -->
+                        <td class="hs-hide-sm">
+                            {% if m.auteur %}
+                            <span class="d-inline-flex align-items-center gap-2"
+                                  title="{{ m.auteur.get_full_name|default:m.auteur.username }}">
+                                <span class="hs-auteur">
+                                    {% if m.auteur.first_name %}
+                                        {{ m.auteur.first_name|first|upper }}{{ m.auteur.last_name|first|upper }}
+                                    {% else %}
+                                        {{ m.auteur.username|first|upper }}
+                                    {% endif %}
+                                </span>
+                                <span class="small text-muted">
+                                    {{ m.auteur.get_full_name|default:m.auteur.username|truncatechars:18 }}
+                                </span>
+                            </span>
+                            {% else %}
+                            <span class="text-muted small">Système</span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Date -->
+                        <td class="text-end text-nowrap">
+                            <div class="small fw-semibold text-dark">{{ m.date_creation|date:"d/m/Y" }}</div>
+                            <div class="hs-art-sub">{{ m.date_creation|date:"H:i" }}</div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-h">
+                                <i class="bi bi-inboxes fs-1 d-block opacity-50 mb-3"></i>
+                                <p class="mb-1 fw-semibold text-secondary">Aucun mouvement de stock</p>
+                                <small>
+                                    {% if type_filter or q %}
+                                        Aucun résultat pour ces filtres.
+                                        <a href="{% url 'core:historique_stock' %}">Réinitialiser</a>
+                                    {% else %}
+                                        Les entrées et sorties apparaîtront ici dès la première
+                                        vente directe ou le premier réapprovisionnement.
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- ===== Pagination ===== -->
+        {% if is_paginated %}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 p-3 border-top">
+            <span class="text-muted small">
+                {{ page_obj.start_index }}–{{ page_obj.end_index }}
+                sur {{ page_obj.paginator.count }}
+            </span>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page={{ page_obj.previous_page_number }}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if q %}&q={{ q }}{% endif %}">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if num == page_obj.number %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="?page={{ num }}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if q %}&q={{ q }}{% endif %}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link"
+                           href="?page={{ page_obj.next_page_number }}{% if type_filter %}&type={{ type_filter }}{% endif %}{% if q %}&q={{ q }}{% endif %}">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </li>
+                    {% else %}
+                    <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+        setTimeout(function () {
+            bootstrap.Alert.getOrCreateInstance(el).close();
+        }, 3500);
+    });
+});
+</script>
+{% endblock %}
