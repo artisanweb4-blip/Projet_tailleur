@@ -23,7 +23,7 @@ Branche : `fix/audit-securite-500` (commits locaux, rien n'a été poussé sur G
 | — | Avertissement `staticfiles.W004` | ✅ Corrigé (`static/` créé) — `manage.py check` renvoie désormais **0 problème** |
 | — | 12 références `{% url %}` cassées | ✅ 11 corrigées — reste `'recherche_clients'` (vue inexistante, voir §10) |
 | — | `export_data.py` inutilisable | ✅ Corrigé (module de settings erroné, export UTF-8, modèles système exclus) |
-| 1 | **Contrôle par rôle non appliqué** | ⏳ **À faire** — harnais de test livré, voir §7 |
+| 1 | **Contrôle par rôle non appliqué** | ✅ **Corrigé** (commit `7b246fe`) — matrice 33/33, voir §7 |
 | 16 | **`POST /inscription/` ne créait aucun compte** | ✅ Corrigé (commit `3eaacdd`), voir §6ter |
 | 17 | `MESSAGE_TAGS` absent → 42 messages d'erreur sans style | ✅ Corrigé |
 | 18 | Messages flash jamais affichés sur le tableau de bord | ✅ Corrigé |
@@ -481,8 +481,41 @@ Règles de référence : Profil.DESCRIPTIONS_ROLES
 ⚠️  5 action(s) réellement exécutée(s) par un rôle qui ne le devrait pas.
 ```
 
-Ce script est **réexécutable en l'état** : c'est lui qui validera le correctif.
-Quand les 8 lignes passeront à ✅, l'autorisation par rôle sera branchée.
+Ce script est **réexécutable en l'état** : c'est lui qui valide le correctif.
+
+### Résultat après le commit `7b246fe`
+
+```
+✅ POST /depenses/ajouter/                GESTIONNAIRE  attendu=bloque  obtenu=bloqué
+✅ POST /clients/<pk>/supprimer/          COMPTABLE     attendu=bloque  obtenu=bloqué
+✅ POST /employes/<pk>/supprimer/         COMPTABLE     attendu=bloque  obtenu=bloqué
+✅ POST /modeles/<pk>/supprimer/          GESTIONNAIRE  attendu=bloque  obtenu=bloqué
+✅ POST /accessoires/<pk>/supprimer/      GESTIONNAIRE  attendu=bloque  obtenu=bloqué
+✅ POST /employes/ajouter/                COMPTABLE     attendu=bloque  obtenu=bloqué
+✅ POST /utilisateurs/ajouter/ (role=ADMIN) GESTIONNAIRE attendu=bloque  obtenu=bloqué
+✅ POST /parametres/ (update_atelier)     COMPTABLE     attendu=bloque  obtenu=bloqué
+
+8/8 contrôles conformes.
+✅ Le contrôle par rôle est appliqué partout.
+```
+
+Et `dev/matrice_droits.py`, qui teste les 33 cellules de la matrice produit
+(11 fonctions × 3 rôles) en HTTP réel : **33/33 conformes**.
+
+### Comment c'est implémenté
+
+- `core/droits.py` : la matrice, les libellés, le rattachement de chaque vue à
+  sa fonction, `peut(user, fonction)` et `droits_de(user)`.
+- `core/decorators.py` : `@droit_requis('…')`, posé sur les 59 vues métier.
+  Refus = redirection vers le tableau de bord avec un message nommant la
+  fonction refusée — jamais de 403 nue.
+- `base.html` : les entrées de menu interdites sont masquées via `peut`,
+  exposé dans tous les templates par le context processor.
+- Deux rattachements assumés, documentés dans `core/droits.py` :
+  `api_mensurations_client` suit « consulter les commandes » (cet endpoint ne
+  sert qu'aux pages commandes, que le comptable consulte) ;
+  `fiche_atelier_pdf` / `fiche_ligne_pdf` suivent « créer une commande »
+  (bons de travail de production).
 
 > Les trois ✅ proviennent des gardes `_est_admin` déjà présentes dans les vues
 > `parametres_view`, `ajouter_utilisateur` et `ajouter_employe`. Le reste du code

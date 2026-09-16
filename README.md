@@ -197,13 +197,15 @@ python manage.py migrate
 python manage.py setup_demo        # jeu de données — fourni par le dépôt
 python /chemin/vers/dev/rbac.py            # matrice page × rôle : qui voit quoi
 python /chemin/vers/dev/escalade.py        # écritures croisées entre rôles
+python /chemin/vers/dev/matrice_droits.py  # les 33 cellules de la matrice produit
 python /chemin/vers/dev/audit_templates.py # {% url %} cassées + templates orphelins
 ```
 
 `dev/rbac.py` affiche les 14 pages principales croisées avec les 4 rôles et signale tout
 crash. `dev/escalade.py` exécute 8 écritures interdites et compte celles qui passent quand
-même — **3/8 actuellement**, ce qui mesure le défaut d'autorisation décrit dans `AUDIT.md` §7.
-Quand le contrôle par rôle sera branché, ce script doit afficher 8/8.
+même : **8/8 bloquées** depuis que la matrice est appliquée. `dev/matrice_droits.py` teste
+les 33 cellules de la matrice produit (11 fonctions × 3 rôles) : **33/33 conformes**.
+Ces deux scripts sont le garde-fou : toute régression d'autorisation les fait rougir.
 
 Pour un jeu de données plus riche, `dev/seed.py` fait la même chose que `setup_demo` en
 recréant la base de zéro.
@@ -230,10 +232,10 @@ et plan d'action en 5 étapes.
 
 À retenir avant toute mise en ligne :
 
-- 🔴 **Le contrôle par rôle n'est pas encore appliqué** : toutes les vues sont protégées par
-  `@login_required` et par le filtrage d'atelier, mais pas par le rôle. Un COMPTABLE peut
-  actuellement supprimer un client, un GESTIONNAIRE peut créer une dépense.
-  Suivi dans `AUDIT.md` §7, correctif à l'étape 3 du plan d'action.
+- ✅ **Le contrôle par rôle est appliqué** (matrice produit dans `core/droits.py`,
+  décorateur `@droit_requis` sur les 59 vues métier). Vérifiable à tout moment :
+  `dev/matrice_droits.py` (33 cellules) et `dev/escalade.py` (8 écritures interdites).
+  Toute nouvelle vue doit être rattachée à une fonction de la matrice.
 - 🟠 **Aucun test automatisé** (`core/tests.py` est vide).
 - 🟠 **Deux systèmes d'abonnement parallèles** non reliés : `core.Atelier`/`PlanAbonnement`
   et `saas_admin.Boutique`/`FormuleAbonnement`.
