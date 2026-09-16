@@ -321,9 +321,21 @@ def changer_mot_de_passe(request):
 # ==========================================
 @login_required
 def dashboard(request):
+    if request.user.is_superuser:
+        return redirect('saas_admin:superadmin_dashboard')
+
     atelier = get_user_atelier(request.user)
     if not atelier:
-        messages.error(request, "Aucun atelier n'est associé à votre compte.")
+        # Bug d'origine : on renvoyait l'utilisateur vers la page de
+        # connexion, qui renvoie l'utilisateur authentifié vers le
+        # tableau de bord -> boucle de redirection infinie (le navigateur
+        # n'affiche jamais rien). On ferme la session et on explique.
+        logout(request)
+        messages.error(
+            request,
+            "Aucun atelier n'est associé à ce compte. Reconnectez-vous "
+            "avec un compte membre d'un atelier."
+        )
         return redirect('core:connexion')
 
     aujourdhui = timezone.now().date()
@@ -2283,7 +2295,7 @@ def parametres_view(request):
             "Aucun atelier n'est associé à votre compte. "
             "Contactez l'administrateur de votre atelier."
         )
-        return redirect('core:connexion')
+        return redirect('core:mon_profil')
 
     profil = getattr(request.user, 'profil', None)
     est_admin = _est_admin(request.user)
