@@ -1,0 +1,246 @@
+{% extends 'saas_admin/base_superadmin.html' %}
+
+{% block title %}Abonnements - Super Admin TailleurPro{% endblock %}
+{% block nav_abonnements %}active{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pricing-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 1.25rem;
+        transition: all 0.2s ease-in-out;
+        position: relative;
+    }
+    .pricing-card.popular {
+        border: 2px solid #0d6efd;
+        box-shadow: 0 10px 25px rgba(13, 110, 253, 0.1);
+    }
+    .badge-popular {
+        position: absolute;
+        top: -14px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #0d6efd;
+        color: white;
+        font-size: 0.75rem;
+        font-weight: 700;
+        padding: 4px 16px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .price-amount {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #0f172a;
+    }
+    .feature-list li {
+        margin-bottom: 0.8rem;
+        font-size: 0.95rem;
+        color: #475569;
+    }
+</style>
+{% endblock %}
+
+{% block top_navbar %}
+<div class="d-flex align-items-center justify-content-between w-100">
+    <h5 class="m-0 fw-bold">Gestion des Offres d'Abonnement</h5>
+    <button type="button" class="btn btn-primary btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#addPlanModal">
+        <i class="bi bi-plus-lg me-1"></i> Nouveau Plan
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="text-center my-4">
+    <h2 class="fw-bold text-dark">Des abonnements adaptés à votre atelier</h2>
+    <p class="text-muted">Choisissez l'offre qui correspond à la taille de votre activité.</p>
+</div>
+
+<div class="row g-4 justify-content-center mb-5 align-items-stretch">
+    {% for formule in formules %}
+        <div class="col-lg-4 col-md-6 d-flex">
+            <div class="pricing-card p-4 p-xl-5 w-100 d-flex flex-column justify-content-between {% if formule.est_populaire %}popular{% endif %}">
+                {% if formule.est_populaire %}
+                    <span class="badge-popular">Populaire</span>
+                {% endif %}
+
+                <div>
+                    <!-- Actions d'édition rapide (Super Admin) -->
+                    <div class="d-flex justify-content-end gap-1 mb-2">
+                        <button class="btn btn-sm btn-light border text-secondary" data-bs-toggle="modal" data-bs-target="#editPlanModal{{ formule.id }}" title="Modifier">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="btn btn-sm btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#deletePlanModal{{ formule.id }}" title="Supprimer">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                    </div>
+
+                    <h4 class="fw-bold text-dark mb-1">{{ formule.nom }}</h4>
+                    <p class="text-muted small mb-4">{{ formule.description|default:"Formule personnalisée pour atelier" }}</p>
+
+                    <div class="mb-4">
+                        <span class="price-amount">{{ formule.prix }}</span>
+                        <span class="text-muted fw-semibold">FCFA / mois</span>
+                    </div>
+
+                    <ul class="list-unstyled feature-list mb-4">
+                        {% for feature in formule.get_fonctionnalites_list %}
+                            <li class="d-flex align-items-center gap-2">
+                                <i class="bi bi-check-lg text-primary fs-5"></i>
+                                <span>{{ feature }}</span>
+                            </li>
+                        {% endfor %}
+                        {% for feature_off in formule.get_non_incluses_list %}
+                            <li class="d-flex align-items-center gap-2 text-muted">
+                                <i class="bi bi-x-lg text-secondary opacity-50 fs-6"></i>
+                                <span class="text-decoration-line-through opacity-75">{{ feature_off }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+
+                <div>
+                    {% if formule.est_populaire %}
+                        <button class="btn btn-primary btn-lg w-100 fw-bold py-2 shadow-sm" data-bs-toggle="modal" data-bs-target="#editPlanModal{{ formule.id }}">
+                            Modifier cette offre
+                        </button>
+                    {% else %}
+                        <button class="btn btn-outline-primary btn-lg w-100 fw-semibold py-2" data-bs-toggle="modal" data-bs-target="#editPlanModal{{ formule.id }}">
+                            Modifier cette offre
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% empty %}
+        <div class="col-12 text-center py-5">
+            <i class="bi bi-card-checklist fs-1 text-muted d-block mb-2"></i>
+            <p class="text-muted">Aucun abonnement configuré.</p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- 1. Modal Ajout d'Abonnement -->
+<div class="modal fade" id="addPlanModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">Créer un abonnement</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'saas_admin:ajouter_abonnement' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Nom de l'offre</label>
+                        <input type="text" name="nom" class="form-control" placeholder="ex: Atelier Pro" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Description</label>
+                        <input type="text" name="description" class="form-control" placeholder="ex: Pour les ateliers avec employés">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Prix (FCFA / mois)</label>
+                        <input type="number" name="prix" class="form-control" placeholder="15000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Fonctionnalités incluses (une par ligne)</label>
+                        <textarea name="fonctionnalites_incluses" class="form-control" rows="3" placeholder="Clients illimités&#10;Rappels SMS automatiques"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Fonctionnalités non incluses (une par ligne)</label>
+                        <textarea name="fonctionnalites_exclues" class="form-control" rows="2" placeholder="Support prioritaire 24/7"></textarea>
+                    </div>
+                    <div class="form-check form-switch mt-3">
+                        <input class="form-check-input" type="checkbox" name="est_populaire" id="addPopulaire">
+                        <label class="form-check-label fw-semibold" for="addPopulaire">Marquer comme offre "Populaire"</label>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold">Enregistrer l'offre</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 2. Modals Modification & Suppression (Générés par boucle) -->
+{% for formule in formules %}
+    <!-- Modal Édition -->
+    <div class="modal fade" id="editPlanModal{{ formule.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold">Modifier l'abonnement {{ formule.nom }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form method="post" action="{% url 'saas_admin:modifier_abonnement' formule.id %}">
+                    {% csrf_token %}
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Nom de l'offre</label>
+                            <input type="text" name="nom" class="form-control" value="{{ formule.nom }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Description</label>
+                            <input type="text" name="description" class="form-control" value="{{ formule.description }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Prix (FCFA / mois)</label>
+                            <input type="number" name="prix" class="form-control" value="{{ formule.prix }}" required>
+                        </div>
+                        <div class="mb-3">
+                              <label class="form-label small fw-semibold">Durée (en mois)</label>
+                              <input type="number" name="duree_mois" class="form-control" value="{{ formule.duree_mois|default:1 }}" min="1" required>
+                         </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Fonctionnalités incluses (une par ligne)</label>
+                            <textarea name="fonctionnalites_incluses" class="form-control" rows="3">{{ formule.fonctionnalites_incluses_str }}</textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Fonctionnalités non incluses (une par ligne)</label>
+                            <textarea name="fonctionnalites_exclues" class="form-control" rows="2">{{ formule.fonctionnalites_exclues_str }}</textarea>
+                        </div>
+                        <div class="form-check form-switch mt-3">
+                            <input class="form-check-input" type="checkbox" name="est_populaire" id="editPopulaire{{ formule.id }}" {% if formule.est_populaire %}checked{% endif %}>
+                            <label class="form-check-label fw-semibold" for="editPopulaire{{ formule.id }}">Marquer comme offre "Populaire"</label>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 p-4 pt-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">Mettre à jour</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Suppression -->
+    <div class="modal fade" id="deletePlanModal{{ formule.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold text-danger">Supprimer la formule</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-0">Voulez-vous vraiment supprimer l'offre <strong>{{ formule.nom }}</strong> ?</p>
+                    <small class="text-danger d-block mt-2"><i class="bi bi-exclamation-circle me-1"></i> Cette action affectera l'affichage des prix pour vos futurs clients.</small>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <form method="post" action="{% url 'saas_admin:supprimer_abonnement' formule.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger px-4 fw-semibold">Supprimer</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endfor %}
+{% endblock %}

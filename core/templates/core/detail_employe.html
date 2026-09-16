@@ -1,0 +1,758 @@
+{% extends "base.html" %}
+{% block title %}{{ emp.nom_complet }} — Employé{% endblock %}
+
+{% block extra_css %}
+<style>
+    .de-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
+
+    /* ===== EN-TÊTE PROFIL ===== */
+    .profil-card {
+        background:linear-gradient(120deg,#bdbcbe 0%,#e1dee5 45%,#ddd5e5 100%);
+        border-radius:18px; color:#fff; padding:1.5rem 1.75rem;
+    }
+    .profil-card.inactif { background:linear-gradient(120deg,#6b7280,#9ca3af); }
+    .pf-avatar {
+        width:78px; height:78px; border-radius:20px; flex-shrink:0;
+        background:rgba(255,255,255,.2); border:2px solid rgba(255,255,255,.35);
+        display:flex; align-items:center; justify-content:center;
+        font-weight:700; font-size:1.6rem; overflow:hidden;
+    }
+    .pf-avatar img { width:100%; height:100%; object-fit:cover; }
+    .pf-nom { font-size:1.5rem; font-weight:700; line-height:1.2; }
+    .pf-mat { font-family:ui-monospace,monospace; font-size:.8rem; opacity:.8; }
+    .pf-sub { opacity:.9; font-size:.9rem; }
+    .pf-tag {
+        display:inline-flex; align-items:center; gap:.3rem;
+        background:rgba(255,255,255,.2); border:1px solid rgba(255,255,255,.3);
+        padding:.2rem .65rem; border-radius:999px; font-size:.78rem; font-weight:600;
+    }
+
+    /* ===== KPI ===== */
+    .kpi-d { background:#fff; border:1px solid #eef0f6; border-radius:14px;
+             padding:.9rem 1.1rem; height:100%; }
+    .kpi-d .lbl { color:#6b7280; font-size:.78rem; }
+    .kpi-d .val { font-size:1.5rem; font-weight:700; color:#111827; line-height:1.2; }
+    .kpi-d .hint { color:#9ca3af; font-size:.73rem; }
+    .kpi-ic { width:38px; height:38px; border-radius:10px; color:#fff; flex-shrink:0;
+              display:flex; align-items:center; justify-content:center; }
+    .ic-v { background:linear-gradient(135deg,#7c3aed,#6d28d9); }
+    .ic-g { background:linear-gradient(135deg,#10b981,#059669); }
+    .ic-o { background:linear-gradient(135deg,#f59e0b,#ea580c); }
+    .ic-b { background:linear-gradient(135deg,#0ea5e9,#0284c7); }
+
+    /* ===== PANELS ===== */
+    .panel { background:#fff; border:1px solid #eef0f6; border-radius:16px; }
+    .panel-head { padding:1rem 1.25rem .5rem; display:flex;
+                  justify-content:space-between; align-items:center; }
+    .panel-title { font-weight:600; color:#111827; font-size:1rem; margin:0; }
+
+    .t-row { display:flex; align-items:center; gap:.85rem;
+             padding:.8rem 1.25rem; border-top:1px solid #f4f5f9; text-decoration:none; }
+    .t-row:first-of-type { border-top:none; }
+    .t-row:hover { background:#fafbff; }
+    .date-box { width:46px; height:46px; border-radius:11px; flex-shrink:0;
+                display:flex; flex-direction:column; align-items:center;
+                justify-content:center; line-height:1; }
+    .date-box .d { font-weight:700; font-size:1rem; }
+    .date-box .m { font-size:.6rem; font-weight:600; letter-spacing:.4px; }
+    .t-titre { font-weight:600; color:#111827; font-size:.92rem; }
+    .t-sub { color:#9ca3af; font-size:.79rem; }
+
+    .pill { display:inline-block; padding:.14rem .55rem; border-radius:999px;
+            font-size:.72rem; font-weight:600; white-space:nowrap; }
+    .p-late { background:#fef2f2; color:#e11d48; border:1px solid #fecdd3; }
+    .p-soon { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
+    .p-ok   { background:#f3f4f6; color:#4b5563; border:1px solid #e5e7eb; }
+    .p-done { background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; }
+    .p-info { background:#eef2ff; color:#4f46e5; border:1px solid #c7d2fe; }
+
+    .info-row { display:flex; justify-content:space-between;
+                padding:.55rem 0; border-bottom:1px solid #f4f5f9; font-size:.88rem; }
+    .info-row:last-child { border-bottom:none; }
+    .info-lbl { color:#6b7280; }
+    .info-val { font-weight:600; color:#111827; text-align:right; }
+
+    .charge-track { height:8px; background:#eef0f6; border-radius:5px; overflow:hidden; }
+    .charge-fill { height:100%; border-radius:5px; }
+
+    .empty-d { padding:2.5rem 1rem; text-align:center; color:#9ca3af; }
+    .nav-tabs .nav-link { color:#6b7280; font-weight:600; border:none;
+                          border-bottom:2px solid transparent; }
+    .nav-tabs .nav-link.active { color:#6d28d9; border-bottom-color:#6d28d9; background:none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="de-wrap">
+<div class="container-fluid px-md-3">
+
+    <!-- Fil d'ariane -->
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <a href="{% url 'core:liste_employes' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>Retour aux employés
+        </a>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-outline-dark"
+                    data-bs-toggle="modal" data-bs-target="#modalEditEmploye">
+                <i class="bi bi-pencil me-1"></i>Modifier
+            </button>
+            <button type="button" class="btn btn-sm btn-success"
+                    data-bs-toggle="modal" data-bs-target="#modalPaie">
+                <i class="bi bi-cash-coin me-1"></i>Enregistrer une paie
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div id="messagesZone">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- ===== PROFIL ===== -->
+    <div class="profil-card mb-4 {% if not emp.est_actif %}inactif{% endif %}">
+        <div class="d-flex flex-column flex-md-row align-items-md-center gap-3">
+            <div class="pf-avatar">
+                {% if emp.photo %}
+                    <img src="{{ emp.photo.url }}" alt="{{ emp.nom_complet }}">
+                {% else %}
+                    {{ emp.initiales }}
+                {% endif %}
+            </div>
+            <div class="flex-grow-1">
+                <div class="pf-nom">{{ emp.nom_complet }}</div>
+                <div class="pf-mat mb-2">{{ emp.matricule }}</div>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="pf-tag"><i class="bi bi-briefcase"></i>{{ emp.get_poste_display }}</span>
+                    <span class="pf-tag"><i class="bi bi-circle-fill" style="font-size:.5rem;"></i>{{ emp.get_statut_display }}</span>
+                    <span class="pf-tag"><i class="bi bi-telephone"></i>{{ emp.telephone }}</span>
+                    <span class="pf-tag"><i class="bi bi-cash"></i>{{ emp.libelle_remuneration }} {{ atelier.devise }}</span>
+                </div>
+                {% if emp.specialites %}
+                <div class="pf-sub mt-2">
+                    <i class="bi bi-award me-1"></i>{{ emp.specialites }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="text-md-end">
+                <div class="pf-sub">Net estimé ce mois</div>
+                <div class="pf-nom">{{ net_estime|floatformat:0 }} {{ atelier.devise }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== KPI ===== -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-d d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Travaux en cours</div>
+                    <div class="val">{{ nb_en_cours }}</div>
+                    <div class="hint">{{ emp.get_statut_display }}</div>
+                </div>
+                <div class="kpi-ic ic-v"><i class="bi bi-scissors"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-d d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Livrées ce mois</div>
+                    <div class="val">{{ nb_livrees_mois }}</div>
+                    <div class="hint">{{ nb_livrees_total }} au total</div>
+                </div>
+                <div class="kpi-ic ic-g"><i class="bi bi-check2-circle"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-d d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Commissions du mois</div>
+                    <div class="val" style="font-size:1.2rem;">
+                        {{ commissions_mois|floatformat:0 }} {{ atelier.devise }}
+                    </div>
+                    <div class="hint">Pièces livrées</div>
+                </div>
+                <div class="kpi-ic ic-o"><i class="bi bi-percent"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-d d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">CA généré</div>
+                    <div class="val" style="font-size:1.2rem;">
+                        {{ ca_genere|floatformat:0 }} {{ atelier.devise }}
+                    </div>
+                    <div class="hint">Depuis l'embauche</div>
+                </div>
+                <div class="kpi-ic ic-b"><i class="bi bi-graph-up-arrow"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- ===== COLONNE GAUCHE : ONGLETS ===== -->
+        <div class="col-12 col-xl-8">
+            <div class="panel">
+                <ul class="nav nav-tabs px-3 pt-2" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab"
+                                data-bs-target="#tab-cours" type="button">
+                            <i class="bi bi-hourglass-split me-1"></i>En cours
+                            <span class="badge bg-primary ms-1">{{ nb_en_cours }}</span>
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab"
+                                data-bs-target="#tab-hist" type="button">
+                            <i class="bi bi-clock-history me-1"></i>Historique
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab"
+                                data-bs-target="#tab-paies" type="button">
+                            <i class="bi bi-receipt me-1"></i>Paies
+                            <span class="badge bg-secondary ms-1">{{ paies|length }}</span>
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+
+                    <!-- ONGLET 1 : TRAVAUX EN COURS -->
+                    <div class="tab-pane fade show active" id="tab-cours" role="tabpanel">
+                        {% for t in travaux %}
+                        <a href="{% url 'core:detail_commande' t.l.commande.pk %}" class="t-row">
+                            <div class="date-box"
+                                 style="{% if t.retard %}background:#fef2f2; color:#e11d48;{% else %}background:#ede9fe; color:#6d28d9;{% endif %}">
+                                <span class="d">{{ t.l.commande.date_livraison_prevue|date:"d" }}</span>
+                                <span class="m">{{ t.l.commande.date_livraison_prevue|date:"M"|upper }}</span>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="t-titre text-truncate">{{ t.l.libelle }}</div>
+                                <div class="t-sub text-truncate">
+                                    {{ t.l.commande.code }} &middot; {{ t.l.commande.client }}
+                                    {% if t.l.quantite > 1 %} &middot; &times;{{ t.l.quantite }}{% endif %}
+                                </div>
+                            </div>
+                            <div class="d-none d-md-block me-2">
+                                {% if t.l.etat_travail == 'TERMINE' %}
+                                    <span class="pill p-done">Terminé</span>
+                                {% elif t.l.etat_travail == 'EN_COURS' %}
+                                    <span class="pill p-info">En cours</span>
+                                {% else %}
+                                    <span class="pill p-ok">À faire</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-end" style="min-width:95px;">
+                                {% if t.retard %}
+                                    <span class="pill p-late">{{ t.retard_jours }} j retard</span>
+                                {% elif t.delta == 0 %}
+                                    <span class="pill p-soon">Aujourd'hui</span>
+                                {% elif t.delta <= 3 %}
+                                    <span class="pill p-soon">dans {{ t.delta }} j</span>
+                                {% else %}
+                                    <span class="pill p-ok">dans {{ t.delta }} j</span>
+                                {% endif %}
+                                {% if t.commission %}
+                                <div class="t-sub mt-1">
+                                    +{{ t.commission|floatformat:0 }} {{ atelier.devise }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </a>
+                        {% empty %}
+                        <div class="empty-d">
+                            <i class="bi bi-inbox display-6 d-block opacity-50 mb-2"></i>
+                            <span class="fw-semibold text-dark d-block mb-1">Aucun travail en cours</span>
+                            <small>Cet employé est disponible pour de nouvelles coutures.</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- ONGLET 2 : HISTORIQUE -->
+                    <div class="tab-pane fade" id="tab-hist" role="tabpanel">
+                        {% for l in livrees %}
+                        <a href="{% url 'core:detail_commande' l.commande.pk %}" class="t-row">
+                            <div class="date-box" style="background:#ecfdf5; color:#059669;">
+                                <span class="d">{{ l.commande.date_livraison_effective|date:"d"|default:"--" }}</span>
+                                <span class="m">{{ l.commande.date_livraison_effective|date:"M"|upper }}</span>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="t-titre text-truncate">{{ l.libelle }}</div>
+                                <div class="t-sub text-truncate">
+                                    {{ l.commande.code }} &middot; {{ l.commande.client }}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-dark" style="font-size:.9rem;">
+                                    {{ l.prix_net|floatformat:0 }} {{ atelier.devise }}
+                                </div>
+                                <span class="pill p-done">Livré</span>
+                            </div>
+                        </a>
+                        {% empty %}
+                        <div class="empty-d">
+                            <i class="bi bi-clock-history display-6 d-block opacity-50 mb-2"></i>
+                            <small>Aucune pièce livrée pour le moment.</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- ONGLET 3 : PAIES -->
+                    <div class="tab-pane fade" id="tab-paies" role="tabpanel">
+                        {% for p in paies %}
+                        <div class="t-row">
+                            <div class="date-box" style="background:#eff6ff; color:#0284c7;">
+                                <span class="d">{{ p.date_paiement|date:"d"|default:"--" }}</span>
+                                <span class="m">{{ p.date_paiement|date:"M"|upper }}</span>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="t-titre">{{ p.periode_libelle }}</div>
+                                <div class="t-sub">
+                                    Fixe {{ p.salaire_fixe|floatformat:0 }}
+                                    {% if p.commissions %} &middot; Commissions {{ p.commissions|floatformat:0 }}{% endif %}
+                                    {% if p.primes %} &middot; Primes {{ p.primes|floatformat:0 }}{% endif %}
+                                    {% if p.avances %} &middot; Avances -{{ p.avances|floatformat:0 }}{% endif %}
+                                    &middot; {{ p.nb_pieces }} pièce{{ p.nb_pieces|pluralize }}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold text-dark">
+                                    {{ p.net_a_payer|floatformat:0 }} {{ atelier.devise }}
+                                </div>
+                                {% if p.statut == 'PAYEE' %}
+                                    <span class="pill p-done">Payée</span>
+                                {% else %}
+                                    <span class="pill p-soon">Brouillon</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="empty-d">
+                            <i class="bi bi-receipt display-6 d-block opacity-50 mb-2"></i>
+                            <span class="fw-semibold text-dark d-block mb-1">Aucune paie enregistrée</span>
+                            <small>Utilisez le bouton « Enregistrer une paie » en haut.</small>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== COLONNE DROITE ===== -->
+        <div class="col-12 col-xl-4">
+
+            <!-- Charge de travail -->
+            <div class="panel p-3 mb-3">
+                <p class="panel-title mb-2">
+                    <i class="bi bi-speedometer2 me-1 text-primary"></i>Charge de travail
+                </p>
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="t-sub">{{ nb_en_cours }} pièce{{ nb_en_cours|pluralize }} en cours</span>
+                    <span class="fw-bold text-dark">{{ emp.charge_pct }}%</span>
+                </div>
+                <div class="charge-track">
+                    <div class="charge-fill"
+                         style="width:{{ emp.charge_pct }}%;
+                         {% if emp.niveau_charge == 'SURCHARGE' %}background:#e11d48;
+                         {% elif emp.niveau_charge == 'CHARGE' %}background:#f59e0b;
+                         {% elif emp.niveau_charge == 'NORMAL' %}background:#0284c7;
+                         {% else %}background:#10b981;{% endif %}"></div>
+                </div>
+                {% if emp.nb_en_retard %}
+                <div class="alert alert-danger py-2 mt-3 mb-0 small">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    {{ emp.nb_en_retard }} pièce{{ emp.nb_en_retard|pluralize }} en retard
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Rémunération -->
+            <div class="panel p-3 mb-3">
+                <p class="panel-title mb-2">
+                    <i class="bi bi-cash-coin me-1 text-primary"></i>Rémunération
+                </p>
+                <div class="info-row">
+                    <span class="info-lbl">Mode</span>
+                    <span class="info-val">{{ emp.get_type_remuneration_display }}</span>
+                </div>
+                {% if emp.a_fixe %}
+                <div class="info-row">
+                    <span class="info-lbl">Salaire fixe</span>
+                    <span class="info-val">{{ emp.salaire_mensuel|floatformat:0 }} {{ atelier.devise }}</span>
+                </div>
+                {% endif %}
+                {% if emp.a_commission %}
+                <div class="info-row">
+                    <span class="info-lbl">Commission</span>
+                    <span class="info-val">
+                        {{ emp.commission_valeur|floatformat:0 }}
+                        {% if emp.commission_type == 'POURCENTAGE' %}%{% else %}{{ atelier.devise }} / pièce{% endif %}
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-lbl">Commissions du mois</span>
+                    <span class="info-val text-success">
+                        +{{ commissions_mois|floatformat:0 }} {{ atelier.devise }}
+                    </span>
+                </div>
+                {% endif %}
+                <div class="info-row">
+                    <span class="info-lbl fw-bold">Net estimé</span>
+                    <span class="info-val" style="font-size:1.05rem;">
+                        {{ net_estime|floatformat:0 }} {{ atelier.devise }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Coordonnées -->
+            <div class="panel p-3 mb-3">
+                <p class="panel-title mb-2">
+                    <i class="bi bi-person-vcard me-1 text-primary"></i>Coordonnées
+                </p>
+                <div class="info-row">
+                    <span class="info-lbl">Téléphone</span>
+                    <span class="info-val">
+                        <a href="tel:{{ emp.telephone }}" class="text-decoration-none">{{ emp.telephone }}</a>
+                    </span>
+                </div>
+                {% if emp.telephone_urgence %}
+                <div class="info-row">
+                    <span class="info-lbl">Urgence</span>
+                    <span class="info-val">{{ emp.telephone_urgence }}</span>
+                </div>
+                {% endif %}
+                {% if emp.adresse %}
+                <div class="info-row">
+                    <span class="info-lbl">Adresse</span>
+                    <span class="info-val">{{ emp.adresse }}</span>
+                </div>
+                {% endif %}
+                {% if emp.date_naissance %}
+                <div class="info-row">
+                    <span class="info-lbl">Naissance</span>
+                    <span class="info-val">{{ emp.date_naissance|date:"d/m/Y" }}</span>
+                </div>
+                {% endif %}
+                {% if emp.date_embauche %}
+                <div class="info-row">
+                    <span class="info-lbl">Embauché le</span>
+                    <span class="info-val">{{ emp.date_embauche|date:"d/m/Y" }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% if emp.notes %}
+            <div class="panel p-3 mb-3">
+                <p class="panel-title mb-2">
+                    <i class="bi bi-sticky me-1 text-primary"></i>Notes internes
+                </p>
+                <div class="t-sub">{{ emp.notes|linebreaks }}</div>
+            </div>
+            {% endif %}
+
+            <!-- Zone danger -->
+            <div class="panel p-3">
+                <p class="panel-title mb-2 text-danger">
+                    <i class="bi bi-exclamation-triangle me-1"></i>Zone sensible
+                </p>
+                <p class="t-sub mb-2">
+                    La suppression retire l'employé du registre. Les coutures liées
+                    resteront mais sans couturier assigné.
+                </p>
+                <form method="post" action="{% url 'core:supprimer_employe' emp.pk %}"
+                      onsubmit="return confirm('Supprimer définitivement {{ emp.nom_complet }} ?');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                        <i class="bi bi-trash me-1"></i>Supprimer cet employé
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+</div>
+
+<!-- ===== MODAL MODIFICATION ===== -->
+<div class="modal fade" id="modalEditEmploye" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="{% url 'core:modifier_employe' emp.pk %}"
+                  enctype="multipart/form-data" id="formEditEmploye">
+                {% csrf_token %}
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-pencil-square me-2"></i>Modifier {{ emp.nom_complet }}
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+
+                    <h6 class="fw-bold text-dark mb-3">
+                        <i class="bi bi-person me-1 text-primary"></i>Identité
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                            <input type="text" name="nom" class="form-control" required value="{{ emp.nom }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Prénom</label>
+                            <input type="text" name="prenom" class="form-control" value="{{ emp.prenom }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Téléphone <span class="text-danger">*</span></label>
+                            <input type="tel" name="telephone" class="form-control" required value="{{ emp.telephone }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Contact d'urgence</label>
+                            <input type="tel" name="telephone_urgence" class="form-control" value="{{ emp.telephone_urgence }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Date de naissance</label>
+                            <input type="date" name="date_naissance" class="form-control"
+                                   value="{{ emp.date_naissance|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Photo</label>
+                            <input type="file" name="photo" class="form-control" accept="image/*">
+                            <small class="text-muted">Laissez vide pour conserver l'actuelle.</small>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Adresse</label>
+                            <textarea name="adresse" class="form-control" rows="2">{{ emp.adresse }}</textarea>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mb-3">
+                        <i class="bi bi-briefcase me-1 text-primary"></i>Poste
+                    </h6>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Poste</label>
+                            <select name="poste" class="form-select">
+                                {% for code, label in emp.POSTES %}
+                                <option value="{{ code }}" {% if emp.poste == code %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Statut</label>
+                            <select name="statut" class="form-select">
+                                {% for code, label in emp.STATUTS %}
+                                <option value="{{ code }}" {% if emp.statut == code %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Date d'embauche</label>
+                            <input type="date" name="date_embauche" class="form-control"
+                                   value="{{ emp.date_embauche|date:'Y-m-d' }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Spécialités</label>
+                            <input type="text" name="specialites" class="form-control" value="{{ emp.specialites }}">
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold text-dark mb-3">
+                        <i class="bi bi-cash-coin me-1 text-primary"></i>Rémunération
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Mode</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="type_remuneration" id="er_fixe"
+                                       value="FIXE" {% if emp.type_remuneration == 'FIXE' %}checked{% endif %}>
+                                <label class="btn btn-outline-primary" for="er_fixe">Fixe mensuel</label>
+                                <input type="radio" class="btn-check" name="type_remuneration" id="er_piece"
+                                       value="PIECE" {% if emp.type_remuneration == 'PIECE' %}checked{% endif %}>
+                                <label class="btn btn-outline-primary" for="er_piece">À la pièce</label>
+                                <input type="radio" class="btn-check" name="type_remuneration" id="er_mixte"
+                                       value="MIXTE" {% if emp.type_remuneration == 'MIXTE' %}checked{% endif %}>
+                                <label class="btn btn-outline-primary" for="er_mixte">Fixe + commission</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 e-bloc-fixe">
+                            <label class="form-label fw-semibold">Salaire mensuel ({{ atelier.devise }})</label>
+                            <input type="number" name="salaire_mensuel" class="form-control"
+                                   step="any" min="0" value="{{ emp.salaire_mensuel|floatformat:0 }}">
+                        </div>
+                        <div class="col-md-6 e-bloc-comm">
+                            <label class="form-label fw-semibold">Type de commission</label>
+                            <select name="commission_type" class="form-select">
+                                <option value="MONTANT" {% if emp.commission_type == 'MONTANT' %}selected{% endif %}>
+                                    Montant fixe par pièce
+                                </option>
+                                <option value="POURCENTAGE" {% if emp.commission_type == 'POURCENTAGE' %}selected{% endif %}>
+                                    Pourcentage du prix
+                                </option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 e-bloc-comm">
+                            <label class="form-label fw-semibold">Valeur</label>
+                            <input type="number" name="commission_valeur" class="form-control"
+                                   step="any" min="0" value="{{ emp.commission_valeur|floatformat:0 }}">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Notes internes</label>
+                            <textarea name="notes" class="form-control" rows="2">{{ emp.notes }}</textarea>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL PAIE ===== -->
+<div class="modal fade" id="modalPaie" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="{% url 'core:creer_paie' emp.pk %}">
+                {% csrf_token %}
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-cash-coin me-2"></i>Enregistrer une paie
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+
+                    <div class="alert alert-light border py-2 mb-3 small">
+                        <i class="bi bi-info-circle me-1 text-primary"></i>
+                        Les commissions sont calculées automatiquement sur les pièces
+                        <strong>livrées</strong> pendant la période choisie.
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Du</label>
+                            <input type="date" name="periode_debut" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Au</label>
+                            <input type="date" name="periode_fin" class="form-control" required>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Primes ({{ atelier.devise }})</label>
+                            <input type="number" name="primes" class="form-control"
+                                   step="any" min="0" value="0">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-semibold">Avances à déduire</label>
+                            <input type="number" name="avances" class="form-control"
+                                   step="any" min="0" value="0">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Mode de paiement</label>
+                            <select name="mode_paiement" class="form-select">
+                                <option value="ESPECES">Espèces</option>
+                                <option value="MOBILE_MONEY">Mobile Money</option>
+                                <option value="VIREMENT">Virement bancaire</option>
+                                <option value="CHEQUE">Chèque</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning py-2 mt-3 mb-0 small">
+                        <i class="bi bi-exclamation-triangle me-1"></i>
+                        Une <strong>dépense</strong> de catégorie « Salaires » sera
+                        créée automatiquement en comptabilité.
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success fw-semibold">
+                        <i class="bi bi-check2-circle me-1"></i>Valider le paiement
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* Bascule des champs de rémunération dans le modal d'édition */
+    function majRemuEdit() {
+        const coche = document.querySelector('input[name="type_remuneration"]:checked');
+        const t = coche ? coche.value : 'FIXE';
+        document.querySelectorAll('.e-bloc-fixe').forEach(function (el) {
+            el.classList.toggle('d-none', t === 'PIECE');
+        });
+        document.querySelectorAll('.e-bloc-comm').forEach(function (el) {
+            el.classList.toggle('d-none', t === 'FIXE');
+        });
+    }
+    document.querySelectorAll('input[name="type_remuneration"]').forEach(function (r) {
+        r.addEventListener('change', majRemuEdit);
+    });
+    majRemuEdit();
+
+    /* Période de paie : mois en cours par défaut */
+    const modalPaie = document.getElementById('modalPaie');
+    if (modalPaie) {
+        modalPaie.addEventListener('show.bs.modal', function () {
+            const now = new Date();
+            const p = n => String(n).padStart(2, '0');
+            const debut = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-01';
+            const fin = now.getFullYear() + '-' + p(now.getMonth() + 1) + '-' + p(now.getDate());
+            this.querySelector('[name="periode_debut"]').value = debut;
+            this.querySelector('[name="periode_fin"]').value = fin;
+        });
+    }
+
+    /* Auto-masquage des messages */
+    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+        setTimeout(function () {
+            bootstrap.Alert.getOrCreateInstance(el).close();
+        }, 3500);
+    });
+});
+</script>
+
+<style>
+    /* Modal édition scrollable */
+    #modalEditEmploye .modal-dialog {
+        max-height: 94vh; margin: 3vh auto;
+        display: flex; flex-direction: column;
+    }
+    #modalEditEmploye .modal-content {
+        display: flex; flex-direction: column;
+        max-height: 100%; overflow: hidden;
+    }
+    #modalEditEmploye form {
+        display: flex; flex-direction: column;
+        flex: 1 1 auto; min-height: 0;
+    }
+    #modalEditEmploye .modal-header,
+    #modalEditEmploye .modal-footer { flex-shrink: 0; }
+    #modalEditEmploye .modal-body {
+        flex: 1 1 auto; overflow-y: auto; min-height: 0;
+        overscroll-behavior: contain;
+    }
+    #modalEditEmploye .modal-footer {
+        position: sticky; bottom: 0; background: #fff;
+        border-top: 1px solid #dee2e6; z-index: 5;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,375 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Agenda des livraisons{% endblock %}
+
+{% block extra_css %}
+<style>
+    .ag-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
+
+    /* ===== KPI ===== */
+    .kpi-a {
+        background:#fff; border:1px solid #eef0f6; border-radius:14px;
+        padding:.9rem 1.1rem; height:100%;
+    }
+    .kpi-a .lbl { color:#6b7280; font-size:.8rem; }
+    .kpi-a .val { font-size:1.6rem; font-weight:700; color:#111827; line-height:1.2; }
+    .kpi-ic {
+        width:38px; height:38px; border-radius:10px; color:#fff; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .ic-v { background:linear-gradient(135deg,#7c3aed,#6d28d9); }
+    .ic-b { background:linear-gradient(135deg,#0ea5e9,#0284c7); }
+    .ic-o { background:linear-gradient(135deg,#f59e0b,#ea580c); }
+    .ic-r { background:linear-gradient(135deg,#f43f5e,#e11d48); }
+
+    /* ===== CALENDRIER ===== */
+    .cal-card { background:#fff; border:1px solid #eef0f6; border-radius:16px; overflow:hidden; }
+    .cal-head {
+        display:flex; justify-content:space-between; align-items:center;
+        padding:1rem 1.25rem; border-bottom:1px solid #eef0f6;
+    }
+    .cal-mois { font-size:1.15rem; font-weight:700; color:#111827; text-transform:capitalize; }
+
+    .cal-grid { display:grid; grid-template-columns:repeat(7,1fr); }
+    .cal-dow {
+        padding:.55rem; text-align:center; font-size:.74rem; font-weight:700;
+        color:#9ca3af; text-transform:uppercase; letter-spacing:.5px;
+        background:#fafbff; border-bottom:1px solid #eef0f6;
+    }
+    .cal-cell {
+        min-height:118px; padding:.4rem; border-right:1px solid #f4f5f9;
+        border-bottom:1px solid #f4f5f9; position:relative; background:#fff;
+    }
+    .cal-cell:nth-child(7n) { border-right:none; }
+    .cal-cell.vide { background:#fcfcfe; }
+    .cal-cell.passe { background:#fbfbfd; }
+    .cal-cell.today { background:#f5f3ff; box-shadow:inset 0 0 0 2px #7c3aed; }
+    .cal-cell.alerte { background:#fffafa; }
+
+    .cal-num {
+        font-size:.82rem; font-weight:600; color:#4b5563;
+        width:24px; height:24px; border-radius:7px;
+        display:flex; align-items:center; justify-content:center; margin-bottom:.25rem;
+    }
+    .cal-cell.today .cal-num { background:#6d28d9; color:#fff; }
+    .cal-cell.passe .cal-num { color:#cbd5e1; }
+
+    .evt {
+        display:block; padding:.2rem .4rem; border-radius:6px;
+        font-size:.71rem; line-height:1.25; margin-bottom:.18rem;
+        text-decoration:none; overflow:hidden; text-overflow:ellipsis;
+        white-space:nowrap; font-weight:600; transition:transform .1s;
+    }
+    .evt:hover { transform:translateX(2px); }
+    .evt-plus { font-size:.68rem; color:#9ca3af; padding-left:.4rem; }
+
+    /* ===== LISTE ===== */
+    .liste-card { background:#fff; border:1px solid #eef0f6; border-radius:16px; }
+    .l-row {
+        display:flex; align-items:center; gap:.85rem;
+        padding:.8rem 1.1rem; border-top:1px solid #f4f5f9; text-decoration:none;
+    }
+    .l-row:first-of-type { border-top:none; }
+    .l-row:hover { background:#fafbff; }
+    .date-box {
+        width:48px; height:48px; border-radius:11px; flex-shrink:0;
+        display:flex; flex-direction:column; align-items:center; justify-content:center;
+        line-height:1;
+    }
+    .date-box .d { font-weight:700; font-size:1.05rem; }
+    .date-box .m { font-size:.62rem; font-weight:600; letter-spacing:.4px; }
+    .l-titre { font-weight:600; color:#111827; font-size:.93rem; }
+    .l-sub { color:#9ca3af; font-size:.8rem; }
+
+    .pill {
+        display:inline-block; padding:.14rem .55rem; border-radius:999px;
+        font-size:.72rem; font-weight:600; white-space:nowrap;
+    }
+    .p-late { background:#fef2f2; color:#e11d48; border:1px solid #fecdd3; }
+    .p-soon { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
+    .p-ok   { background:#f3f4f6; color:#4b5563; border:1px solid #e5e7eb; }
+    .p-pay  { background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; }
+
+    .empty-a { padding:3rem 1rem; text-align:center; color:#9ca3af; }
+
+    .legende { display:flex; gap:1rem; flex-wrap:wrap; font-size:.78rem; color:#6b7280; }
+    .lg-dot { width:10px; height:10px; border-radius:3px; display:inline-block; margin-right:.3rem; }
+
+    @media (max-width: 767px) {
+        .cal-cell { min-height:72px; padding:.25rem; }
+        .evt { font-size:.62rem; }
+        .cal-num { font-size:.74rem; width:20px; height:20px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ag-wrap">
+<div class="container-fluid px-md-3">
+
+    <!-- En-tête -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 gap-3">
+        <div>
+            <h1 class="h4 fw-bold text-dark mb-1">
+                <i class="bi bi-calendar-event me-2 text-primary"></i>Agenda des livraisons
+            </h1>
+            <p class="text-muted small mb-0">
+                Planning des commandes à livrer — en attente, en cours et prêtes.
+            </p>
+        </div>
+        <a href="{% url 'core:liste_commandes' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-list-ul me-1"></i>Toutes les commandes
+        </a>
+    </div>
+
+    <!-- KPI -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-a d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Ce mois</div>
+                    <div class="val">{{ nb_mois }}</div>
+                </div>
+                <div class="kpi-ic ic-v"><i class="bi bi-calendar3"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-a d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Aujourd'hui</div>
+                    <div class="val">{{ nb_aujourdhui }}</div>
+                </div>
+                <div class="kpi-ic ic-b"><i class="bi bi-sun-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-a d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Sous 7 jours</div>
+                    <div class="val">{{ nb_semaine }}</div>
+                </div>
+                <div class="kpi-ic ic-o"><i class="bi bi-truck"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-a d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">En retard</div>
+                    <div class="val {% if nb_retard %}text-danger{% endif %}">{{ nb_retard }}</div>
+                </div>
+                <div class="kpi-ic ic-r"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- ===== CALENDRIER ===== -->
+        <div class="col-12 col-xl-8">
+            <div class="cal-card">
+                <div class="cal-head">
+                    <div class="cal-mois">{{ mois_nom }} {{ annee }}</div>
+                    <div class="btn-group btn-group-sm">
+                        <a href="?annee={{ prev_annee }}&mois={{ prev_mois }}"
+                           class="btn btn-outline-secondary" title="Mois précédent">
+                            <i class="bi bi-chevron-left"></i>
+                        </a>
+                        <a href="?annee={{ annee_auj }}&mois={{ mois_auj }}"
+                           class="btn btn-outline-secondary px-3">Aujourd'hui</a>
+                        <a href="?annee={{ next_annee }}&mois={{ next_mois }}"
+                           class="btn btn-outline-secondary" title="Mois suivant">
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="cal-grid">
+                    {% for j in jours_semaine %}
+                        <div class="cal-dow">{{ j }}</div>
+                    {% endfor %}
+
+                    {% for semaine in semaines %}
+                        {% for cell in semaine %}
+                            {% if cell.vide %}
+                                <div class="cal-cell vide"></div>
+                            {% else %}
+                                <div class="cal-cell {% if cell.aujourdhui %}today{% elif cell.a_retard %}alerte{% elif cell.passe %}passe{% endif %}">
+                                    <div class="cal-num">{{ cell.num }}</div>
+                                    {% for e in cell.events %}
+                                        <a href="{% url 'core:detail_commande' e.obj.pk %}"
+                                           class="evt" style="{{ e.style_pastille }}"
+                                           title="{{ e.client }} — {{ e.libelle }}">
+                                            {{ e.client }}
+                                        </a>
+                                    {% endfor %}
+                                    {% if cell.reste %}
+                                        <div class="evt-plus">+{{ cell.reste }} autre{{ cell.reste|pluralize }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+
+                <div class="p-3 border-top">
+                    <div class="legende">
+                        <span><span class="lg-dot" style="background:#fde68a;"></span>En attente</span>
+                        <span><span class="lg-dot" style="background:#c7d2fe;"></span>En cours</span>
+                        <span><span class="lg-dot" style="background:#a7f3d0;"></span>Prêt</span>
+                        <span><span class="lg-dot" style="background:#fecdd3;"></span>En retard</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== PANNEAU DROIT ===== -->
+        <div class="col-12 col-xl-4">
+
+            {% if retards %}
+            <div class="liste-card mb-3">
+                <div class="d-flex justify-content-between align-items-center p-3 pb-2">
+                    <h6 class="fw-bold mb-0 text-danger">
+                        <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                        Livraisons en retard
+                    </h6>
+                    <span class="badge bg-danger">{{ nb_retard }}</span>
+                </div>
+                {% for e in retards %}
+                <a href="{% url 'core:detail_commande' e.obj.pk %}" class="l-row">
+                    <div class="date-box" style="background:#fef2f2; color:#e11d48;">
+                        <span class="d">{{ e.date|date:"d" }}</span>
+                        <span class="m">{{ e.date|date:"M"|upper }}</span>
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="l-titre text-truncate">{{ e.client }}</div>
+                        <div class="l-sub text-truncate">{{ e.obj.code }} &middot; {{ e.libelle }}</div>
+                    </div>
+                    <span class="pill p-late">{{ e.retard_jours }} j</span>
+                </a>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <div class="liste-card">
+                <div class="d-flex justify-content-between align-items-center p-3 pb-2">
+                    <h6 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-clock-history me-1 text-primary"></i>Prochaines livraisons
+                    </h6>
+                </div>
+                {% for e in prochaines %}
+                <a href="{% url 'core:detail_commande' e.obj.pk %}" class="l-row">
+                    <div class="date-box" style="background:#ede9fe; color:#6d28d9;">
+                        <span class="d">{{ e.date|date:"d" }}</span>
+                        <span class="m">{{ e.date|date:"M"|upper }}</span>
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="l-titre text-truncate">{{ e.client }}</div>
+                        <div class="l-sub text-truncate">
+                            {{ e.obj.code }} &middot; {{ e.nb_lignes }} article{{ e.nb_lignes|pluralize }}
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        {% if e.delta == 0 %}
+                            <span class="pill p-soon">Aujourd'hui</span>
+                        {% elif e.delta <= 3 %}
+                            <span class="pill p-soon">dans {{ e.delta }} j</span>
+                        {% else %}
+                            <span class="pill p-ok">dans {{ e.delta }} j</span>
+                        {% endif %}
+                    </div>
+                </a>
+                {% empty %}
+                <div class="empty-a">
+                    <i class="bi bi-calendar-check display-6 d-block opacity-50 mb-2"></i>
+                    <small>Aucune livraison planifiée.</small>
+                </div>
+                {% endfor %}
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ===== LISTE DÉTAILLÉE DU MOIS ===== -->
+    <div class="liste-card mt-3">
+        <div class="d-flex justify-content-between align-items-center p-3 pb-2 flex-wrap gap-2">
+            <h6 class="fw-bold mb-0 text-dark">
+                <i class="bi bi-list-task me-1 text-primary"></i>
+                Détail — {{ mois_nom }} {{ annee }}
+                <span class="badge bg-primary ms-1">{{ nb_mois }}</span>
+            </h6>
+            <div class="input-group input-group-sm" style="max-width:280px;">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="recherche_liste" class="form-control"
+                       placeholder="Filtrer par client ou article…">
+            </div>
+        </div>
+
+        <div id="liste_mois">
+            {% for e in liste %}
+            <a href="{% url 'core:detail_commande' e.obj.pk %}" class="l-row ligne-f"
+               data-search="{{ e.client|lower }} {{ e.libelle|lower }} {{ e.obj.code|lower }}">
+                <div class="date-box" style="{{ e.style_pastille }}">
+                    <span class="d">{{ e.date|date:"d" }}</span>
+                    <span class="m">{{ e.date|date:"M"|upper }}</span>
+                </div>
+                <div class="flex-grow-1 min-w-0">
+                    <div class="l-titre text-truncate">{{ e.client }}</div>
+                    <div class="l-sub text-truncate">
+                        {{ e.obj.code }} &middot; {{ e.libelle }}
+                        {% if e.nb_lignes > 1 %} &middot; +{{ e.nb_lignes|add:"-1" }} autre{{ e.nb_lignes|add:"-1"|pluralize }}{% endif %}
+                    </div>
+                </div>
+                <div class="d-none d-md-block me-2">
+                    <span class="pill" style="{{ e.style_pastille }}">
+                        {{ e.obj.get_statut_display }}
+                    </span>
+                </div>
+                <div class="text-end" style="min-width:110px;">
+                    <div class="fw-bold text-dark" style="font-size:.9rem;">
+                        {{ e.prix_net|floatformat:0 }} {{ atelier.devise }}
+                    </div>
+                    {% if e.soldee %}
+                        <span class="pill p-pay">Soldée</span>
+                    {% else %}
+                        <span class="pill p-soon">Reste {{ e.reste|floatformat:0 }}</span>
+                    {% endif %}
+                </div>
+            </a>
+            {% empty %}
+            <div class="empty-a">
+                <i class="bi bi-calendar-x display-5 d-block opacity-50 mb-3"></i>
+                <span class="fw-semibold text-dark d-block mb-1">Aucune livraison ce mois-ci</span>
+                <small>Naviguez vers un autre mois ou créez une commande.</small>
+            </div>
+            {% endfor %}
+            <div id="aucun_resultat" class="empty-a d-none">
+                <i class="bi bi-search display-6 d-block opacity-50 mb-2"></i>
+                <small>Aucun résultat pour cette recherche.</small>
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const champ = document.getElementById('recherche_liste');
+    if (!champ) return;
+
+    const lignes = document.querySelectorAll('.ligne-f');
+    const vide = document.getElementById('aucun_resultat');
+
+    champ.addEventListener('input', function () {
+        const t = this.value.toLowerCase().trim();
+        let visibles = 0;
+        lignes.forEach(function (l) {
+            const ok = l.dataset.search.indexOf(t) !== -1;
+            l.style.display = ok ? '' : 'none';
+            if (ok) visibles++;
+        });
+        vide.classList.toggle('d-none', visibles > 0 || lignes.length === 0);
+    });
+});
+</script>
+{% endblock %}

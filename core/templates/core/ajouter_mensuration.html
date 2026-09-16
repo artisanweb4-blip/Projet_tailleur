@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+{% block title %}Détail - {{ client.nom }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- En-tête avec boutons d'action -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <h2 class="display-6 fw-bold">{{ client.nom }}</h2>
+        <div class="d-flex gap-2">
+            <a href="{% url 'modifier_client' client.id %}" class="btn btn-warning btn-lg shadow-sm">✏️ Modifier</a>
+            <a href="{% url 'supprimer_client' client.id %}" class="btn btn-danger btn-lg shadow-sm">🗑️ Supprimer</a>
+            <a href="{% url 'recherche_clients' %}" class="btn btn-secondary btn-lg shadow-sm">⬅️ Retour</a>
+        </div>
+    </div>
+
+    <!-- Informations personnelles -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-gradient-primary text-white" style="background: linear-gradient(135deg, #0d6efd, #0a58ca);">
+            <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i>Informations personnelles</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <p><strong><i class="bi bi-person-badge me-2"></i>Nom :</strong> {{ client.nom }}</p>
+                    <p><strong><i class="bi bi-envelope me-2"></i>Email :</strong> {{ client.email|default:"-" }}</p>
+                    <p><strong><i class="bi bi-telephone me-2"></i>Téléphone :</strong> {{ client.telephone }}</p>
+                </div>
+                <div class="col-md-6">
+                    <p><strong><i class="bi bi-geo-alt me-2"></i>Adresse :</strong><br>{{ client.adresse|linebreaks|default:"-" }}</p>
+                    <p><strong><i class="bi bi-calendar3 me-2"></i>Client depuis :</strong> {{ client.created_at|date:"d/m/Y" }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensurations -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-gradient-success text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #198754, #157347);">
+            <h5 class="mb-0"><i class="bi bi-rulers me-2"></i>Mensurations</h5>
+            <button type="button" class="btn btn-sm btn-light rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#mensurationModal">
+                <i class="bi bi-plus-circle me-1"></i> Ajouter
+            </button>
+        </div>
+        <div class="card-body">
+            {% if mensurations %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr><th>Date</th><th>Mesures</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for m in mensurations %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ m.date|date:"d/m/Y" }}</span></td>
+                                <td>
+                                    <div class="row row-cols-2 g-1">
+                                        {% if m.epaule %}<div class="col"><small>Épaule:</small> <strong>{{ m.epaule }} cm</strong></div>{% endif %}
+                                        {% if m.longueur_manche %}<div class="col"><small>Manche:</small> <strong>{{ m.longueur_manche }} cm</strong></div>{% endif %}
+                                        {% if m.tour_manche %}<div class="col"><small>Tour manche:</small> <strong>{{ m.tour_manche }} cm</strong></div>{% endif %}
+                                        {% if m.poitrine %}<div class="col"><small>Poitrine:</small> <strong>{{ m.poitrine }} cm</strong></div>{% endif %}
+                                        {% if m.tour_taille %}<div class="col"><small>Tour taille:</small> <strong>{{ m.tour_taille }} cm</strong></div>{% endif %}
+                                    </div>
+                                 </p>
+                                <td>
+                                    <a href="{% url 'modifier_mensuration' m.id %}" class="btn btn-sm btn-outline-warning rounded-pill">
+                                        <i class="bi bi-pencil"></i> Modifier
+                                    </a>
+                                 </p>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-light text-center py-4">
+                    <i class="bi bi-info-circle fs-3"></i>
+                    <p class="mb-0 mt-2">Aucune mensuration enregistrée.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Commandes -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-gradient-info text-white" style="background: linear-gradient(135deg, #0dcaf0, #0aa2c0);">
+            <h5 class="mb-0"><i class="bi bi-cart3 me-2"></i>Commandes</h5>
+        </div>
+        <div class="card-body">
+            {% if commandes %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date commande</th>
+                                <th>Description</th>
+                                <th>Prix total</th>
+                                <th>Statut</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cmd in commandes %}
+                            <tr>
+                                <td>{{ cmd.date_commande|date:"d/m/Y" }}</td>
+                                <td>{{ cmd.description|truncatechars:50 }}</p>
+                                <td><strong>{{ cmd.prix_total }} FCFA</strong></td>
+                                <td>
+                                    {% if cmd.statut == 'attente' %}
+                                        <span class="badge bg-warning rounded-pill">En attente</span>
+                                    {% elif cmd.statut == 'encours' %}
+                                        <span class="badge bg-primary rounded-pill">En cours</span>
+                                    {% elif cmd.statut == 'termine' %}
+                                        <span class="badge bg-success rounded-pill">Terminé</span>
+                                    {% elif cmd.statut == 'livre' %}
+                                        <span class="badge bg-info rounded-pill">Livré</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary rounded-pill">{{ cmd.get_statut_display }}</span>
+                                    {% endif %}
+                                 </p>
+                                <td>
+                                    <a href="{% url 'detail_commande' cmd.id %}" class="btn btn-sm btn-outline-primary rounded-pill">
+                                        <i class="bi bi-eye"></i> Voir
+                                    </a>
+                                 </p>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="alert alert-light text-center py-4">
+                    <i class="bi bi-cart-x fs-3"></i>
+                    <p class="mb-0 mt-2">Aucune commande pour ce client.</p>
+                </div>
+            {% endif %}
+            <a href="{% url 'ajouter_commande' %}?client={{ client.id }}" class="btn btn-primary mt-3 rounded-pill shadow-sm">
+                <i class="bi bi-plus-lg"></i> Nouvelle commande
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal pour ajouter des mensurations - Version finale avec labels en haut -->
+<div class="modal fade" id="mensurationModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header bg-gradient-success text-white" style="background: linear-gradient(135deg, #198754, #157347);">
+                <h5 class="modal-title"><i class="bi bi-rulers me-2"></i>Ajouter des mensurations pour {{ client.nom }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form method="post" action="{% url 'ajouter_mensuration' client.id %}">
+                    {% csrf_token %}
+                    
+                    <!-- Boutons Homme / Femme -->
+                    <div class="d-flex flex-column flex-sm-row gap-3 mb-5">
+                        <button type="button" id="btnHomme" class="btn btn-outline-primary btn-lg flex-fill rounded-pill py-3 shadow-sm">
+                            <i class="bi bi-gender-male fs-3"></i><br>Homme
+                        </button>
+                        <button type="button" id="btnFemme" class="btn btn-outline-danger btn-lg flex-fill rounded-pill py-3 shadow-sm">
+                            <i class="bi bi-gender-female fs-3"></i><br>Femme
+                        </button>
+                    </div>
+
+                    <!-- Mesures communes -->
+                    <div class="card mb-4 border-0 shadow-sm">
+                        <div class="card-header bg-secondary bg-opacity-10 border-0 fw-bold">
+                            <i class="bi bi-people me-2"></i>Mesures communes
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12 col-sm-6 col-md-4 col-lg">
+                                    <label for="id_epaule" class="form-label">Épaule (cm)</label>
+                                    <input type="number" name="epaule" id="id_epaule" class="form-control" step="0.1" value="{{ form.epaule.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg">
+                                    <label for="id_longueur_manche" class="form-label">Longueur manche (cm)</label>
+                                    <input type="number" name="longueur_manche" id="id_longueur_manche" class="form-control" step="0.1" value="{{ form.longueur_manche.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg">
+                                    <label for="id_tour_manche" class="form-label">Tour manche (cm)</label>
+                                    <input type="number" name="tour_manche" id="id_tour_manche" class="form-control" step="0.1" value="{{ form.tour_manche.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg">
+                                    <label for="id_poitrine" class="form-label">Poitrine (cm)</label>
+                                    <input type="number" name="poitrine" id="id_poitrine" class="form-control" step="0.1" value="{{ form.poitrine.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg">
+                                    <label for="id_tour_taille" class="form-label">Tour taille (cm)</label>
+                                    <input type="number" name="tour_taille" id="id_tour_taille" class="form-control" step="0.1" value="{{ form.tour_taille.value|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section Homme -->
+                    <div id="sectionHomme" class="card mb-4 border-0 shadow-sm" style="display: none;">
+                        <div class="card-header bg-primary bg-opacity-10 border-0 fw-bold">
+                            <i class="bi bi-gender-male me-2"></i>Mesures Homme (Boubou)
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_epaule_homme" class="form-label">Épaules (cm)</label>
+                                    <input type="number" name="epaule_homme" id="id_epaule_homme" class="form-control" step="0.1" value="{{ form.epaule_homme.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_manche_boubou" class="form-label">Manches (cm)</label>
+                                    <input type="number" name="manche_boubou" id="id_manche_boubou" class="form-control" step="0.1" value="{{ form.manche_boubou.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_tour_manche_homme" class="form-label">Tour manche (cm)</label>
+                                    <input type="number" name="tour_manche_homme" id="id_tour_manche_homme" class="form-control" step="0.1" value="{{ form.tour_manche_homme.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_coude" class="form-label">Coude (cm)</label>
+                                    <input type="number" name="coude" id="id_coude" class="form-control" step="0.1" value="{{ form.coude.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_poitrine_homme" class="form-label">Poitrine (cm)</label>
+                                    <input type="number" name="poitrine_homme" id="id_poitrine_homme" class="form-control" step="0.1" value="{{ form.poitrine_homme.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_longueur_boubou" class="form-label">Longueur boubou (cm)</label>
+                                    <input type="number" name="longueur_boubou" id="id_longueur_boubou" class="form-control" step="0.1" value="{{ form.longueur_boubou.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_poignet" class="form-label">Poignet (cm)</label>
+                                    <input type="number" name="poignet" id="id_poignet" class="form-control" step="0.1" value="{{ form.poignet.value|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Section Femme -->
+                    <div id="sectionFemme" class="card mb-4 border-0 shadow-sm" style="display: none;">
+                        <div class="card-header bg-danger bg-opacity-10 border-0 fw-bold">
+                            <i class="bi bi-gender-female me-2"></i>Mesures Femme
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_longueur_taille" class="form-label">Longueur taille (cm)</label>
+                                    <input type="number" name="longueur_taille" id="id_longueur_taille" class="form-control" step="0.1" value="{{ form.longueur_taille.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_longueur_bassin" class="form-label">Longueur bassin (cm)</label>
+                                    <input type="number" name="longueur_bassin" id="id_longueur_bassin" class="form-control" step="0.1" value="{{ form.longueur_bassin.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_bassin" class="form-label">Bassin (cm)</label>
+                                    <input type="number" name="bassin" id="id_bassin" class="form-control" step="0.1" value="{{ form.bassin.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_longueur_genou" class="form-label">Longueur genou (cm)</label>
+                                    <input type="number" name="longueur_genou" id="id_longueur_genou" class="form-control" step="0.1" value="{{ form.longueur_genou.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_tour_genou" class="form-label">Tour genou (cm)</label>
+                                    <input type="number" name="tour_genou" id="id_tour_genou" class="form-control" step="0.1" value="{{ form.tour_genou.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_longueur_camisole" class="form-label">Longueur camisole (cm)</label>
+                                    <input type="number" name="longueur_camisole" id="id_longueur_camisole" class="form-control" step="0.1" value="{{ form.longueur_camisole.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_longueur_jupe" class="form-label">Longueur jupe (cm)</label>
+                                    <input type="number" name="longueur_jupe" id="id_longueur_jupe" class="form-control" step="0.1" value="{{ form.longueur_jupe.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_longueur_robe" class="form-label">Longueur robe (cm)</label>
+                                    <input type="number" name="longueur_robe" id="id_longueur_robe" class="form-control" step="0.1" value="{{ form.longueur_robe.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_longitude_haut" class="form-label">Longitude haut (cm)</label>
+                                    <input type="number" name="longitude_haut" id="id_longitude_haut" class="form-control" step="0.1" value="{{ form.longitude_haut.value|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mesures Pantalon -->
+                    <div class="card mb-4 border-0 shadow-sm">
+                        <div class="card-header bg-info bg-opacity-10 border-0 fw-bold">
+                            <i class="bi bi-bag me-2"></i>Mesures Pantalon
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_tour_fesses" class="form-label">Tour de fesses (cm)</label>
+                                    <input type="number" name="tour_fesses" id="id_tour_fesses" class="form-control" step="0.1" value="{{ form.tour_fesses.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_ceinture" class="form-label">Ceinture (cm)</label>
+                                    <input type="number" name="ceinture" id="id_ceinture" class="form-control" step="0.1" value="{{ form.ceinture.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_cuisse" class="form-label">Cuisse (cm)</label>
+                                    <input type="number" name="cuisse" id="id_cuisse" class="form-control" step="0.1" value="{{ form.cuisse.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_longueur_pantalon" class="form-label">Longueur pantalon (cm)</label>
+                                    <input type="number" name="longueur_pantalon" id="id_longueur_pantalon" class="form-control" step="0.1" value="{{ form.longueur_pantalon.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_ds" class="form-label">DS (cm)</label>
+                                    <input type="number" name="ds" id="id_ds" class="form-control" step="0.1" value="{{ form.ds.value|default:'' }}">
+                                </div>
+                                <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                    <label for="id_bas_pantalon" class="form-label">Bas du pantalon (cm)</label>
+                                    <input type="number" name="bas_pantalon" id="id_bas_pantalon" class="form-control" step="0.1" value="{{ form.bas_pantalon.value|default:'' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer border-0 pt-3">
+                        <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">
+                            <i class="bi bi-x-lg me-1"></i>Annuler
+                        </button>
+                        <button type="submit" class="btn btn-success rounded-pill px-4 shadow-sm">
+                            <i class="bi bi-check-lg me-1"></i>Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Gestion des boutons Homme/Femme
+    const btnHomme = document.getElementById('btnHomme');
+    const btnFemme = document.getElementById('btnFemme');
+    const sectionHomme = document.getElementById('sectionHomme');
+    const sectionFemme = document.getElementById('sectionFemme');
+
+    function setActiveButton(activeBtn, inactiveBtn) {
+        if (activeBtn.id === 'btnHomme') {
+            activeBtn.classList.remove('btn-outline-primary');
+            activeBtn.classList.add('btn-primary', 'shadow');
+            inactiveBtn.classList.remove('btn-danger', 'shadow');
+            inactiveBtn.classList.add('btn-outline-danger');
+        } else {
+            activeBtn.classList.remove('btn-outline-danger');
+            activeBtn.classList.add('btn-danger', 'shadow');
+            inactiveBtn.classList.remove('btn-primary', 'shadow');
+            inactiveBtn.classList.add('btn-outline-primary');
+        }
+    }
+
+    btnHomme.addEventListener('click', function() {
+        sectionHomme.style.display = 'block';
+        sectionFemme.style.display = 'none';
+        setActiveButton(btnHomme, btnFemme);
+    });
+
+    btnFemme.addEventListener('click', function() {
+        sectionFemme.style.display = 'block';
+        sectionHomme.style.display = 'none';
+        setActiveButton(btnFemme, btnHomme);
+    });
+
+    // Activer Homme par défaut
+    btnHomme.click();
+</script>
+{% endblock %}

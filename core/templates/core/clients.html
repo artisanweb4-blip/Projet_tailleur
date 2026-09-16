@@ -1,0 +1,335 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Messages d'alerte Django -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss-alert" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- En-tete et Actions -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">Gestion des Clients</h1>
+            <p class="text-muted small mb-0">Liste globale et actions rapides</p>
+        </div>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#ajouterClientModal">
+            <i class="bi bi-person-plus me-1"></i> Nouveau Client
+        </button>
+    </div>
+
+    <!-- Barre de Recherche et Filtres -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" name="q" class="form-control bg-light border-start-0" placeholder="Rechercher par nom, email..." value="{{ request.GET.q }}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <select name="type" class="form-select bg-light">
+                        <option value="">Tous les types</option>
+                        <option value="particulier" {% if request.GET.type == 'particulier' %}selected{% endif %}>Particulier</option>
+                        <option value="entreprise" {% if request.GET.type == 'entreprise' %}selected{% endif %}>Entreprise</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="statut" class="form-select bg-light">
+                        <option value="">Tous les statuts</option>
+                        <option value="actif" {% if request.GET.statut == 'actif' %}selected{% endif %}>Actif</option>
+                        <option value="inactif" {% if request.GET.statut == 'inactif' %}selected{% endif %}>Inactif</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-secondary w-100">Filtrer</button>
+                    {% if request.GET.q or request.GET.type or request.GET.statut %}
+                        <a href="{% url 'core:liste_clients' %}" class="btn btn-outline-secondary" title="Reinitialiser"><i class="bi bi-x-circle"></i></a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tableau des Clients -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Nom & Prenom</th>
+                            <th>Email</th>
+                            <th>Telephone</th>
+                            <th>Type</th>
+                            <th>Statut</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in clients %}
+                        <tr>
+                            <td class="ps-4 fw-semibold">{{ client.nom }} {{ client.prenom|default:"" }}</td>
+                            <td>{{ client.email }}</td>
+                            <td>{{ client.telephone|default:"-" }}</td>
+                            <td>
+                                {% if client.type_client == 'entreprise' %}
+                                    <span class="badge bg-info-subtle text-info rounded-pill px-2">Entreprise</span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary rounded-pill px-2">Particulier</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if client.statut == 'actif' %}
+                                    <span class="badge bg-success-subtle text-success rounded-pill px-2">Actif</span>
+                                {% else %}
+                                    <span class="badge bg-danger-subtle text-danger rounded-pill px-2">Inactif</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4">
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-secondary rounded-2 me-1 edit-client-btn" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#modifierClientModal"
+                                        data-url="{% url 'core:modifier_client' client.id %}"
+                                        data-id="{{ client.id }}"
+                                        data-nom="{{ client.nom }}"
+                                        data-prenom="{{ client.prenom|default:'' }}"
+                                        data-email="{{ client.email }}"
+                                        data-telephone="{{ client.telephone|default:'' }}"
+                                        data-type="{{ client.type_client }}"
+                                        data-statut="{{ client.statut }}"
+                                        aria-label="Modifier le client {{ client.nom }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-danger rounded-2 delete-client-btn"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#supprimerClientModal"
+                                        data-url="{% url 'core:supprimer_client' client.id %}"
+                                        data-nom="{{ client.nom }} {{ client.prenom|default:'' }}"
+                                        aria-label="Supprimer le client {{ client.nom }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-people display-6 d-block mb-2"></i>
+                                Aucun client trouve.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="card-footer bg-white border-0 py-3">
+            <nav aria-label="Navigation des pages">
+                <ul class="pagination justify-content-center mb-0">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">&laquo;</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                    {% endif %}
+
+                    {% for i in paginator.page_range %}
+                        {% if page_obj.number == i %}
+                            <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ i }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">{{ i }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.type %}&type={{ request.GET.type }}{% endif %}{% if request.GET.statut %}&statut={{ request.GET.statut }}{% endif %}">&raquo;</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modal : Ajouter Client -->
+<div class="modal fade" id="ajouterClientModal" tabindex="-1" aria-labelledby="ajouterClientModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" action="{% url 'core:ajouter_client' %}">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="ajouterClientModalLabel">Nouveau Client</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="nom" name="nom" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="prenom" class="form-label">Prenom</label>
+                        <input type="text" class="form-control" id="prenom" name="prenom">
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="telephone" class="form-label">Telephone</label>
+                        <input type="text" class="form-control" id="telephone" name="telephone">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="type_client" class="form-label">Type</label>
+                            <select class="form-select" id="type_client" name="type_client">
+                                <option value="particulier">Particulier</option>
+                                <option value="entreprise">Entreprise</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="statut" class="form-label">Statut</label>
+                            <select class="form-select" id="statut" name="statut">
+                                <option value="actif">Actif</option>
+                                <option value="inactif">Inactif</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal : Modifier Client -->
+<div class="modal fade" id="modifierClientModal" tabindex="-1" aria-labelledby="modifierClientModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="editClientForm">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modifierClientModalLabel">Modifier le Client</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="edit_client_id" name="client_id">
+                    <div class="mb-3">
+                        <label for="edit_nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="edit_nom" name="nom" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_prenom" class="form-label">Prenom</label>
+                        <input type="text" class="form-control" id="edit_prenom" name="prenom">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_email" class="form-label">Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="edit_email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_telephone" class="form-label">Telephone</label>
+                        <input type="text" class="form-control" id="edit_telephone" name="telephone">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_type_client" class="form-label">Type</label>
+                            <select class="form-select" id="edit_type_client" name="type_client">
+                                <option value="particulier">Particulier</option>
+                                <option value="entreprise">Entreprise</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="edit_statut" class="form-label">Statut</label>
+                            <select class="form-select" id="edit_statut" name="statut">
+                                <option value="actif">Actif</option>
+                                <option value="inactif">Inactif</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Mettre a jour</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal : Supprimer Client -->
+<div class="modal fade" id="supprimerClientModal" tabindex="-1" aria-labelledby="supprimerClientModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" id="deleteClientForm">
+                {% csrf_token %}
+                <div class="modal-header">
+                    <h5 class="modal-title" id="supprimerClientModalLabel">Confirmation de suppression</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                </div>
+                <div class="modal-body">
+                    Etes-vous sur de vouloir supprimer le client <strong id="delete_client_nom"></strong> ? 
+                    Cette action est irreversible.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Fermeture automatique des messages flash apres 4 secondes
+    setTimeout(function() {
+        document.querySelectorAll('.auto-dismiss-alert').forEach(function(alert) {
+            let bsAlert = bootstrap.Alert.getOrCreateInstance(alert);
+            bsAlert.close();
+        });
+    }, 2000);
+
+    // Injection dynamique des donnees dans le modal de modification
+    document.querySelectorAll('.edit-client-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            document.getElementById('editClientForm').action = this.dataset.url;
+            document.getElementById('edit_client_id').value = this.dataset.id;
+            document.getElementById('edit_nom').value = this.dataset.nom;
+            document.getElementById('edit_prenom').value = this.dataset.prenom;
+            document.getElementById('edit_email').value = this.dataset.email;
+            document.getElementById('edit_telephone').value = this.dataset.telephone;
+            document.getElementById('edit_type_client').value = this.dataset.type;
+            document.getElementById('edit_statut').value = this.dataset.statut;
+        });
+    });
+
+    // Injection dynamique des donnees dans le modal de suppression
+    document.querySelectorAll('.delete-client-btn').forEach(button => {
+        button.addEventListener('click', function () {
+            document.getElementById('deleteClientForm').action = this.dataset.url;
+            document.getElementById('delete_client_nom').textContent = this.dataset.nom;
+        });
+    });
+});
+</script>
+{% endblock %}

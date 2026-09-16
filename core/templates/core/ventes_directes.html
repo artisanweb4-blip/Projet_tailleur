@@ -1,0 +1,755 @@
+{% extends "base.html" %}
+{% block title %}Ventes directes{% endblock %}
+
+{% block extra_css %}
+<style>
+    .vd-wrap { background: #f7f8fc; min-height: 100vh; margin: -1.5rem -1rem; padding: 1.5rem 1rem; }
+
+    /* ===== KPI ===== */
+    .kpi-v {
+        background:#fff; border:1px solid #eef0f6; border-radius:14px;
+        padding:1rem 1.15rem; height:100%;
+    }
+    .kpi-v .lbl { color:#6b7280; font-size:.8rem; }
+    .kpi-v .val { font-size:1.45rem; font-weight:700; color:#111827; line-height:1.2; }
+    .kpi-v .hint { color:#9ca3af; font-size:.76rem; }
+    .kpi-ic {
+        width:40px; height:40px; border-radius:11px; color:#fff; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .ic-blue  { background:linear-gradient(135deg,#0ea5e9,#0284c7); }
+    .ic-green { background:linear-gradient(135deg,#10b981,#059669); }
+    .ic-viol  { background:linear-gradient(135deg,#7c3aed,#6d28d9); }
+    .ic-red   { background:linear-gradient(135deg,#f43f5e,#e11d48); }
+
+    /* ===== LIGNES VENTES ===== */
+    .vente-row {
+        background:#fff; border:1px solid #eef0f6; border-radius:12px;
+        padding:.9rem 1rem; margin-bottom:.6rem; transition:all .14s;
+    }
+    .vente-row:hover { border-color:#bae6fd; box-shadow:0 4px 14px rgba(0,0,0,.05); }
+    .vente-row.annulee { opacity:.62; background:#fdfdfd; }
+    .vente-row.annulee .v-total { text-decoration:line-through; }
+
+    .v-icon {
+        width:42px; height:42px; border-radius:11px; flex-shrink:0;
+        background:#e0f2fe; color:#0284c7;
+        display:flex; align-items:center; justify-content:center; font-size:1.15rem;
+    }
+    .v-icon.ko { background:#fef2f2; color:#e11d48; }
+    .v-code   { font-family:ui-monospace,monospace; font-size:.76rem; color:#6b7280; }
+    .v-client { font-weight:600; color:#111827; font-size:.95rem; }
+    .v-articles { color:#9ca3af; font-size:.8rem; }
+    .v-total  { font-weight:700; color:#111827; font-size:1rem; }
+
+    .pill {
+        display:inline-block; padding:.14rem .55rem; border-radius:999px;
+        font-size:.73rem; font-weight:600; white-space:nowrap;
+    }
+    .p-ok  { background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; }
+    .p-ko  { background:#fef2f2; color:#e11d48; border:1px solid #fecdd3; }
+    .p-mode{ background:#f1f5f9; color:#475569; border:1px solid #e2e8f0; }
+
+    /* ===== MODAL CAISSE ===== */
+    #modalCaisse .modal-dialog {
+        max-width:1150px; max-height:94vh; margin:3vh auto;
+        display:flex; flex-direction:column;
+    }
+    #modalCaisse .modal-content {
+        display:flex; flex-direction:column; max-height:100%; overflow:hidden;
+    }
+    #modalCaisse form {
+        display:flex; flex-direction:column; flex:1 1 auto; min-height:0;
+    }
+    #modalCaisse .modal-header, #modalCaisse .modal-footer { flex-shrink:0; }
+    #modalCaisse .caisse-body {
+        flex:1 1 auto; min-height:0; display:flex; overflow:hidden;
+    }
+
+    .cat-panel {
+        width:56%; border-right:1px solid #eef0f6;
+        display:flex; flex-direction:column; min-height:0;
+    }
+    .cat-head { padding:.9rem 1rem .6rem; flex-shrink:0; }
+    .cat-grid {
+        flex:1 1 auto; overflow-y:auto; padding:0 1rem 1rem;
+        display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:.6rem;
+        align-content:start;
+    }
+    .prod-tile {
+        border:1px solid #e9ecef; border-radius:11px; padding:.6rem;
+        cursor:pointer; background:#fff; transition:all .12s; text-align:left;
+    }
+    .prod-tile:hover { border-color:#7c3aed; background:#faf9ff; transform:translateY(-2px); }
+    .prod-tile:active { transform:scale(.97); }
+    .prod-tile.rupture { opacity:.45; cursor:not-allowed; }
+    .prod-tile.rupture:hover { transform:none; border-color:#e9ecef; background:#fff; }
+    .pt-nom { font-weight:600; font-size:.83rem; color:#111827; line-height:1.25;
+              display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .pt-prix { font-weight:700; color:#6d28d9; font-size:.88rem; margin-top:.25rem; }
+    .pt-meta { font-size:.7rem; color:#9ca3af; }
+    .pt-stock {
+        font-size:.68rem; font-weight:700; padding:.05rem .35rem;
+        border-radius:5px; display:inline-block; margin-top:.2rem;
+    }
+    .st-ok  { background:#ecfdf5; color:#059669; }
+    .st-low { background:#fffbeb; color:#d97706; }
+    .st-out { background:#fef2f2; color:#e11d48; }
+
+    .panier-panel {
+        width:44%; display:flex; flex-direction:column; min-height:0; background:#fcfcfe;
+    }
+    .panier-head { padding:.9rem 1rem .5rem; flex-shrink:0; }
+    .panier-list { flex:1 1 auto; overflow-y:auto; padding:0 1rem; min-height:0; }
+    .panier-foot { flex-shrink:0; padding:.9rem 1rem; border-top:1px solid #eef0f6; background:#fff; }
+
+    .cart-item {
+        background:#fff; border:1px solid #eef0f6; border-radius:10px;
+        padding:.55rem .7rem; margin-bottom:.5rem;
+    }
+    .ci-nom { font-weight:600; font-size:.85rem; color:#111827; }
+    .ci-prix { font-size:.76rem; color:#9ca3af; }
+    .qte-btn {
+        width:26px; height:26px; border-radius:6px; border:1px solid #d1d5db;
+        background:#fff; display:flex; align-items:center; justify-content:center;
+        cursor:pointer; font-weight:700; color:#4b5563; font-size:.9rem; line-height:1;
+    }
+    .qte-btn:hover { background:#f3f4f6; }
+    .qte-val { width:34px; text-align:center; font-weight:700; font-size:.9rem; }
+    .ci-total { font-weight:700; color:#111827; font-size:.9rem; }
+
+    .panier-vide { text-align:center; padding:3rem 1rem; color:#cbd5e1; }
+
+    @media (max-width: 991px) {
+        #modalCaisse .caisse-body { flex-direction:column; overflow-y:auto; }
+        .cat-panel, .panier-panel { width:100%; border-right:none; }
+        .cat-grid { max-height:280px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="vd-wrap">
+<div class="container-fluid px-md-3">
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pb-3 mb-4">
+        <div>
+            <h2 class="h4 mb-1 fw-bold text-dark">
+                <i class="bi bi-bag-check-fill me-2 text-info"></i>Ventes directes
+            </h2>
+            <p class="text-muted small mb-0">
+                Prêt-à-porter et accessoires vendus au comptant, sans couture sur mesure.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'core:liste_commandes' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-scissors me-1"></i> Commandes couture
+            </a>
+            <button type="button" class="btn btn-primary btn-lg px-4 shadow-sm"
+                    data-bs-toggle="modal" data-bs-target="#modalCaisse">
+                <i class="bi bi-cart-plus me-2"></i>Ouvrir la caisse
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- KPI -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-v d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Ventes du jour</div>
+                    <div class="val">{{ total_jour|floatformat:0 }} {{ atelier.devise }}</div>
+                    <div class="hint">{{ nb_jour }} vente{{ nb_jour|pluralize }} aujourd'hui</div>
+                </div>
+                <div class="kpi-ic ic-viol"><i class="bi bi-sun-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-v d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Total ventes</div>
+                    <div class="val">{{ total_ventes|floatformat:0 }} {{ atelier.devise }}</div>
+                    <div class="hint">{{ nb_total }} vente{{ nb_total|pluralize }} validée{{ nb_total|pluralize }}</div>
+                </div>
+                <div class="kpi-ic ic-blue"><i class="bi bi-bag-check-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-v d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Encaissé</div>
+                    <div class="val text-success">{{ total_encaisse|floatformat:0 }} {{ atelier.devise }}</div>
+                    <div class="hint">Paiement immédiat</div>
+                </div>
+                <div class="kpi-ic ic-green"><i class="bi bi-cash-stack"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-v d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Annulées</div>
+                    <div class="val {% if nb_annulees %}text-danger{% endif %}">{{ nb_annulees }}</div>
+                    <div class="hint">{{ total_annulees|floatformat:0 }} {{ atelier.devise }}</div>
+                </div>
+                <div class="kpi-ic ic-red"><i class="bi bi-x-circle-fill"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card border-0 shadow-sm rounded-3 mb-3">
+        <div class="card-body p-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label small fw-medium text-muted">Recherche</label>
+                    <input type="text" name="q" class="form-control form-control-sm"
+                        placeholder="Code, client, téléphone…" value="{{ q }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-medium text-muted">Statut</label>
+                    <select name="statut" class="form-select form-select-sm">
+                        <option value="">Toutes</option>
+                        <option value="VALIDE" {% if statut_filter == 'VALIDE' %}selected{% endif %}>Validées</option>
+                        <option value="ANNULE" {% if statut_filter == 'ANNULE' %}selected{% endif %}>Annulées</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-medium text-muted">Du</label>
+                    <input type="date" name="date_debut" class="form-control form-control-sm" value="{{ date_debut }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label small fw-medium text-muted">Au</label>
+                    <input type="date" name="date_fin" class="form-control form-control-sm" value="{{ date_fin }}">
+                </div>
+                <div class="col-md-2 d-flex gap-1">
+                    <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-search"></i></button>
+                    <a href="{% url 'core:liste_ventes_directes' %}" class="btn btn-sm btn-outline-secondary w-100">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Liste des ventes -->
+    {% for r in rows %}
+    <div class="vente-row {% if r.annulee %}annulee{% endif %}">
+        <div class="row g-2 align-items-center">
+
+            <div class="col-12 col-lg-5">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="v-icon {% if r.annulee %}ko{% endif %}">
+                        <i class="bi {% if r.annulee %}bi-x-lg{% else %}bi-receipt{% endif %}"></i>
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="v-client text-truncate">
+                            {{ r.v.client.nom }}{% if r.v.client.prenom %} {{ r.v.client.prenom }}{% endif %}
+                        </div>
+                        <div class="v-code">
+                            {{ r.v.code }} &middot; {{ r.v.date_commande|date:"d/m/Y" }}
+                        </div>
+                        <div class="v-articles text-truncate">
+                            {{ r.nb_lignes }} article{{ r.nb_lignes|pluralize }}
+                            {% if r.resume %} &middot; {{ r.resume }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-6 col-lg-2">
+                {% if r.paiement %}
+                    <span class="pill p-mode">
+                        <i class="bi bi-credit-card"></i> {{ r.paiement.get_mode_paiement_display }}
+                    </span>
+                {% endif %}
+            </div>
+
+            <div class="col-6 col-lg-2">
+                {% if r.annulee %}
+                    <span class="pill p-ko">Annulée</span>
+                {% else %}
+                    <span class="pill p-ok"><i class="bi bi-check-lg"></i> Payée</span>
+                {% endif %}
+            </div>
+
+            <div class="col-7 col-lg-2 text-lg-end">
+                <span class="v-total">{{ r.prix_net|floatformat:0 }} {{ atelier.devise }}</span>
+            </div>
+
+            <div class="col-5 col-lg-1 text-end">
+                <div class="btn-group btn-group-sm">
+                    <a href="{% url 'core:detail_vente_directe' r.v.pk %}"
+                       class="btn btn-light border" title="Détail">
+                        <i class="bi bi-eye"></i>
+                    </a>
+                    <button type="button" class="btn btn-light border dropdown-toggle"
+                            data-bs-toggle="dropdown"></button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{% url 'core:recu_caisse' r.v.pk %}" target="_blank">
+                            <i class="bi bi-printer me-2"></i>Imprimer le reçu</a></li>
+                        <li><a class="dropdown-item" href="{% url 'core:recu_caisse_pdf' r.v.pk %}">
+                            <i class="bi bi-file-pdf me-2"></i>Télécharger PDF</a></li>
+                        {% if not r.annulee %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="post" action="{% url 'core:annuler_vente_directe' r.v.pk %}"
+                                  onsubmit="return confirm('Annuler la vente {{ r.v.code }} ?');">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item text-danger">
+                                    <i class="bi bi-x-circle me-2"></i>Annuler la vente
+                                </button>
+                            </form>
+                        </li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    {% empty %}
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body text-center py-5 text-muted">
+            <i class="bi bi-cart-x display-5 d-block opacity-50 mb-3"></i>
+            <span class="fw-semibold text-dark d-block mb-1">Aucune vente directe</span>
+            <small>Ouvrez la caisse pour enregistrer votre première vente.</small>
+            <div class="mt-3">
+                <button type="button" class="btn btn-primary"
+                        data-bs-toggle="modal" data-bs-target="#modalCaisse">
+                    <i class="bi bi-cart-plus me-1"></i>Ouvrir la caisse
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% if is_paginated %}
+    <nav class="mt-3">
+        <ul class="pagination pagination-sm justify-content-center mb-0">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ q }}&statut={{ statut_filter }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}">
+                    <i class="bi bi-chevron-left"></i></a>
+            </li>
+            {% endif %}
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}&q={{ q }}&statut={{ statut_filter }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ q }}&statut={{ statut_filter }}&date_debut={{ date_debut }}&date_fin={{ date_fin }}">
+                    <i class="bi bi-chevron-right"></i></a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+</div>
+</div>
+
+<!-- ============================================================
+     MODAL CAISSE
+     ============================================================ -->
+<div class="modal fade" id="modalCaisse" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-shop me-2"></i>Caisse &mdash; Nouvelle vente
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="post" action="{% url 'core:creer_vente_directe' %}" id="formCaisse">
+        {% csrf_token %}
+        <input type="hidden" name="ligne_count" id="ligne_count" value="0">
+        <div id="zone_inputs_caches"></div>
+
+        <div class="caisse-body">
+
+          <!-- ===== CATALOGUE ===== -->
+          <div class="cat-panel">
+            <div class="cat-head">
+              <div class="input-group input-group-sm mb-2">
+                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" id="recherche_produit" class="form-control"
+                       placeholder="Rechercher un article…" autocomplete="off">
+              </div>
+              <div class="btn-group btn-group-sm w-100" role="group">
+                <button type="button" class="btn btn-primary filtre-type active" data-t="PAP">
+                  <i class="bi bi-bag me-1"></i>Prêt-à-porter
+                </button>
+                <button type="button" class="btn btn-outline-primary filtre-type" data-t="ACC">
+                  <i class="bi bi-gem me-1"></i>Accessoires
+                </button>
+              </div>
+            </div>
+            <div class="cat-grid" id="grille_produits"></div>
+          </div>
+
+          <!-- ===== PANIER ===== -->
+          <div class="panier-panel">
+            <div class="panier-head">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="fw-bold mb-0">
+                  <i class="bi bi-cart3 me-1 text-primary"></i>Panier
+                  <span class="badge bg-primary ms-1" id="badge_panier">0</span>
+                </h6>
+                <button type="button" class="btn btn-sm btn-link text-danger p-0" id="btn_vider">
+                  <i class="bi bi-trash"></i> Vider
+                </button>
+              </div>
+              <div class="row g-2">
+                <div class="col-7">
+                  <input type="text" name="nom_client" class="form-control form-control-sm"
+                         placeholder="Nom client (optionnel)">
+                </div>
+                <div class="col-5">
+                  <input type="text" name="telephone_client" class="form-control form-control-sm"
+                         placeholder="Téléphone">
+                </div>
+              </div>
+            </div>
+
+            <div class="panier-list" id="panier_list">
+              <div class="panier-vide" id="panier_vide">
+                <i class="bi bi-cart display-6 d-block mb-2"></i>
+                <small>Cliquez sur un article<br>pour l'ajouter au panier</small>
+              </div>
+            </div>
+
+            <div class="panier-foot">
+              <div class="d-flex justify-content-between mb-1 small">
+                <span class="text-muted">Sous-total</span>
+                <strong id="recap_st">0 {{ atelier.devise }}</strong>
+              </div>
+              <div class="row g-2 mb-2">
+                <div class="col-6">
+                  <select name="remise_type" id="remise_type" class="form-select form-select-sm">
+                    <option value="">Sans remise</option>
+                    <option value="MONTANT">Remise fixe</option>
+                    <option value="POURCENTAGE">Remise %</option>
+                  </select>
+                </div>
+                <div class="col-6">
+                  <input type="number" id="remise_valeur" class="form-control form-control-sm"
+                         placeholder="0" step="any" min="0" value="0" disabled>
+                </div>
+              </div>
+              <div class="d-flex justify-content-between mb-2 d-none" id="ligne_remise">
+                <span class="text-muted small">Remise</span>
+                <strong class="text-danger small">- <span id="recap_remise">0</span> {{ atelier.devise }}</strong>
+              </div>
+              <div class="d-flex justify-content-between align-items-center py-2 border-top border-bottom mb-2">
+                <span class="fw-bold">TOTAL</span>
+                <span class="h4 mb-0 fw-bold text-primary" id="recap_total">0 {{ atelier.devise }}</span>
+              </div>
+              <select name="mode_paiement" class="form-select form-select-sm">
+                {% for val, lbl in form_vente_directe.mode_paiement.field.choices %}
+                  <option value="{{ val }}">{{ lbl }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+        </div><!-- /caisse-body -->
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-success btn-lg px-4 fw-bold" id="btn_valider" disabled>
+            <i class="bi bi-check2-circle me-1"></i>Encaisser
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+
+<script id="pap-data" type="application/json">{{ pap_json|safe }}</script>
+<script id="acc-data" type="application/json">{{ acc_json|safe }}</script>
+
+<script>
+(function () {
+  'use strict';
+
+  const PAP = JSON.parse(document.getElementById('pap-data').textContent || '[]');
+  const ACC = JSON.parse(document.getElementById('acc-data').textContent || '[]');
+  const DEVISE = "{{ atelier.devise }}";
+
+  const grille      = document.getElementById('grille_produits');
+  const panierList  = document.getElementById('panier_list');
+  const panierVide  = document.getElementById('panier_vide');
+  const zoneInputs  = document.getElementById('zone_inputs_caches');
+  const inputCount  = document.getElementById('ligne_count');
+  const btnValider  = document.getElementById('btn_valider');
+  const selRemise   = document.getElementById('remise_type');
+  const inpRemise   = document.getElementById('remise_valeur');
+  const recherche   = document.getElementById('recherche_produit');
+
+  let typeActif = 'PAP';
+  let panier = [];   // { key, type, id, nom, prix, qte, stock }
+
+  const fmt = n => Math.round(n).toLocaleString('fr-FR');
+
+  /* ===== GRILLE PRODUITS ===== */
+  function rendreGrille() {
+    const terme = recherche.value.toLowerCase().trim();
+    const items = typeActif === 'PAP' ? PAP : ACC;
+    grille.innerHTML = '';
+
+    const filtres = items.filter(function (it) {
+      return it.nom.toLowerCase().indexOf(terme) !== -1;
+    });
+
+    if (!filtres.length) {
+      grille.innerHTML = '<div class="text-muted small p-3" style="grid-column:1/-1;">' +
+                         'Aucun article trouvé.</div>';
+      return;
+    }
+
+    filtres.forEach(function (it) {
+      const estPap = typeActif === 'PAP';
+      const prix = parseFloat(estPap ? it.prix_base : it.prix_unitaire);
+      const stock = estPap ? it.stock_pret_a_porter : it.stock_disponible;
+      const rupture = stock === 0;
+
+      let clsStock = 'st-ok', txtStock = stock + ' en stock';
+      if (rupture) { clsStock = 'st-out'; txtStock = 'Rupture'; }
+      else if (stock <= 3) { clsStock = 'st-low'; txtStock = stock + ' restant'; }
+
+      let meta = '';
+      if (estPap) {
+        const bits = [];
+        if (it.taille_disponible) bits.push(it.taille_disponible);
+        if (it.couleur) bits.push(it.couleur);
+        meta = bits.join(' · ');
+      } else {
+        meta = it.unite || '';
+      }
+
+      const tile = document.createElement('button');
+      tile.type = 'button';
+      tile.className = 'prod-tile' + (rupture ? ' rupture' : '');
+      tile.innerHTML =
+        '<div class="pt-nom">' + it.nom + '</div>' +
+        (meta ? '<div class="pt-meta">' + meta + '</div>' : '') +
+        '<div class="pt-prix">' + fmt(prix) + ' ' + DEVISE + '</div>' +
+        '<span class="pt-stock ' + clsStock + '">' + txtStock + '</span>';
+
+      if (!rupture) {
+        tile.addEventListener('click', function () {
+          ajouterAuPanier({
+            type: estPap ? 'PRET_A_PORTER' : 'ACCESSOIRE',
+            id: it.id, nom: it.nom, prix: prix, stock: stock
+          });
+        });
+      }
+      grille.appendChild(tile);
+    });
+  }
+
+  /* ===== PANIER ===== */
+  function ajouterAuPanier(prod) {
+    const key = prod.type + '-' + prod.id;
+    const existant = panier.find(function (p) { return p.key === key; });
+    if (existant) {
+      if (existant.qte >= existant.stock) {
+        alert('Stock insuffisant pour « ' + prod.nom +' » (max ' + existant.stock + ').');
+        return;
+      }
+      existant.qte += 1;
+    } else {
+      panier.push({
+        key: key, type: prod.type, id: prod.id,
+        nom: prod.nom, prix: prod.prix, qte: 1, stock: prod.stock
+      });
+    }
+    rendrePanier();
+  }
+
+  function changerQte(key, delta) {
+    const it = panier.find(function (p) { return p.key === key; });
+    if (!it) return;
+    const nouvelle = it.qte + delta;
+    if (nouvelle <= 0) {
+      panier = panier.filter(function (p) { return p.key !== key; });
+    } else if (nouvelle > it.stock) {
+      alert('Stock maximum atteint (' + it.stock + ').');
+      return;
+    } else {
+      it.qte = nouvelle;
+    }
+    rendrePanier();
+  }
+
+  function rendrePanier() {
+    panierList.querySelectorAll('.cart-item').forEach(function (e) { e.remove(); });
+
+    if (!panier.length) {
+      panierVide.classList.remove('d-none');
+    } else {
+      panierVide.classList.add('d-none');
+      panier.forEach(function (it) {
+        const div = document.createElement('div');
+        div.className = 'cart-item';
+        div.innerHTML =
+          '<div class="d-flex justify-content-between align-items-start mb-1">' +
+            '<div class="flex-grow-1 pe-2">' +
+              '<div class="ci-nom">' + it.nom + '</div>' +
+              '<div class="ci-prix">' + fmt(it.prix) + ' ' + DEVISE + ' / unité</div>' +
+            '</div>' +
+            '<button type="button" class="btn btn-sm text-danger p-0 btn-suppr" title="Retirer">' +
+              '<i class="bi bi-x-lg"></i></button>' +
+          '</div>' +
+          '<div class="d-flex justify-content-between align-items-center">' +
+            '<div class="d-flex align-items-center gap-1">' +
+              '<button type="button" class="qte-btn btn-moins">&minus;</button>' +
+              '<span class="qte-val">' + it.qte + '</span>' +
+              '<button type="button" class="qte-btn btn-plus">+</button>' +
+            '</div>' +
+            '<span class="ci-total">' + fmt(it.prix * it.qte) + ' ' + DEVISE + '</span>' +
+          '</div>';
+
+        div.querySelector('.btn-moins').addEventListener('click', function () { changerQte(it.key, -1); });
+        div.querySelector('.btn-plus').addEventListener('click', function () { changerQte(it.key, 1); });
+        div.querySelector('.btn-suppr').addEventListener('click', function () {
+          panier = panier.filter(function (p) { return p.key !== it.key; });
+          rendrePanier();
+        });
+        panierList.appendChild(div);
+      });
+    }
+
+    document.getElementById('badge_panier').textContent = panier.length;
+    btnValider.disabled = panier.length === 0;
+    recalculer();
+  }
+
+  function recalculer() {
+    let st = 0;
+    panier.forEach(function (it) { st += it.prix * it.qte; });
+
+    const tr = selRemise.value;
+    const vr = parseFloat(inpRemise.value) || 0;
+    let rem = 0;
+    if (tr === 'MONTANT') rem = Math.min(vr, st);
+    else if (tr === 'POURCENTAGE') rem = st * Math.min(vr, 100) / 100;
+    const total = Math.max(0, st - rem);
+
+    document.getElementById('recap_st').textContent = fmt(st) + ' ' + DEVISE;
+    document.getElementById('recap_total').textContent = fmt(total) + ' ' + DEVISE;
+
+    const lr = document.getElementById('ligne_remise');
+    if (rem > 0) {
+      lr.classList.remove('d-none');
+      document.getElementById('recap_remise').textContent = fmt(rem);
+    } else {
+      lr.classList.add('d-none');
+    }
+  }
+
+  /* ===== SUBMIT : génération des inputs ===== */
+  document.getElementById('formCaisse').addEventListener('submit', function (e) {
+    if (!panier.length) {
+      e.preventDefault();
+      alert('Le panier est vide.');
+      return;
+    }
+    zoneInputs.innerHTML = '';
+
+    function champ(nom, val) {
+      const i = document.createElement('input');
+      i.type = 'hidden';
+      i.name = nom;
+      i.value = val;
+      zoneInputs.appendChild(i);
+    }
+
+    panier.forEach(function (it, idx) {
+      const n = idx + 1;
+      champ('ligne_' + n + '_type', it.type);
+      champ('ligne_' + n + '_prix_unitaire', it.prix);
+      champ('ligne_' + n + '_quantite', it.qte);
+      if (it.type === 'PRET_A_PORTER') champ('ligne_' + n + '_modele_id', it.id);
+      else champ('ligne_' + n + '_accessoire_id', it.id);
+    });
+
+    // Remise globale répartie sur la 1re ligne (le modèle n'a pas de remise commande en vente directe)
+    const tr = selRemise.value;
+    const vr = parseFloat(inpRemise.value) || 0;
+    if (tr && vr > 0) {
+      champ('ligne_1_remise_type', tr);
+      champ('ligne_1_remise_valeur', vr);
+    }
+
+    inputCount.value = panier.length;
+  });
+
+  /* ===== ÉVÉNEMENTS ===== */
+  document.querySelectorAll('.filtre-type').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.filtre-type').forEach(function (b) {
+        b.classList.remove('btn-primary', 'active');
+        b.classList.add('btn-outline-primary');
+      });
+      this.classList.add('btn-primary', 'active');
+      this.classList.remove('btn-outline-primary');
+      typeActif = this.dataset.t;
+      rendreGrille();
+    });
+  });
+
+  recherche.addEventListener('input', rendreGrille);
+
+  selRemise.addEventListener('change', function () {
+    inpRemise.disabled = !this.value;
+    if (!this.value) inpRemise.value = 0;
+    inpRemise.max = this.value === 'POURCENTAGE' ? '100' : '';
+    recalculer();
+  });
+  inpRemise.addEventListener('input', recalculer);
+
+  document.getElementById('btn_vider').addEventListener('click', function () {
+    if (panier.length && confirm('Vider le panier ?')) {
+      panier = [];
+      rendrePanier();
+    }
+  });
+
+  document.getElementById('modalCaisse').addEventListener('shown.bs.modal', function () {
+    rendreGrille();
+    recherche.focus();
+  });
+
+  document.getElementById('modalCaisse').addEventListener('hidden.bs.modal', function () {
+    panier = [];
+    document.getElementById('formCaisse').reset();
+    inpRemise.disabled = true;
+    zoneInputs.innerHTML = '';
+    typeActif = 'PAP';
+    document.querySelectorAll('.filtre-type').forEach(function (b, i) {
+      b.classList.toggle('btn-primary', i === 0);
+      b.classList.toggle('active', i === 0);
+      b.classList.toggle('btn-outline-primary', i !== 0);
+    });
+    rendrePanier();
+  });
+
+})();
+</script>
+{% endblock %}

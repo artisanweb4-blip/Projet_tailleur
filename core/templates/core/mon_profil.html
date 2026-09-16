@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Mon profil - TailleurPro{% endblock %}
+
+{% block extra_css %}
+<style>
+    .avatar-circle {
+        width: 80px;
+        height: 80px;
+        font-size: 2rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+    }
+    .profile-header-card {
+        background: linear-gradient(to right, #ffffff, #f8fafc);
+        border: 1px solid #e2e8f0;
+    }
+    .info-label {
+        font-size: 0.825rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #64748b;
+        font-weight: 600;
+    }
+    .info-value {
+        font-size: 1rem;
+        color: #0f172a;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- En-tête de la page -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">Mon profil</h2>
+            <p class="text-secondary mb-0">Gérez vos informations personnelles et paramètres de sécurité.</p>
+        </div>
+        <!-- CORRECTION 1: Ajout de core: -->
+        <a href="{% url 'core:accueil' %}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Tableau de bord
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Colonne gauche : Synthèse profil -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm profile-header-card text-center p-4">
+                <div class="d-flex justify-content-center mb-3">
+                    <div class="avatar-circle">
+                        {{ user.first_name|first|default:user.username|first|upper }}
+                    </div>
+                </div>
+                <h5 class="fw-bold text-dark mb-1">
+                    {{ user.get_full_name|default:user.username }}
+                </h5>
+                <p class="text-muted small mb-3">{{ user.email|default:"Aucun email renseigné" }}</p>
+                
+                <div class="d-flex justify-content-center gap-2 mb-3">
+                    {% if user.is_superuser %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill px-3 py-1">Administrateur</span>
+                    {% else %}
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle rounded-pill px-3 py-1">Maître Tailleur</span>
+                    {% endif %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill px-3 py-1">Compte Actif</span>
+                </div>
+
+                <hr class="my-3 text-secondary opacity-25">
+
+                <div class="text-start small text-muted">
+                    <div class="d-flex justify-content-between py-1">
+                        <span>Membre depuis :</span>
+                        <strong class="text-dark">{{ user.date_joined|date:"d F Y" }}</strong>
+                    </div>
+                    {% if user.last_login %}
+                    <div class="d-flex justify-content-between py-1">
+                        <span>Dernière connexion :</span>
+                        <strong class="text-dark">{{ user.last_login|date:"d/m/Y H:i" }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne droite : Détails & Déclencheurs de Modales -->
+        <div class="col-lg-8">
+            <!-- Carte Détails du compte -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+                    <h6 class="fw-bold m-0 text-dark">
+                        <i class="bi bi-person me-2 text-primary"></i>Informations personnelles
+                    </h6>
+                    <!-- Bouton Déclencheur Modale Edit Profil -->
+                    <button type="button" class="btn btn-sm btn-primary rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#editProfilModal">
+                        <i class="bi bi-pencil me-1"></i> Modifier profil
+                    </button>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="info-label mb-1">Nom d'utilisateur</div>
+                            <div class="info-value">{{ user.username }}</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="info-label mb-1">Adresse Email</div>
+                            <div class="info-value">{{ user.email|default:"Non communiquée" }}</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="info-label mb-1">Prénom</div>
+                            <div class="info-value">{{ user.first_name|default:"--" }}</div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="info-label mb-1">Nom</div>
+                            <div class="info-value">{{ user.last_name|default:"--" }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Carte Sécurité et Accès -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white py-3 border-bottom d-flex align-items-center justify-content-between">
+                    <h6 class="fw-bold m-0 text-dark">
+                        <i class="bi bi-shield-lock me-2 text-primary"></i>Sécurité & Authentification
+                    </h6>
+                </div>
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-semibold text-dark mb-1">Mot de passe</div>
+                            <p class="text-secondary small mb-0">Il est recommandé de changer régulièrement votre mot de passe pour des raisons de sécurité.</p>
+                        </div>
+                        <!-- Bouton Déclencheur Modale Mot de Passe -->
+                        <button type="button" class="btn btn-outline-dark btn-sm rounded-pill px-3 text-nowrap ms-3" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                            <i class="bi bi-key me-1"></i> Changer le mot de passe
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODALE 1 : MODIFIER LE PROFIL              -->
+<!-- ========================================== -->
+<div class="modal fade" id="editProfilModal" tabindex="-1" aria-labelledby="editProfilModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold" id="editProfilModalLabel">
+                    <i class="bi bi-pencil-square me-2"></i>Modifier mon profil
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <!-- CORRECTION 2: Ajout de core: -->
+            <form method="post" action="{% url 'core:modifier_profil' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="id_username" class="form-label fw-semibold">Nom d'utilisateur</label>
+                        <input type="text" name="username" id="id_username" class="form-control" value="{{ form.username.value|default:user.username }}" required>
+                        {% if form.username.errors %}
+                            <div class="text-danger small mt-1" id="profil-username-errors">{{ form.username.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_email" class="form-label fw-semibold">Adresse Email</label>
+                        <input type="email" name="email" id="id_email" class="form-control" value="{{ form.email.value|default:user.email }}">
+                        {% if form.email.errors %}
+                            <div class="text-danger small mt-1" id="profil-email-errors">{{ form.email.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer bg-light px-4 py-3">
+                    <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODALE 2 : CHANGER LE MOT DE PASSE          -->
+<!-- ========================================== -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold" id="changePasswordModalLabel">
+                    <i class="bi bi-shield-lock me-2"></i>Changer de mot de passe
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer"></button>
+            </div>
+            <!-- CORRECTION 3: Ajout de core: -->
+            <form method="post" action="{% url 'core:changer_mot_de_passe' %}">
+                {% csrf_token %}
+                <div class="modal-body p-4">
+                    <div class="mb-3">
+                        <label for="id_old_password" class="form-label fw-semibold">Ancien mot de passe</label>
+                        <input type="password" name="old_password" id="id_old_password" class="form-control" required>
+                        {% if form.old_password.errors %}
+                            <div class="text-danger small mt-1" id="pwd-old-errors">{{ form.old_password.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_new_password1" class="form-label fw-semibold">Nouveau mot de passe</label>
+                        <input type="password" name="new_password1" id="id_new_password1" class="form-control" required>
+                        {% if form.new_password1.errors %}
+                            <div class="text-danger small mt-1" id="pwd-new1-errors">{{ form.new_password1.errors.0 }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Au moins 8 caractères, ne devant pas être trop commun.</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_new_password2" class="form-label fw-semibold">Confirmation du nouveau mot de passe</label>
+                        <input type="password" name="new_password2" id="id_new_password2" class="form-control" required>
+                        {% if form.new_password2.errors %}
+                            <div class="text-danger small mt-1" id="pwd-new2-errors">{{ form.new_password2.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer bg-light px-4 py-3">
+                    <button type="button" class="btn btn-secondary rounded-pill px-3" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Changer le mot de passe</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Détecter s'il y a des erreurs dans le formulaire de modification du profil
+        const hasProfilErrors = document.getElementById('profil-username-errors') || document.getElementById('profil-email-errors');
+        if (hasProfilErrors) {
+            const editModal = new bootstrap.Modal(document.getElementById('editProfilModal'));
+            editModal.show();
+        }
+
+        // Détecter s'il y a des erreurs dans le formulaire de mot de passe
+        const hasPasswordErrors = document.getElementById('pwd-old-errors') || document.getElementById('pwd-new1-errors') || document.getElementById('pwd-new2-errors');
+        if (hasPasswordErrors) {
+            const pwdModal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+            pwdModal.show();
+        }
+    });
+</script>
+{% endblock %}

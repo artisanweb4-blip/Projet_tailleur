@@ -1,0 +1,236 @@
+{% extends 'saas_admin/base_superadmin.html' %}
+
+{% block title %}Gestion des Super Admins - Super Admin{% endblock %}
+{% block nav_utilisateurs %}active{% endblock %}
+
+{% block top_navbar %}
+<div class="d-flex align-items-center justify-content-between w-100">
+    <h5 class="m-0 fw-bold">Gestion des Super Administrateurs</h5>
+    <button class="btn btn-primary btn-sm fw-semibold" data-bs-toggle="modal" data-bs-target="#ajouterSuperAdminModal">
+        <i class="bi bi-person-plus me-1"></i> Ajouter un Super Admin
+    </button>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card-custom p-4 shadow-sm mb-4">
+    <!-- Barre de Recherche -->
+    <form method="GET" action="" class="row g-3 mb-4">
+        <div class="col-md-10">
+            <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-search text-muted"></i></span>
+                <input type="text" name="q" class="form-control border-start-0" placeholder="Rechercher par nom, username ou email..." value="{{ search_query }}">
+            </div>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-secondary w-100">Rechercher</button>
+        </div>
+    </form>
+
+    <!-- Tableau des Super Administrateurs -->
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small text-uppercase">
+                <tr>
+                    <th>Administrateur</th>
+                    <th>Identifiant</th>
+                    <th>Rôle</th>
+                    <th>Date d'inscription</th>
+                    <th>Statut</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for utilisateur in page_obj %}
+                <tr>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width: 38px; height: 38px;">
+                                {{ utilisateur.username|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <div class="fw-semibold text-dark">{{ utilisateur.get_full_name|default:utilisateur.username }}</div>
+                                <div class="text-muted small">{{ utilisateur.email|default:"Pas d'email" }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td><code>{{ utilisateur.username }}</code></td>
+                    <td>
+                        <span class="badge bg-danger-subtle text-danger">Super Admin</span>
+                    </td>
+                    <td class="small">{{ utilisateur.date_joined|date:"d/m/Y" }}</td>
+                    <td>
+                        {% if utilisateur.is_active %}
+                            <span class="badge bg-success-subtle text-success">Actif</span>
+                        {% else %}
+                            <span class="badge bg-danger-subtle text-danger">Inactif</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-1">
+                            <!-- Modifier -->
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modifierSuperAdminModal_{{ utilisateur.id }}" title="Modifier">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+
+                            <!-- Activer / Désactiver (URL corrigée ci-dessous) -->
+                            <form method="POST" action="{% url 'saas_admin:changer_statut_utilisateur' utilisateur.id %}" class="d-inline">
+                                {% csrf_token %}
+                                {% if utilisateur.is_active %}
+                                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Désactiver le compte">
+                                        <i class="bi bi-person-x"></i>
+                                    </button>
+                                {% else %}
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Activer le compte">
+                                        <i class="bi bi-person-check"></i>
+                                    </button>
+                                {% endif %}
+                            </form>
+
+                            <!-- Supprimer -->
+                            <button type="button" class="btn btn-sm btn-outline-danger" data-bs-toggle="modal" data-bs-target="#supprimerSuperAdminModal_{{ utilisateur.id }}" title="Supprimer">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+
+                <!-- Modal Modifier Super Admin -->
+                <div class="modal fade" id="modifierSuperAdminModal_{{ utilisateur.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 rounded-4 shadow">
+                            <div class="modal-header border-bottom">
+                                <h5 class="modal-title fw-bold"><i class="bi bi-pencil me-2"></i>Modifier le Super Admin</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <form action="{% url 'saas_admin:modifier_utilisateur' utilisateur.id %}" method="POST">
+                                {% csrf_token %}
+                                <div class="modal-body p-4 text-start">
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Prénom</label>
+                                            <input type="text" name="first_name" class="form-control" value="{{ utilisateur.first_name }}">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label small fw-semibold">Nom</label>
+                                            <input type="text" name="last_name" class="form-control" value="{{ utilisateur.last_name }}">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label small fw-semibold">Identifiant (Username) <span class="text-danger">*</span></label>
+                                            <input type="text" name="username" class="form-control" value="{{ utilisateur.username }}" required>
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label small fw-semibold">Adresse Email</label>
+                                            <input type="email" name="email" class="form-control" value="{{ utilisateur.email }}">
+                                        </div>
+                                        <div class="col-12">
+                                            <label class="form-label small fw-semibold">Nouveau mot de passe (laisser vide si inchangé)</label>
+                                            <input type="password" name="password" class="form-control" autocomplete="new-password">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0 p-4 pt-0">
+                                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                                    <button type="submit" class="btn btn-primary px-4 fw-semibold">Enregistrer</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Modal Supprimer Super Admin -->
+                <div class="modal fade" id="supprimerSuperAdminModal_{{ utilisateur.id }}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 rounded-4 shadow">
+                            <div class="modal-header border-bottom">
+                                <h5 class="modal-title fw-bold text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body p-4 text-start">
+                               Êtes-vous sûr de vouloir supprimer définitivement le compte de <strong>{{ utilisateur.username }}</strong> ? Cette action est irréversible.
+                            </div>
+                            <div class="modal-footer border-0 p-4 pt-0">
+                                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                                <form action="{% url 'saas_admin:supprimer_utilisateur' utilisateur.id %}" method="POST" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-danger px-4 fw-semibold">Supprimer</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">Aucun super administrateur trouvé.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center mb-0">
+            {% if page_obj.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ search_query }}">Précédent</a></li>
+            {% endif %}
+            
+            <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} sur {{ page_obj.paginator.num_pages }}</span></li>
+            
+            {% if page_obj.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ search_query }}">Suivant</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block modals %}
+<!-- Modal Ajouter Super Admin -->
+<div class="modal fade" id="ajouterSuperAdminModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>Nouveau Super Administrateur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'saas_admin:ajouter_utilisateur' %}" method="POST">
+                {% csrf_token %}
+                <input type="hidden" name="is_superuser" value="on">
+
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Prénom</label>
+                            <input type="text" name="first_name" class="form-control" placeholder="Mamadou">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Nom</label>
+                            <input type="text" name="last_name" class="form-control" placeholder="Diarra">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Identifiant (Username) <span class="text-danger">*</span></label>
+                            <input type="text" name="username" class="form-control" placeholder="m_diarra" required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Adresse Email</label>
+                            <input type="email" name="email" class="form-control" placeholder="diarra@example.com">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Mot de passe <span class="text-danger">*</span></label>
+                            <input type="password" name="password" class="form-control" required autocomplete="new-password">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-semibold">Créer le Super Admin</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

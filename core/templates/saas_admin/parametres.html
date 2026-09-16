@@ -1,0 +1,77 @@
+{% extends 'saas_admin/base_superadmin.html' %}
+
+{% block title %}Paramètres Globaux - Super Admin{% endblock %}
+{% block nav_parametres %}active{% endblock %}
+
+{% block top_navbar %}
+<div class="d-flex align-items-center justify-content-between w-100">
+    <h5 class="m-0 fw-bold">Paramètres de la Plateforme</h5>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="POST" action="{% url 'saas_admin:superadmin_parametres' %}">
+    {% csrf_token %}
+
+    <div class="row g-4">
+        <!-- Informations Générales -->
+        <div class="col-lg-6">
+            <div class="card-custom p-4 shadow-sm h-100">
+                <h6 class="fw-bold mb-3"><i class="bi bi-sliders me-2 text-primary"></i>Informations Générales</h6>
+                <hr class="text-muted opacity-25">
+                
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Nom de la Plateforme SaaS</label>
+                    <input type="text" name="site_name" class="form-control" value="Projet Tailleur">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Email de Support / Contact</label>
+                    <input type="email" name="support_email" class="form-control" value="support@projettailleur.com">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Devise Principale</label>
+                    <select name="currency" class="form-select">
+                        <option value="FCFA" selected>FCFA (XOF / XAF)</option>
+                        <option value="EUR">Euro (€)</option>
+                        <option value="USD">Dollar ($)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Mode Maintenance & Sécurité -->
+        <div class="col-lg-6">
+            <div class="card-custom p-4 shadow-sm h-100">
+                <h6 class="fw-bold mb-3"><i class="bi bi-shield-lock me-2 text-warning"></i>Sécurité & Maintenance</h6>
+                <hr class="text-muted opacity-25">
+
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" role="switch" id="maintenanceMode" name="maintenance_mode">
+                    <label class="form-check-label fw-semibold" for="maintenanceMode">Activer le mode maintenance</label>
+                    <div class="form-text small">Bloque l'accès aux boutiques pour effectuer des mises à jour système.</div>
+                </div>
+
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" role="switch" id="allowRegistration" name="allow_registration" checked>
+                    <label class="form-check-label fw-semibold" for="allowRegistration">Autoriser les nouvelles inscriptions</label>
+                    <div class="form-text small">Permet à de nouvelles boutiques de s'inscrire automatiquement.</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold">Durée d'essai gratuite par défaut (Jours)</label>
+                    <input type="number" name="trial_days" class="form-control" value="14" min="0">
+                </div>
+            </div>
+        </div>
+
+        <!-- Bouton Enregistrer -->
+        <div class="col-12 text-end">
+            <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                <i class="bi bi-check-circle me-1"></i> Enregistrer les modifications
+            </button>
+        </div>
+    </div>
+</form>
+{% endblock %}

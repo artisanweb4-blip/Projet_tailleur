@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<style>
+    @page { size: A4; margin: 1.4cm; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #1f2937; }
+
+    .entete { border-bottom: 2px solid #111827; padding-bottom: 8px; margin-bottom: 14px; }
+    .atelier-nom { font-size: 15pt; font-weight: bold; }
+    .atelier-info { font-size: 8.5pt; color: #6b7280; }
+    .titre-doc {
+        background: #111827; color: #fff; padding: 5px 10px;
+        font-size: 11pt; font-weight: bold; margin-bottom: 12px;
+    }
+
+    table { width: 100%; border-collapse: collapse; }
+    .infos td { padding: 4px 6px; font-size: 9.5pt; border: 1px solid #d1d5db; }
+    .infos .lbl { background: #f3f4f6; font-weight: bold; width: 26%; }
+
+    .ligne-bloc {
+        border: 1px solid #9ca3af; margin-top: 14px; page-break-inside: avoid;
+    }
+    .ligne-titre {
+        background: #e5e7eb; padding: 5px 8px; font-weight: bold; font-size: 10.5pt;
+    }
+    .ligne-corps { padding: 8px; }
+
+    .sous-titre {
+        font-weight: bold; font-size: 9.5pt; margin: 8px 0 4px;
+        border-bottom: 1px solid #d1d5db; padding-bottom: 2px;
+    }
+
+    .mesures td {
+        border: 1px solid #d1d5db; padding: 4px 6px; font-size: 9.5pt; width: 25%;
+    }
+    .mesures .m-lbl { background: #f9fafb; color: #4b5563; }
+    .mesures .m-val { font-weight: bold; }
+
+    .desc {
+        background: #f9fafb; border-left: 3px solid #9ca3af;
+        padding: 6px 8px; font-size: 9.5pt;
+    }
+    .acc td { border-bottom: 1px solid #e5e7eb; padding: 3px 6px; font-size: 9pt; }
+
+    .alerte {
+        border: 1px dashed #9ca3af; padding: 6px; font-size: 9pt;
+        color: #6b7280; text-align: center;
+    }
+    .pied {
+        margin-top: 18px; border-top: 1px solid #d1d5db; padding-top: 6px;
+        font-size: 8pt; color: #9ca3af; text-align: center;
+    }
+    .signature { margin-top: 22px; font-size: 9pt; }
+</style>
+</head>
+<body>
+
+<div class="entete">
+    <table>
+        <tr>
+            <td>
+                <div class="atelier-nom">{{ atelier.nom }}</div>
+                <div class="atelier-info">
+                    {% if atelier.telephone %}Tél : {{ atelier.telephone }}{% endif %}
+                    {% if atelier.adresse %} · {{ atelier.adresse }}{% endif %}
+                </div>
+            </td>
+            <td style="text-align:right; font-size:8.5pt; color:#6b7280;">
+                Édité le {{ date_edition|date:"d/m/Y à H:i" }}
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="titre-doc">FICHE ATELIER — BON DE TRAVAIL</div>
+
+<table class="infos">
+    <tr>
+        <td class="lbl">N° de commande</td>
+        <td>{{ commande.code }}</td>
+        <td class="lbl">Date de commande</td>
+        <td>{{ commande.date_commande|date:"d/m/Y" }}</td>
+    </tr>
+    <tr>
+        <td class="lbl">Client</td>
+        <td>
+            <strong>{{ commande.client.nom }}{% if commande.client.prenom %} {{ commande.client.prenom }}{% endif %}</strong>
+        </td>
+        <td class="lbl">Téléphone</td>
+        <td>{{ commande.client.telephone }}</td>
+    </tr>
+    <tr>
+        <td class="lbl">Livraison prévue</td>
+        <td><strong>{{ commande.date_livraison_prevue|date:"d/m/Y" }}</strong></td>
+        <td class="lbl">Statut</td>
+        <td>{{ commande.get_statut_display }}</td>
+    </tr>
+    {% if commande.couturier_attribue %}
+    <tr>
+        <td class="lbl">Couturier</td>
+        <td colspan="3">
+            {{ commande.couturier_attribue.get_full_name|default:commande.couturier_attribue.username }}
+        </td>
+    </tr>
+    {% endif %}
+</table>
+
+{% if commande.notes %}
+<div class="sous-titre">Notes générales</div>
+<div class="desc">{{ commande.notes|linebreaksbr }}</div>
+{% endif %}
+
+{% for ligne in lignes %}
+<div class="ligne-bloc">
+    <div class="ligne-titre">
+        ARTICLE {{ forloop.counter }} — {{ ligne.modele.nom|default:"Couture sur mesure" }}
+        &nbsp;·&nbsp; Qté : {{ ligne.quantite }}
+    </div>
+    <div class="ligne-corps">
+
+        <table class="infos">
+            <tr>
+                <td class="lbl">Modèle</td>
+                <td>{{ ligne.modele.nom|default:"Sur mesure (sans modèle)" }}</td>
+                <td class="lbl">Destinataire</td>
+                <td>
+                    {% if ligne.client_secondaire %}
+                        {{ ligne.client_secondaire.nom }}{% if ligne.client_secondaire.prenom %} {{ ligne.client_secondaire.prenom }}{% endif %}
+                    {% else %}
+                        {{ commande.client.nom }}{% if commande.client.prenom %} {{ commande.client.prenom }}{% endif %}
+                    {% endif %}
+                </td>
+            </tr>
+            <tr>
+                <td class="lbl">Personne mesurée</td>
+                <td colspan="3">
+                    <strong>
+                        {% if ligne.mensuration %}
+                            {{ ligne.mensuration.nom_personne|default:ligne.mensuration.client.nom }}
+                            &nbsp;—&nbsp; {{ ligne.mensuration.libelle }}
+                            ({{ ligne.mensuration.date_prise|date:"d/m/Y" }})
+                        {% else %}
+                            Aucune mensuration liée
+                        {% endif %}
+                    </strong>
+                </td>
+            </tr>
+        </table>
+
+        {% if ligne.description %}
+        <div class="sous-titre">Consignes de confection</div>
+        <div class="desc">{{ ligne.description|linebreaksbr }}</div>
+        {% endif %}
+
+        <div class="sous-titre">Mensurations (cm)</div>
+        {% if ligne.mensuration and ligne.mensuration.donnees %}
+            <table class="mesures">
+                {% for cle, valeur in ligne.mensuration.donnees.items %}
+                    {% if forloop.counter0|divisibleby:2 %}<tr>{% endif %}
+                    <td class="m-lbl">{{ cle }}</td>
+                    <td class="m-val">{{ valeur }}</td>
+                    {% if forloop.counter|divisibleby:2 or forloop.last %}</tr>{% endif %}
+                {% endfor %}
+            </table>
+        {% else %}
+            <div class="alerte">
+                Aucune mensuration enregistrée pour cet article — à prendre avant confection.
+            </div>
+        {% endif %}
+
+        {% if ligne.accessoires_ligne.exists %}
+        <div class="sous-titre">Accessoires à prévoir</div>
+        <table class="acc">
+            {% for a in ligne.accessoires_ligne.all %}
+            <tr>
+                <td style="width:70%;">{{ a.accessoire.nom }}</td>
+                <td>× {{ a.quantite }} {{ a.accessoire.get_unite_display }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+        {% endif %}
+
+        <div class="signature">
+            Couturier : ______________________
+            &nbsp;&nbsp;&nbsp; Début : ____ / ____
+            &nbsp;&nbsp;&nbsp; Fin : ____ / ____
+            &nbsp;&nbsp;&nbsp; Contrôle : ______
+        </div>
+
+    </div>
+</div>
+{% empty %}
+<div class="alerte" style="margin-top:14px;">
+    Aucune couture sur mesure dans cette commande.
+</div>
+{% endfor %}
+
+<div class="pied">
+    {{ atelier.nom }} · Fiche atelier {{ commande.code }} ·
+    Livraison prévue le {{ commande.date_livraison_prevue|date:"d/m/Y" }}
+</div>
+
+</body>
+</html>

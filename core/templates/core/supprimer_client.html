@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Supprimer {{ client.nom }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h3>Confirmer la suppression</h3>
+                </div>
+                <div class="card-body">
+                    <p>Êtes-vous sûr de vouloir supprimer le client <strong>{{ client.nom }}</strong> ?</p>
+                    <p class="text-danger">Cette action est irréversible et supprimera également toutes ses commandes et mensurations associées.</p>
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+                            <a href="{% url 'detail_client' client.id %}" class="btn btn-secondary">Annuler</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

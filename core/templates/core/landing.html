@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TailleurPro - La plateforme tout-en-un pour ateliers de couture</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    
+    <style>
+        :root {
+            --primary-color: #2b59c3;
+            --secondary-color: #0f172a;
+            --accent-color: #2563eb;
+            --bg-light: #f8fafc;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: #334155;
+            background-color: #ffffff;
+            padding-top: 70px;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: #ffffff;
+            padding: 100px 0 140px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-badge {
+            background: rgba(37, 99, 235, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            border-radius: 50px;
+            padding: 6px 16px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 24px;
+        }
+
+        .hero-title {
+            font-size: 3.2rem;
+            font-weight: 800;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-subtitle {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            margin-bottom: 32px;
+            font-weight: 400;
+        }
+
+        .btn-custom-primary {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 14px 32px;
+            font-weight: 600;
+            border-radius: 10px;
+            border: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.4);
+        }
+
+        .btn-custom-primary:hover {
+            background-color: #1d4ed8;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .feature-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.3s ease;
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+            border-color: #cbd5e1;
+        }
+
+        .icon-box {
+            width: 56px;
+            height: 56px;
+            background: #eff6ff;
+            color: var(--accent-color);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+        }
+
+        .pricing-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 40px 32px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .pricing-card.featured {
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 25px 50px -12px rgba(37, 99, 235, 0.15);
+        }
+
+        .popular-badge {
+            position: absolute;
+            top: -15px;
+            right: 32px;
+            background: var(--accent-color);
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 4px 12px;
+            border-radius: 20px;
+            text-transform: uppercase;
+        }
+
+        .price-number {
+            font-size: 2.75rem;
+            font-weight: 800;
+            color: var(--secondary-color);
+        }
+
+        .dashboard-mockup {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px;
+        }
+
+        .contact-info-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
+            height: 100%;
+        }
+
+        .contact-icon {
+            width: 48px;
+            height: 48px;
+            background: #eff6ff;
+            color: var(--accent-color);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3 fixed-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold fs-4" href="{% url 'core:landing_page' %}">
+                <i class="bi bi-scissors text-primary me-2"></i>TailleurPro
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto me-4">
+                    <li class="nav-item"><a class="nav-link" href="#features">Fonctionnalités</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#tarifs">Tarifs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                </ul>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'core:connexion' %}" class="btn btn-outline-light px-4">Connexion</a>
+                    <a href="{% url 'core:inscription' %}" class="btn btn-primary px-4 fw-semibold">Créer un compte</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="container">
+            <div class="row align-items-center gy-5">
+                <div class="col-lg-6">
+                    <span class="hero-badge">
+                        <i class="bi bi-stars me-1"></i> Solution N°1 pour la couture
+                    </span>
+                    <h1 class="hero-title mb-3">Numérisez la gestion de votre atelier sur-mesure</h1>
+                    <p class="hero-subtitle">
+                        Suivi des mesures clients, gestion des commandes, relances SMS et suivi des finances. Tout ce dont vous avez besoin pour développer votre atelier en un seul endroit.
+                    </p>
+                    <div class="d-flex flex-wrap gap-3">
+                        <a href="{% url 'core:inscription' %}" class="btn btn-custom-primary">
+                            Commencer l'essai gratuit <i class="bi bi-arrow-right ms-2"></i>
+                        </a>
+                        <a href="#features" class="btn btn-outline-light btn-lg px-4 py-3 fs-6">
+                            <i class="bi bi-play-circle me-2"></i>Découvrir les fonctions
+                        </a>
+                    </div>
+                    <div class="mt-4 pt-3 d-flex align-items-center text-muted">
+                        <small class="me-4"><i class="bi bi-check-circle-fill text-primary me-1"></i> Sans engagement</small>
+                        <small><i class="bi bi-check-circle-fill text-primary me-1"></i> Configuration rapide</small>
+                    </div>
+                </div>
+
+                <!-- Preview Mockup -->
+                <div class="col-lg-6">
+                    <div class="dashboard-mockup">
+                        <div class="d-flex align-items-center mb-3 px-2">
+                            <span class="badge bg-danger rounded-circle p-1 me-1"></span>
+                            <span class="badge bg-warning rounded-circle p-1 me-1"></span>
+                            <span class="badge bg-success rounded-circle p-1 me-2"></span>
+                            <small class="text-muted">Tableau de bord - Atelier Dakar Couture</small>
+                        </div>
+                        <div class="bg-light p-4 rounded text-dark">
+                            <div class="row g-3 mb-3">
+                                <div class="col-6">
+                                    <div class="bg-white p-3 rounded shadow-sm border-start border-primary border-4">
+                                        <small class="text-muted d-block">Commandes en cours</small>
+                                        <strong class="fs-4">24 tenues</strong>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="bg-white p-3 rounded shadow-sm border-start border-success border-4">
+                                        <small class="text-muted d-block">Recette du mois</small>
+                                        <strong class="fs-4">850 000 F</strong>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white p-3 rounded shadow-sm">
+                                <h6 class="mb-2">Dernière mesure enregistrée</h6>
+                                <p class="mb-1 text-muted small"><i class="bi bi-person me-1"></i> Amadou Diallo - Boubou 3 pièces</p>
+                                <span class="badge bg-primary-subtle text-primary">Épaule: 48cm</span>
+                                <span class="badge bg-primary-subtle text-primary">Poitrine: 102cm</span>
+                                <span class="badge bg-primary-subtle text-primary">Longueur: 110cm</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="py-5 bg-light">
+        <div class="container py-5">
+            <div class="text-center max-width-600 mx-auto mb-5">
+                <span class="text-primary fw-bold text-uppercase">Fonctionnalités</span>
+                <h2 class="fw-bold fs-1 mt-2">Conçu spécialement pour la couture moderne</h2>
+                <p class="text-muted">Dites adieu aux carnets papier perdus ou détériorés.</p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="icon-box">
+                            <i class="bi bi-journal-bookmark"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Carnet de Mesures Digital</h4>
+                        <p class="text-muted mb-0">
+                            Enregistrez et retrouvez en un clic les mensurations exactes de tous vos clients (homme, femme, enfant).
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="icon-box">
+                            <i class="bi bi-kanban"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Suivi des Commandes</h4>
+                        <p class="text-muted mb-0">
+                            Suivez l'avancement de chaque tenue : Dépôt du tissu, Découpe, Essayage, Finitions et Livraison.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="feature-card">
+                        <div class="icon-box">
+                            <i class="bi bi-wallet2"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Gestion des Avances & Paiements</h4>
+                        <p class="text-muted mb-0">
+                            Gardez une visibilité claire sur les acomptes versés et le solde restant à régler par chaque client.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="tarifs" class="py-5">
+        <div class="container py-5">
+            <div class="text-center mb-5">
+                <span class="text-primary fw-bold text-uppercase">Tarification</span>
+                <h2 class="fw-bold fs-1 mt-2">Des abonnements adaptés à votre atelier</h2>
+                <p class="text-muted">Choisissez l'offre qui correspond à la taille de votre activité.</p>
+            </div>
+
+            <div class="row g-4 align-items-center">
+                <!-- Plan 1 -->
+                <div class="col-lg-4">
+                    <div class="pricing-card">
+                        <h4 class="fw-bold mb-2">Débutant</h4>
+                        <p class="text-muted small">Idéal pour les couturiers indépendants</p>
+                        <div class="mb-4">
+                            <span class="price-number">5 000</span> <span class="text-muted">FCFA / mois</span>
+                        </div>
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Jusqu'à 50 clients</li>
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Carnet de mesures illimité</li>
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Gestion des commandes</li>
+                            <li class="text-muted"><i class="bi bi-x text-secondary me-2"></i> Rappels SMS automatiques</li>
+                        </ul>
+                        <a href="{% url 'core:inscription' %}" class="btn btn-outline-primary w-100 py-2">Choisir cette offre</a>
+                    </div>
+                </div>
+
+                <!-- Plan 2 (Featured) -->
+                <div class="col-lg-4">
+                    <div class="pricing-card featured">
+                        <span class="popular-badge">Populaire</span>
+                        <h4 class="fw-bold mb-2">Atelier Pro</h4>
+                        <p class="text-muted small">Pour les ateliers avec employés</p>
+                        <div class="mb-4">
+                            <span class="price-number">15 000</span> <span class="text-muted">FCFA / mois</span>
+                        </div>
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Clients illimités</li>
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Multi-utilisateurs (3 couturiers)</li>
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Suivi des paiements & avances</li>
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Rappels SMS automatiques</li>
+                        </ul>
+                        <a href="{% url 'core:inscription' %}" class="btn btn-primary w-100 py-2 fw-bold">Essayer 14 jours gratuits</a>
+                    </div>
+                </div>
+
+                <!-- Plan 3 -->
+                <div class="col-lg-4">
+                    <div class="pricing-card">
+                        <h4 class="fw-bold mb-2">Grande Maison</h4>
+                        <p class="text-muted small">Pour les grandes maisons de couture</p>
+                        <div class="mb-4">
+                            <span class="price-number">30 000</span> <span class="text-muted">FCFA / mois</span>
+                        </div>
+                        <ul class="list-unstyled mb-4">
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Fonctionnalités illimitées</li>
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Multi-ateliers</li>
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Module de facturation personnalisée</li>
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Support prioritaire 24/7</li>
+                        </ul>
+                        <a href="{% url 'core:inscription' %}" class="btn btn-outline-primary w-100 py-2">Choisir cette offre</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section Contact -->
+    <section id="contact" class="py-5 bg-light">
+        <div class="container py-5">
+            <div class="text-center max-width-600 mx-auto mb-5">
+                <span class="text-primary fw-bold text-uppercase">Contact</span>
+                <h2 class="fw-bold fs-1 mt-2">Une question ? Un besoin particulier ?</h2>
+                <p class="text-muted">Notre équipe est là pour vous accompagner dans la numérisation de votre atelier.</p>
+            </div>
+
+            <div class="row g-4">
+                <!-- Coordonnées -->
+                <div class="col-lg-5">
+                    <div class="d-flex flex-column gap-3 h-100">
+                        <div class="contact-info-card d-flex align-items-center gap-3 shadow-sm">
+                            <div class="contact-icon">
+                                <i class="bi bi-geo-alt"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-1">Adresse</h6>
+                                <p class="text-muted mb-0 small">Dakar, Sénégal / Bamako, Mali</p>
+                            </div>
+                        </div>
+
+                        <div class="contact-info-card d-flex align-items-center gap-3 shadow-sm">
+                            <div class="contact-icon">
+                                <i class="bi bi-telephone"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-1">Téléphone & WhatsApp</h6>
+                                <p class="text-muted mb-0 small">+221 77 000 00 00 / +223 70 00 00 00</p>
+                            </div>
+                        </div>
+
+                        <div class="contact-info-card d-flex align-items-center gap-3 shadow-sm">
+                            <div class="contact-icon">
+                                <i class="bi bi-envelope"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-1">Email</h6>
+                                <p class="text-muted mb-0 small">contact@tailleurpro.com</p>
+                            </div>
+                        </div>
+
+                        <div class="contact-info-card d-flex align-items-center gap-3 shadow-sm">
+                            <div class="contact-icon">
+                                <i class="bi bi-clock"></i>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-1">Horaires d'assistance</h6>
+                                <p class="text-muted mb-0 small">Lundi - Samedi : 08h00 - 19h00</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulaire de contact -->
+                <div class="col-lg-7">
+                    <div class="bg-white p-4 p-md-5 rounded-4 border shadow-sm">
+                        <h4 class="fw-bold mb-4">Envoyez-nous un message</h4>
+                        <form method="post" action="">
+                            {% csrf_token %}
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="nom" class="form-label fw-semibold">Nom complet</label>
+                                    <input type="text" class="form-control" id="nom" name="nom" placeholder="Ex: Mamadou Diop" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label fw-semibold">Adresse Email</label>
+                                    <input type="email" class="form-control" id="email" name="email" placeholder="nom@exemple.com" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="telephone" class="form-label fw-semibold">Téléphone</label>
+                                    <input type="tel" class="form-control" id="telephone" name="telephone" placeholder="+221 ...">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="sujet" class="form-label fw-semibold">Sujet</label>
+                                    <select class="form-select" id="sujet" name="sujet">
+                                        <option selected>Demande d'information</option>
+                                        <option value="1">Assistance technique</option>
+                                        <option value="2">Partenariat / Grande Maison</option>
+                                        <option value="3">Autre</option>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label for="message" class="form-label fw-semibold">Message</label>
+                                    <textarea class="form-control" id="message" name="message" rows="4" placeholder="Comment pouvons-nous vous aider ?" required></textarea>
+                                </div>
+                                <div class="col-12 mt-4">
+                                    <button type="submit" class="btn btn-primary px-4 py-2 fw-semibold w-100">
+                                        <i class="bi bi-send me-2"></i>Envoyer le message
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-white py-4 border-top border-secondary">
+        <div class="container text-center text-md-between d-flex flex-column flex-md-row align-items-center">
+            <p class="mb-0 text-muted">&copy; 2026 TailleurPro. Tous droits réservés.</p>
+            <div class="mt-3 mt-md-0">
+                <a href="#" class="text-muted me-3 text-decoration-none">Confidentialité</a>
+                <a href="#" class="text-muted me-3 text-decoration-none">Conditions d'utilisation</a>
+                <a href="#contact" class="text-muted text-decoration-none">Support</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

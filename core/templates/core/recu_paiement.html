@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #333; }
+    .recu-container { max-width: 680px; margin: 0 auto; padding: 20px; }
+    .recu-header { background-color: #0d6efd; color: white;
+                   padding: 15px 20px; border-radius: 6px 6px 0 0; }
+    .recu-header h5 { margin: 0; font-size: 16px; }
+    .recu-header small { font-size: 12px; }
+    .recu-body { border: 1px solid #dee2e6; border-top: none;
+                 padding: 20px; border-radius: 0 0 6px 6px; }
+    .info-row { margin-bottom: 15px; }
+    .info-left { float: left; width: 50%; }
+    .info-right { float: right; width: 50%; text-align: right; }
+    .clearfix { clear: both; }
+    p { margin: 2px 0; font-size: 12px; }
+    .label { color: #6c757d; font-size: 11px; }
+    .value { font-weight: bold; }
+    hr { border: none; border-top: 1px solid #dee2e6; margin: 15px 0; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+    table th { background-color: #f8f9fa; padding: 8px 10px;
+               text-align: left; font-size: 12px; border: 1px solid #dee2e6; }
+    table td { padding: 8px 10px; font-size: 12px; border: 1px solid #dee2e6; }
+    .text-end { text-align: right; }
+    .row-remise td { background-color: #fff3cd; }
+    .row-net td { background-color: #f8f9fa; font-weight: bold; }
+    .row-acompte td { background-color: #d1e7dd; }
+    .row-reste td { background-color: #f8d7da; font-weight: bold; }
+    .alert-info-box { background-color: #cff4fc; border: 1px solid #b6effb;
+                      padding: 8px 12px; border-radius: 4px;
+                      font-size: 12px; margin-bottom: 15px; }
+    .sig-left { float: left; width: 45%; text-align: center; }
+    .sig-right { float: right; width: 45%; text-align: center; }
+    .sig-label { font-size: 11px; color: #6c757d; margin-bottom: 5px; }
+    .sig-line { border-top: 1px solid #aaa; margin-top: 40px; }
+    .badge-code { background-color: #ffffff; color: #0d6efd;
+                  padding: 4px 10px; border-radius: 4px;
+                  font-size: 13px; font-weight: bold; float: right; }
+  </style>
+</head>
+<body>
+
+<div class="recu-container">
+
+  <div class="recu-header">
+    <span class="badge-code">{{ commande.code }}</span>
+    <h5>Recu d'acompte</h5>
+    <small>{{ atelier.nom }}</small>
+    <div class="clearfix"></div>
+  </div>
+
+  <div class="recu-body">
+
+    <div class="info-row">
+      <div class="info-left">
+        <p class="value">{{ atelier.nom }}</p>
+        {% if atelier.telephone %}<p>{{ atelier.telephone }}</p>{% endif %}
+        {% if atelier.adresse %}<p>{{ atelier.adresse }}</p>{% endif %}
+      </div>
+      <div class="info-right">
+        <p class="label">Date de commande</p>
+        <p class="value">{{ commande.date_commande|date:"d/m/Y" }}</p>
+      </div>
+      <div class="clearfix"></div>
+    </div>
+
+    <hr>
+
+    <div style="margin-bottom:15px;">
+      <p class="label">Client</p>
+      <p class="value">{{ commande.client }}</p>
+      <p>{{ commande.client.telephone }}</p>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Désignation</th>
+          <th class="text-end">Montant</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            {% if commande.modele %}
+              <strong>{{ commande.modele.nom }}</strong><br>
+            {% else %}
+              <strong>Confection sur mesure</strong><br>
+            {% endif %}
+            <span style="color:#6c757d;">
+              {{ commande.description_vetement|truncatechars:80 }}
+            </span>
+          </td>
+          <td class="text-end">
+            {{ commande.prix_total|floatformat:0 }} {{ atelier.devise }}
+          </td>
+        </tr>
+        {% if commande.remise_type and commande.remise_valeur %}
+        <tr class="row-remise">
+          <td>
+            Remise
+            {% if commande.remise_type == 'POURCENTAGE' %}
+              ({{ commande.remise_valeur }}%)
+            {% else %}
+              (montant fixe)
+            {% endif %}
+          </td>
+          <td class="text-end" style="color:#dc3545;">
+            - {{ commande.remise_valeur|floatformat:0 }} {{ atelier.devise }}
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+      <tfoot>
+        <tr class="row-net">
+          <td>Prix net</td>
+          <td class="text-end">
+            {{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}
+          </td>
+        </tr>
+        <tr class="row-acompte">
+          <td>
+            Acompte recu
+            {% if paiement %}({{ paiement.get_mode_paiement_display }}){% endif %}
+          </td>
+          <td class="text-end">
+            {% if paiement %}{{ paiement.montant|floatformat:0 }}{% else %}0{% endif %}
+            {{ atelier.devise }}
+          </td>
+        </tr>
+        <tr class="row-reste">
+          <td>Reste a payer</td>
+          <td class="text-end">
+            {{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div class="alert-info-box">
+      Date de livraison prevue :
+      <strong>{{ commande.date_livraison_prevue|date:"d/m/Y" }}</strong>
+    </div>
+
+    <div style="margin-top:40px;">
+      <div class="sig-left">
+        <p class="sig-label">Signature du client</p>
+        <div class="sig-line"></div>
+      </div>
+      <div class="sig-right">
+        <p class="sig-label">Cachet / Signature atelier</p>
+        <div class="sig-line"></div>
+      </div>
+      <div class="clearfix"></div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

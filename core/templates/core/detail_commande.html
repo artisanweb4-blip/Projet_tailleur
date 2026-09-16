@@ -1,0 +1,1325 @@
+{% extends "base.html" %}
+{% block title %}Commande {{ commande.code }} - {{ commande.client.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* ===== MODAL MODIFIER : chaîne flex complète ===== */
+    #modalModifierCommande .modal-dialog {
+        max-height: 94vh;
+        margin: 3vh auto;
+        display: flex;
+        flex-direction: column;
+    }
+    #modalModifierCommande .modal-content {
+        display: flex;
+        flex-direction: column;
+        max-height: 100%;
+        overflow: hidden;
+    }
+    #modalModifierCommande .modal-header,
+    #modalModifierCommande .nav-tabs {
+        flex-shrink: 0;
+    }
+    #modalModifierCommande .tab-content {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+    }
+    #modalModifierCommande .tab-pane.active {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    #modalModifierCommande .tab-pane form {
+        flex: 1 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    #modalModifierCommande .modal-body {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        min-height: 0;
+    }
+    #modalModifierCommande .modal-footer {
+        flex-shrink: 0;
+        position: sticky;
+        bottom: 0;
+        background: #fff;
+        z-index: 5;
+    }
+    #modalModifierCommande .nav-tabs .nav-link { font-weight: 600; }
+
+    /* ===== COMBOBOX ===== */
+    .combo { position: relative; }
+    .combo-list {
+        position: absolute; top: 100%; left: 0; right: 0; z-index: 1060;
+        background: #fff; border: 1px solid #d1d5db; border-radius: 8px;
+        max-height: 220px; overflow-y: auto; margin-top: 2px;
+        box-shadow: 0 6px 18px rgba(0,0,0,.10);
+    }
+    .combo-item { padding: .5rem .75rem; cursor: pointer; font-size: .9rem; }
+    .combo-item:hover { background: #eef2ff; }
+    .combo-item .ci-nom { font-weight: 600; color: #111827; }
+    .combo-item .ci-tel { color: #6b7280; font-size: .82rem; }
+    .combo-empty { padding: .65rem .75rem; color: #9ca3af; font-size: .87rem; }
+    .combo-chosen { background: #ecfdf5 !important; border-color: #6ee7b7 !important; }
+
+    .input-locked {
+        background: #f3f4f6 !important; color: #111827 !important;
+        font-weight: 600; cursor: not-allowed;
+    }
+
+    .ligne-item { border: 1px solid #e9ecef; border-radius: .5rem; }
+    .ligne-item:hover { border-color: #c7d2fe; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-md-4">
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pb-3 mb-4 border-bottom">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="h4 mb-0 fw-bold text-dark">Commande {{ commande.code }}</h2>
+                {% if commande.statut == 'EN_ATTENTE' %}
+                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-3 py-1">En attente</span>
+                {% elif commande.statut == 'EN_COURS' %}
+                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-3 py-1">En cours</span>
+                {% elif commande.statut == 'PRET' %}
+                    <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1">Prêt</span>
+                {% elif commande.statut == 'LIVRE' %}
+                    <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-3 py-1">Livré</span>
+                {% elif commande.statut == 'ANNULE' %}
+                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger rounded-pill px-3 py-1">Annulé</span>
+                {% endif %}
+            </div>
+            <p class="text-muted small mb-0">
+                {{ commande.client }} &middot; <i class="bi bi-telephone"></i> {{ commande.client.telephone }}
+                &middot; Créée le {{ commande.date_commande|date:"d/m/Y" }}
+            </p>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{% url 'core:liste_commandes' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Retour
+            </a>
+            <button type="button" class="btn btn-outline-dark"
+                data-bs-toggle="modal" data-bs-target="#modalModifierCommande">
+                <i class="bi bi-pencil me-1"></i> Modifier
+            </button>
+            <a href="{% url 'core:fiche_atelier_pdf' commande.pk %}" class="btn btn-outline-primary">
+                <i class="bi bi-rulers me-1"></i> Fiche atelier
+            </a>
+            <a href="{% url 'core:facture_commande' commande.pk %}" class="btn btn-success">
+                <i class="bi bi-file-earmark-text me-1"></i> Facture
+            </a>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if commande.est_en_retard %}
+        <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center gap-2 mb-4">
+            <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+            <div>
+                <strong>Attention :</strong> livraison dépassée
+                ({{ commande.date_livraison_prevue|date:"d/m/Y" }}).
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row g-4">
+
+        <!-- ===== COLONNE GAUCHE ===== -->
+        <div class="col-lg-7">
+
+            <!-- Lignes de couture -->
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-transparent border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0 fw-bold text-dark">
+                        <i class="bi bi-scissors me-2 text-primary"></i>Coutures sur mesure
+                        <span class="badge bg-primary ms-1">{{ lignes|length }}</span>
+                    </h6>
+                    <button type="button" class="btn btn-sm btn-outline-primary" id="btn_ouvrir_ajout">
+                        <i class="bi bi-plus-lg me-1"></i>Ajouter
+                    </button>
+                </div>
+                <div class="card-body">
+
+                    {% for ligne in lignes %}
+                    <div class="ligne-item p-3 mb-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="fw-bold text-dark">
+                                    <i class="bi bi-scissors me-1 text-primary"></i>
+                                    Couture {{ forloop.counter }}
+                                </span>
+                                {% if ligne.modele %}
+                                    <span class="badge bg-light text-dark border ms-2">{{ ligne.modele.nom }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="d-flex gap-1">
+                                <a href="{% url 'core:fiche_ligne_pdf' ligne.pk %}"
+                                   class="btn btn-sm btn-outline-primary" title="Fiche de cette couture">
+                                    <i class="bi bi-file-earmark-pdf"></i>
+                                </a>
+                                <form method="post" action="{% url 'core:supprimer_ligne' ligne.pk %}"
+                                    onsubmit="return confirm('Supprimer cette couture ?');">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <div class="row g-2 small mb-2">
+                            <div class="col-md-4">
+                                <span class="text-muted">Prix unit. :</span>
+                                <strong>{{ ligne.prix_unitaire|floatformat:0 }} {{ atelier.devise }}</strong>
+                            </div>
+                            <div class="col-md-3">
+                                <span class="text-muted">Qté :</span>
+                                <strong>{{ ligne.quantite }}</strong>
+                            </div>
+                            <div class="col-md-5 text-md-end">
+                                <span class="text-muted">Sous-total :</span>
+                                <strong class="text-primary">{{ ligne.prix_net|floatformat:0 }} {{ atelier.devise }}</strong>
+                            </div>
+                        </div>
+
+                        {% if ligne.description %}
+                        <div class="mb-2">
+                            <span class="text-muted small">Description :</span>
+                            <div class="p-2 bg-light rounded-2 small">{{ ligne.description }}</div>
+                        </div>
+                        {% endif %}
+
+                        <div class="row g-2 small mb-2">
+                            {% if ligne.client_secondaire %}
+                            <div class="col-md-6">
+                                <span class="text-muted">Pour :</span>
+                                <a href="{% url 'core:detail_client' ligne.client_secondaire.pk %}"
+                                   class="text-decoration-none">{{ ligne.client_secondaire }}</a>
+                            </div>
+                            {% endif %}
+                            {% if ligne.mensuration %}
+                            <div class="col-md-6">
+                                <span class="text-muted">Mensurations :</span>
+                                <a href="{% url 'core:detail_mensuration' ligne.mensuration.pk %}"
+                                   class="text-decoration-none">
+                                    {{ ligne.mensuration.nom_personne }}
+                                    {% if not ligne.mensuration.est_pour_client %}
+                                        ({{ ligne.mensuration.get_lien_parente_display }})
+                                    {% endif %}
+                                </a>
+                            </div>
+                            {% else %}
+                            <div class="col-md-6">
+                                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>Sans mensuration
+                                </span>
+                            </div>
+                            {% endif %}
+                            {% if ligne.remise_type %}
+                            <div class="col-md-6">
+                                <span class="text-muted">Remise :</span>
+                                <span class="text-danger">
+                                    {% if ligne.remise_type == 'MONTANT' %}
+                                        - {{ ligne.remise_valeur|floatformat:0 }} {{ atelier.devise }}
+                                    {% else %}
+                                        - {{ ligne.remise_valeur|floatformat:0 }}%
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        {% if ligne.photo_tissu or ligne.photo_modele_custom %}
+                        <div class="row g-2 mb-2">
+                            {% if ligne.photo_tissu %}
+                            <div class="col-sm-6">
+                                <span class="text-muted small d-block mb-1">Photo tissu</span>
+                                <img src="{{ ligne.photo_tissu.url }}" class="img-fluid rounded-2 border" style="max-height:100px;">
+                            </div>
+                            {% endif %}
+                            {% if ligne.photo_modele_custom %}
+                            <div class="col-sm-6">
+                                <span class="text-muted small d-block mb-1">Photo modèle</span>
+                                <img src="{{ ligne.photo_modele_custom.url }}" class="img-fluid rounded-2 border" style="max-height:100px;">
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        {% if ligne.accessoires_ligne.exists %}
+                        <div class="bg-light rounded-2 p-2 mt-2">
+                            <span class="text-muted small fw-semibold d-block mb-1">
+                                <i class="bi bi-bag me-1"></i>Accessoires liés :
+                            </span>
+                            {% for acc in ligne.accessoires_ligne.all %}
+                            <div class="d-flex justify-content-between small">
+                                <span>{{ acc.accessoire.nom }} &times; {{ acc.quantite }}</span>
+                                <span class="fw-medium">{{ acc.sous_total|floatformat:0 }} {{ atelier.devise }}</span>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-inbox fs-2 d-block opacity-50 mb-2"></i>
+                        Aucune couture enregistrée.
+                    </div>
+                    {% endfor %}
+
+                    {% if commande.notes %}
+                    <div class="mt-3 p-3 bg-light rounded-3">
+                        <span class="text-muted small d-block mb-1">Notes globales</span>
+                        {{ commande.notes|linebreaks }}
+                    </div>
+                    {% endif %}
+
+                </div>
+            </div>
+
+            <!-- Historique paiements -->
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-transparent border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="card-title mb-0 fw-bold text-dark">
+                        <i class="bi bi-clock-history me-2 text-primary"></i>Historique des paiements
+                    </h6>
+                    {% if commande.est_soldee %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Soldée</span>
+                    {% else %}
+                        <span class="badge bg-danger">
+                            Reste : {{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="card-body p-0">
+                    <table class="table table-sm table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-3">Date</th>
+                                <th>Mode</th>
+                                <th>Référence</th>
+                                <th class="text-end pe-3">Montant</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in paiements %}
+                            <tr>
+                                <td class="ps-3 small">{{ p.date_paiement|date:"d/m/Y H:i" }}</td>
+                                <td class="small">{{ p.get_mode_paiement_display }}</td>
+                                <td class="small text-muted">{{ p.reference_transaction|default:"-" }}</td>
+                                <td class="text-end pe-3 fw-semibold text-success">
+                                    {{ p.montant|floatformat:0 }} {{ atelier.devise }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-3">
+                                    Aucun paiement enregistré.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                        {% if paiements %}
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="3" class="ps-3 fw-bold">Total encaissé</td>
+                                <td class="text-end pe-3 fw-bold text-success">
+                                    {{ commande.montant_paye|floatformat:0 }} {{ atelier.devise }}
+                                </td>
+                            </tr>
+                        </tfoot>
+                        {% endif %}
+                    </table>
+                </div>
+
+                {% if not commande.est_soldee %}
+                <div class="card-footer bg-white border-top">
+                    <p class="fw-semibold small mb-2">
+                        <i class="bi bi-plus-circle me-1 text-primary"></i>
+                        Enregistrer un paiement
+                        <span class="text-muted fw-normal">
+                            (maximum : {{ reste_int }} {{ atelier.devise }})
+                        </span>
+                    </p>
+                    <form method="post" action="{% url 'core:ajouter_paiement' commande.pk %}"
+                          id="formPaiement">
+                        {% csrf_token %}
+                        <div class="row g-2">
+                            <div class="col-md-4">
+                                <div class="input-group input-group-sm">
+                                    <input type="number" name="montant" id="input_montant_paiement"
+                                        class="form-control"
+                                        placeholder="Montant"
+                                        step="any" min="1" max="{{ reste_int }}"
+                                        required>
+                                    <span class="input-group-text">{{ atelier.devise }}</span>
+                                </div>
+                                <div class="d-flex gap-1 mt-1">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2"
+                                            id="btn_solde_total" data-reste="{{ reste_int }}">
+                                        Solde total
+                                    </button>
+                                    <span class="text-muted small align-self-center">
+                                        Reste : <strong>{{ reste_int }}</strong>
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <select name="mode_paiement" class="form-select form-select-sm">
+                                    {% for val, lbl in modes_paiement %}
+                                        <option value="{{ val }}">{{ lbl }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <input type="text" name="reference_transaction"
+                                    class="form-control form-control-sm"
+                                    placeholder="Référence (optionnel)">
+                            </div>
+                            <div class="col-12 d-flex gap-2 mt-2">
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-save me-1"></i>Enregistrer ce paiement
+                                </button>
+                                <button type="button" class="btn btn-sm btn-success"
+                                    data-bs-toggle="modal" data-bs-target="#modalFinaliserCommande">
+                                    <i class="bi bi-check2-circle me-1"></i>Finaliser la commande
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                {% elif commande.statut != 'LIVRE' %}
+                <div class="card-footer bg-white border-top">
+                    <button type="button" class="btn btn-success w-100"
+                        data-bs-toggle="modal" data-bs-target="#modalFinaliserCommande">
+                        <i class="bi bi-check2-circle me-1"></i>Marquer comme livrée
+                    </button>
+                </div>
+
+                {% else %}
+                <div class="card-footer bg-success bg-opacity-10 text-center py-3">
+                    <span class="text-success fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i>
+                        Commande livrée le {{ commande.date_livraison_effective|date:"d/m/Y" }}
+                    </span>
+                </div>
+                {% endif %}
+
+            </div>
+
+        </div><!-- /col-lg-7 -->
+
+        <!-- ===== COLONNE DROITE ===== -->
+        <div class="col-lg-5">
+
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-bold text-dark">
+                        <i class="bi bi-wallet2 me-2 text-primary"></i>Règlement
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Total lignes</span>
+                        <span class="fw-bold text-dark">
+                            {{ commande.prix_total|floatformat:0 }} {{ atelier.devise }}
+                        </span>
+                    </div>
+                    {% if commande.remise_type and commande.remise_valeur %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">
+                            Remise
+                            {% if commande.remise_type == 'POURCENTAGE' %}
+                                ({{ commande.remise_valeur|floatformat:0 }}&#37;)
+                            {% else %}
+                                (fixe)
+                            {% endif %}
+                        </span>
+                        <span class="fw-semibold text-danger">
+                            - {{ commande.montant_remise|floatformat:0 }} {{ atelier.devise }}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted">Prix net</span>
+                        <span class="fw-bold text-dark">
+                            {{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}
+                        </span>
+                    </div>
+                    {% endif %}
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="text-muted">Encaissé</span>
+                        <span class="fw-semibold text-success">
+                            + {{ commande.montant_paye|floatformat:0 }} {{ atelier.devise }}
+                        </span>
+                    </div>
+                    <hr class="my-3 opacity-25">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <span class="fw-bold text-dark">Reste à payer</span>
+                        <span class="fs-4 fw-bold
+                            {% if commande.reste_a_payer > 0 %}text-danger{% else %}text-success{% endif %}">
+                            {{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}
+                        </span>
+                    </div>
+                    {% if commande.est_soldee %}
+                        <div class="alert alert-success py-2 text-center mb-0">
+                            <i class="bi bi-check-circle me-1"></i> Entièrement réglée
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning py-2 text-center mb-0">
+                            <i class="bi bi-clock me-1"></i> Solde restant dû
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-bold text-dark">
+                        <i class="bi bi-calendar-event me-2 text-primary"></i>Calendrier
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="rounded-circle bg-light p-2 me-3 text-secondary">
+                            <i class="bi bi-calendar-plus fs-5"></i>
+                        </div>
+                        <div>
+                            <span class="text-muted small d-block">Date de commande</span>
+                            <span class="fw-semibold text-dark">{{ commande.date_commande|date:"d/m/Y" }}</span>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="rounded-circle bg-light p-2 me-3
+                            {% if commande.est_en_retard %}text-danger{% else %}text-secondary{% endif %}">
+                            <i class="bi bi-calendar-check fs-5"></i>
+                        </div>
+                        <div>
+                            <span class="text-muted small d-block">Livraison prévue</span>
+                            <span class="fw-semibold
+                                {% if commande.est_en_retard %}text-danger{% else %}text-dark{% endif %}">
+                                {{ commande.date_livraison_prevue|date:"d/m/Y"|default:"Non définie" }}
+                            </span>
+                        </div>
+                    </div>
+                    {% if commande.date_livraison_effective %}
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-light p-2 me-3 text-success">
+                            <i class="bi bi-calendar2-check fs-5"></i>
+                        </div>
+                        <div>
+                            <span class="text-muted small d-block">Livraison effective</span>
+                            <span class="fw-semibold text-success">
+                                {{ commande.date_livraison_effective|date:"d/m/Y" }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if commande.couturier_attribue %}
+            <div class="card border-0 shadow-sm rounded-3 mb-4">
+                <div class="card-body">
+                    <span class="text-muted small d-block mb-1">Couturier attribué</span>
+                    <span class="fw-semibold text-dark">
+                        <i class="bi bi-person me-1"></i>
+                        {{ commande.couturier_attribue.get_full_name|default:commande.couturier_attribue.username }}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-header bg-transparent border-bottom py-3">
+                    <h6 class="card-title mb-0 fw-bold text-dark">
+                        <i class="bi bi-lightning me-2 text-primary"></i>Documents
+                    </h6>
+                </div>
+                <div class="card-body d-flex flex-column gap-2">
+                    <a href="{% url 'core:fiche_atelier_pdf' commande.pk %}"
+                       class="btn btn-outline-dark btn-sm">
+                        <i class="bi bi-rulers me-1"></i>Fiche atelier (mensurations)
+                    </a>
+                    <a href="{% url 'core:recu_paiement' commande.pk %}"
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-receipt me-1"></i>Voir le reçu
+                    </a>
+                    <a href="{% url 'core:recu_paiement_pdf' commande.pk %}"
+                       class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-file-pdf me-1"></i>Reçu PDF
+                    </a>
+                    <a href="{% url 'core:facture_commande' commande.pk %}"
+                       class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-file-earmark-text me-1"></i>Voir la facture
+                    </a>
+                    <a href="{% url 'core:facture_commande_pdf' commande.pk %}"
+                       class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-file-pdf me-1"></i>Facture PDF
+                    </a>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL FINALISER ===== -->
+<div class="modal fade" id="modalFinaliserCommande" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-check2-circle me-2"></i>Finaliser {{ commande.code }}
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="post" action="{% url 'core:finaliser_commande' commande.pk %}">
+        {% csrf_token %}
+        <div class="modal-body">
+
+          <div class="alert alert-info py-2 mb-3">
+            <div class="d-flex justify-content-between mb-1">
+              <span>Prix net :</span>
+              <strong>{{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}</strong>
+            </div>
+            <div class="d-flex justify-content-between mb-1">
+              <span>Déjà encaissé :</span>
+              <strong class="text-success">{{ commande.montant_paye|floatformat:0 }} {{ atelier.devise }}</strong>
+            </div>
+            <hr class="my-2">
+            <div class="d-flex justify-content-between fw-bold">
+              <span>Solde à encaisser :</span>
+              <span class="{% if commande.reste_a_payer > 0 %}text-danger{% else %}text-success{% endif %}">
+                {{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}
+              </span>
+            </div>
+          </div>
+
+          {% if commande.reste_a_payer > 0 %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Mode de paiement du solde</label>
+            <select name="mode_paiement" class="form-select">
+              {% for val, lbl in modes_paiement %}
+                <option value="{{ val }}">{{ lbl }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Référence transaction (optionnel)</label>
+            <input type="text" name="reference_transaction" class="form-control"
+              placeholder="N° transaction Mobile Money, chèque…">
+          </div>
+          {% else %}
+          <input type="hidden" name="mode_paiement" value="ESPECES">
+          {% endif %}
+
+          <div class="alert alert-warning py-2 mb-0">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Cette action va :
+            <ul class="mb-0 mt-1 small">
+              {% if commande.reste_a_payer > 0 %}
+              <li>Encaisser le solde de
+                <strong>{{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}</strong></li>
+              {% endif %}
+              <li>Passer le statut en <strong>Livré</strong></li>
+              <li>Enregistrer la date de livraison à <strong>aujourd'hui</strong></li>
+            </ul>
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-success fw-bold">
+            <i class="bi bi-check2-circle me-1"></i>Confirmer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MODAL MODIFIER (2 onglets) ===== -->
+<div class="modal fade" id="modalModifierCommande" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+
+      <div class="modal-header bg-warning">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-pencil me-2"></i>Modifier {{ commande.code }}
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <ul class="nav nav-tabs px-3 pt-2" id="tabsModifier" role="tablist">
+        <li class="nav-item" role="presentation">
+          <button class="nav-link active" data-bs-toggle="tab"
+                  data-bs-target="#tab-infos" type="button" role="tab">
+            <i class="bi bi-info-circle me-1"></i>Informations
+          </button>
+        </li>
+        <li class="nav-item" role="presentation">
+          <button class="nav-link" id="tab-btn-ajout" data-bs-toggle="tab"
+                  data-bs-target="#tab-ajout" type="button" role="tab">
+            <i class="bi bi-plus-circle me-1"></i>Ajouter une couture
+          </button>
+        </li>
+      </ul>
+
+      <div class="tab-content">
+
+        <!-- ONGLET 1 : EN-TÊTE -->
+        <div class="tab-pane fade show active" id="tab-infos" role="tabpanel">
+          <form method="post" action="{% url 'core:modifier_commande' commande.pk %}">
+            {% csrf_token %}
+            <div class="modal-body">
+
+              <div class="card border-0 bg-light rounded-3 mb-4 p-3">
+                <h6 class="fw-bold text-dark mb-3">
+                  <i class="bi bi-info-circle me-2 text-primary"></i>Informations générales
+                </h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">
+                      Client principal <span class="text-danger">*</span>
+                    </label>
+                    <select name="client" id="select_client_principal" class="form-select" required>
+                      {% for c in form_commande_modif.client.field.queryset %}
+                        <option value="{{ c.pk }}" {% if commande.client_id == c.pk %}selected{% endif %}>
+                          {{ c.nom }}{% if c.prenom %} {{ c.prenom }}{% endif %} &mdash; {{ c.telephone }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">
+                      Date de livraison prévue <span class="text-danger">*</span>
+                    </label>
+                    <input type="date" name="date_livraison_prevue" class="form-control" required
+                        value="{{ commande.date_livraison_prevue|date:'Y-m-d' }}">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">Statut</label>
+                    <select name="statut" class="form-select">
+                      {% for val, lbl in form_commande_modif.statut.field.choices %}
+                        <option value="{{ val }}" {% if commande.statut == val %}selected{% endif %}>{{ lbl }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">Couturier attribué</label>
+                    <select name="couturier_attribue" class="form-select">
+                      <option value="">&mdash; Non attribué &mdash;</option>
+                      {% for u in form_commande_modif.couturier_attribue.field.queryset %}
+                        <option value="{{ u.pk }}" {% if commande.couturier_attribue_id == u.pk %}selected{% endif %}>
+                          {{ u.get_full_name|default:u.username }}
+                        </option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">Date de livraison effective</label>
+                    <input type="date" name="date_livraison_effective" class="form-control"
+                        value="{{ commande.date_livraison_effective|date:'Y-m-d'|default:'' }}">
+                    <small class="text-muted">À remplir uniquement si déjà livrée.</small>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label fw-semibold">Notes globales</label>
+                    <textarea name="notes" class="form-control" rows="2">{{ commande.notes|default:'' }}</textarea>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card border-0 bg-light rounded-3 p-3">
+                <h6 class="fw-bold text-dark mb-3">
+                  <i class="bi bi-calculator me-2 text-primary"></i>Remise globale
+                </h6>
+                <div class="row g-3">
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Remise</label>
+                    <select name="remise_type" id="remise_type_global" class="form-select">
+                      <option value="" {% if not commande.remise_type %}selected{% endif %}>Aucune remise</option>
+                      <option value="MONTANT" {% if commande.remise_type == 'MONTANT' %}selected{% endif %}>Montant fixe</option>
+                      <option value="POURCENTAGE" {% if commande.remise_type == 'POURCENTAGE' %}selected{% endif %}>Pourcentage</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4 {% if not commande.remise_type %}d-none{% endif %}" id="bloc_remise_global">
+                    <label class="form-label fw-semibold" id="label_remise_global">
+                      {% if commande.remise_type == 'POURCENTAGE' %}Remise (%){% else %}Remise ({{ atelier.devise }}){% endif %}
+                    </label>
+                    <input type="number" name="remise_valeur" id="remise_valeur_global"
+                        class="form-control" step="any" min="0"
+                        value="{{ commande.remise_valeur|floatformat:0 }}">
+                  </div>
+                </div>
+              </div>
+
+            </div>
+            <div class="modal-footer border-top">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-warning fw-bold">
+                <i class="bi bi-save me-1"></i>Enregistrer les modifications
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- ONGLET 2 : AJOUTER COUTURE -->
+        <div class="tab-pane fade" id="tab-ajout" role="tabpanel">
+          <form method="post" action="{% url 'core:ajouter_ligne' commande.pk %}"
+                enctype="multipart/form-data" id="formAjoutLigne">
+            {% csrf_token %}
+            <input type="hidden" name="ligne_count" id="ligne_count" value="0">
+            <div class="modal-body">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold text-dark mb-0">
+                  <i class="bi bi-scissors me-2 text-primary"></i>Nouvelles coutures
+                  <span class="badge bg-primary ms-1" id="badge_nouvelles">0</span>
+                </h6>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btn_une_couture_de_plus">
+                  <i class="bi bi-plus-lg me-1"></i>Une couture de plus
+                </button>
+              </div>
+              <div id="conteneur_nouvelles_lignes"></div>
+            </div>
+            <div class="modal-footer border-top">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+              <button type="submit" class="btn btn-success fw-bold">
+                <i class="bi bi-plus-circle me-1"></i>Ajouter à la commande
+              </button>
+            </div>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TEMPLATE LIGNE -->
+<template id="template_ligne">
+  <div class="card border shadow-sm rounded-3 mb-3 ligne-card" data-ligne="__N__">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+      <span class="fw-semibold text-dark">
+        <i class="bi bi-scissors me-1 text-primary"></i>
+        Couture <span class="num-ligne">__N__</span>
+      </span>
+      <button type="button" class="btn btn-sm btn-outline-danger btn-supprimer-ligne">
+        <i class="bi bi-trash"></i>
+      </button>
+    </div>
+    <div class="card-body">
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-5">
+          <label class="form-label fw-semibold">Modèle du catalogue</label>
+          <select name="ligne___N___modele_id" class="form-select select-modele-ligne">
+            <option value="">&mdash; Aucun modèle (prix libre) &mdash;</option>
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-semibold">
+            Prix unit. ({{ atelier.devise }})
+            <i class="bi bi-lock-fill text-muted d-none icone-lock"></i>
+          </label>
+          <input type="number" name="ligne___N___prix_unitaire"
+              class="form-control input-prix-ligne" step="any" min="0" value="0">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Qté</label>
+          <input type="number" name="ligne___N___quantite"
+              class="form-control input-qte-ligne" min="1" step="1" value="1">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-semibold">Sous-total</label>
+          <div class="form-control bg-light fw-bold text-primary span-sous-total" data-amount="0">
+            0 {{ atelier.devise }}
+          </div>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-12">
+          <label class="form-label fw-semibold">Description de la couture</label>
+          <textarea name="ligne___N___description" class="form-control" rows="2"
+              placeholder="Tissu, finitions, modifications demandées…"></textarea>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">
+            Pour un autre client ? <small class="text-muted fw-normal">(optionnel)</small>
+          </label>
+          <div class="combo">
+            <input type="hidden" name="ligne___N___client_secondaire_id" class="hidden-client-sec">
+            <input type="text" class="form-control input-client-sec" autocomplete="off"
+                   placeholder="&mdash; Même client principal &mdash;">
+            <div class="combo-list d-none list-client-sec"></div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">
+            Mensurations <small class="text-muted fw-normal">(personne mesurée)</small>
+          </label>
+          <select name="ligne___N___mensuration_id" class="form-select select-mensuration-ligne">
+            <option value="">&mdash; Chargement… &mdash;</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-6">
+          <label class="form-label">Photo du tissu</label>
+          <input type="file" name="ligne___N___photo_tissu" class="form-control" accept="image/*">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Photo du modèle personnalisé</label>
+          <input type="file" name="ligne___N___photo_modele_custom" class="form-control" accept="image/*">
+        </div>
+      </div>
+
+      <div class="row g-3 mb-3">
+        <div class="col-md-4">
+          <label class="form-label fw-semibold">Remise sur cette ligne</label>
+          <select name="ligne___N___remise_type" class="form-select select-remise-ligne">
+            <option value="">Aucune remise</option>
+            <option value="MONTANT">Montant fixe</option>
+            <option value="POURCENTAGE">Pourcentage</option>
+          </select>
+        </div>
+        <div class="col-md-4 d-none bloc-remise-ligne">
+          <label class="form-label fw-semibold label-remise-ligne">Valeur</label>
+          <input type="number" name="ligne___N___remise_valeur"
+              class="form-control input-remise-ligne" step="any" min="0" value="0">
+        </div>
+      </div>
+
+      <div class="border rounded-3 p-3 bg-light">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <label class="form-label fw-semibold mb-0">
+            <i class="bi bi-bag me-1 text-secondary"></i>Accessoires liés
+          </label>
+          <button type="button" class="btn btn-sm btn-outline-secondary btn-ajouter-acc-ligne">
+            <i class="bi bi-plus-sm me-1"></i> Ajouter
+          </button>
+        </div>
+        <div class="conteneur-acc-ligne"></div>
+      </div>
+
+    </div>
+  </div>
+</template>
+
+<template id="template_acc_ligne">
+  <div class="row g-2 align-items-end mb-2 acc-ligne-row">
+    <div class="col-md-5">
+      <select name="ligne___N___acc_ids[]" class="form-select form-select-sm select-acc-item">
+        <option value="">&mdash; Accessoire &mdash;</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <input type="number" name="ligne___N___acc_qtes[]"
+          class="form-control form-control-sm input-acc-qte" placeholder="Qté" min="1" step="1" value="1">
+    </div>
+    <div class="col-md-3">
+      <input type="number" name="ligne___N___acc_prix[]"
+          class="form-control form-control-sm input-acc-prix" placeholder="Prix" step="any" min="0" value="0">
+    </div>
+    <div class="col-md-2">
+      <button type="button" class="btn btn-sm btn-outline-danger w-100 btn-suppr-acc">
+        <i class="bi bi-x"></i>
+      </button>
+    </div>
+  </div>
+</template>
+
+<script id="clients-data" type="application/json">{{ clients_json|safe }}</script>
+<script id="catalogue-data" type="application/json">{{ catalogue_json|safe }}</script>
+<script id="accessoires-data" type="application/json">{{ accessoires_json|safe }}</script>
+
+<script>
+(function () {
+    'use strict';
+
+    const clients         = JSON.parse(document.getElementById('clients-data').textContent || '[]');
+    const catalogue       = JSON.parse(document.getElementById('catalogue-data').textContent || '[]');
+    const accessoiresData = JSON.parse(document.getElementById('accessoires-data').textContent || '[]');
+    const MENS_URL = "{% url 'core:api_mensurations_client' 999999 %}";
+    const DEVISE   = "{{ atelier.devise }}";
+    const modelesCouture = catalogue.filter(function (m) { return m.type_modele === 'COUTURE'; });
+
+    const fmt = n => (Math.round(n * 100) / 100).toLocaleString('fr-FR');
+    const nomComplet = c => (c.nom + ' ' + (c.prenom || '')).trim();
+
+    /* ===== 1. PAIEMENT : bouton solde total ===== */
+    const btnSolde = document.getElementById('btn_solde_total');
+    if (btnSolde) {
+        btnSolde.addEventListener('click', function () {
+            document.getElementById('input_montant_paiement').value = this.dataset.reste;
+        });
+    }
+
+    /* ===== 2. MODAL MODIFIER ===== */
+    const modalEl = document.getElementById('modalModifierCommande');
+    if (!modalEl) return;
+
+    const formAjout          = document.getElementById('formAjoutLigne');
+    const conteneurNouvelles = document.getElementById('conteneur_nouvelles_lignes');
+    const templateLigne      = document.getElementById('template_ligne');
+    const templateAcc        = document.getElementById('template_acc_ligne');
+    const selectClient       = document.getElementById('select_client_principal');
+    const inputCount         = document.getElementById('ligne_count');
+    const badgeNouvelles     = document.getElementById('badge_nouvelles');
+
+    let nextId = 0;
+
+    function majCompteur() {
+        const nb = conteneurNouvelles.querySelectorAll('.ligne-card').length;
+        inputCount.value = nb;
+        badgeNouvelles.textContent = nb;
+    }
+
+    function remplirSelect(select, items, labelFn, prixKey) {
+        const first = select.querySelector('option');
+        select.innerHTML = '';
+        if (first) select.appendChild(first);
+        items.forEach(function (it) {
+            const o = document.createElement('option');
+            o.value = it.id;
+            if (prixKey) o.dataset.prix = it[prixKey];
+            o.textContent = labelFn(it);
+            select.appendChild(o);
+        });
+    }
+
+    function initCombo(input, listEl, hiddenInput, placeholderVide, onChoix) {
+        function filtrer(txt) {
+            const t = (txt || '').toLowerCase().trim();
+            if (!t) return clients.slice(0, 50);
+            return clients.filter(function (c) {
+                return nomComplet(c).toLowerCase().indexOf(t) !== -1 ||
+                       (c.telephone || '').toLowerCase().indexOf(t) !== -1;
+            }).slice(0, 50);
+        }
+        function afficher(items) {
+            listEl.innerHTML = '';
+            if (!items.length) {
+                listEl.innerHTML = '<div class="combo-empty">Aucun client trouvé.</div>';
+            } else {
+                items.forEach(function (c) {
+                    const d = document.createElement('div');
+                    d.className = 'combo-item';
+                    d.innerHTML = '<div class="ci-nom">' + nomComplet(c) + '</div>' +
+                                  '<div class="ci-tel"><i class="bi bi-telephone"></i> ' +
+                                  (c.telephone || '—') + '</div>';
+                    d.addEventListener('mousedown', function (e) {
+                        e.preventDefault();
+                        hiddenInput.value = c.id;
+                        input.value = nomComplet(c) + ' — ' + (c.telephone || '');
+                        input.classList.add('combo-chosen');
+                        listEl.classList.add('d-none');
+                        if (onChoix) onChoix(c.id);
+                    });
+                    listEl.appendChild(d);
+                });
+            }
+            listEl.classList.remove('d-none');
+        }
+        input.addEventListener('focus', function () {
+            afficher(filtrer(input.classList.contains('combo-chosen') ? '' : input.value));
+        });
+        input.addEventListener('input', function () {
+            hiddenInput.value = '';
+            input.classList.remove('combo-chosen');
+            afficher(filtrer(input.value));
+            if (onChoix) onChoix('');
+        });
+        input.addEventListener('blur', function () {
+            setTimeout(function () {
+                listEl.classList.add('d-none');
+                if (!hiddenInput.value) {
+                    input.value = '';
+                    input.placeholder = placeholderVide;
+                }
+            }, 160);
+        });
+    }
+
+    function chargerMensurations(clientId, selectEl) {
+        if (!selectEl) return;
+        if (!clientId) {
+            selectEl.innerHTML = '<option value="">— Sélectionner d\'abord un client —</option>';
+            return;
+        }
+        selectEl.innerHTML = '<option value="">— Chargement… —</option>';
+        fetch(MENS_URL.replace('999999', clientId), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                const list = data.mensurations || [];
+                selectEl.innerHTML = list.length
+                    ? '<option value="">— Aucune mensuration —</option>'
+                    : '<option value="">— Ce client n\'a aucune mensuration —</option>';
+                list.forEach(function (m) {
+                    const o = document.createElement('option');
+                    o.value = m.id;
+                    let txt = m.nom_personne;
+                    if (m.est_proche) txt += ' (' + m.lien + ')';
+                    txt += ' · ' + m.libelle;
+                    if (m.date_prise) txt += ' — ' + m.date_prise;
+                    o.textContent = txt;
+                    selectEl.appendChild(o);
+                });
+                if (list.length) selectEl.selectedIndex = 1;
+            })
+            .catch(function () {
+                selectEl.innerHTML = '<option value="">— Erreur de chargement —</option>';
+            });
+    }
+
+    function verrouillerPrix(input, card, verrou) {
+        const ic = card.querySelector('.icone-lock');
+        if (verrou) {
+            input.readOnly = true;
+            input.classList.add('input-locked');
+            ic.classList.remove('d-none');
+        } else {
+            input.readOnly = false;
+            input.classList.remove('input-locked');
+            ic.classList.add('d-none');
+        }
+    }
+
+    function totalAcc(card) {
+        let t = 0;
+        card.querySelectorAll('.acc-ligne-row').forEach(function (r) {
+            const p = parseFloat(r.querySelector('.input-acc-prix').value) || 0;
+            const q = parseInt(r.querySelector('.input-acc-qte').value) || 1;
+            t += p * q;
+        });
+        return t;
+    }
+
+    function recalcul(card) {
+        const p  = parseFloat(card.querySelector('.input-prix-ligne').value) || 0;
+        const q  = parseInt(card.querySelector('.input-qte-ligne').value) || 1;
+        const tr = card.querySelector('.select-remise-ligne').value;
+        const vr = parseFloat(card.querySelector('.input-remise-ligne').value) || 0;
+        const span = card.querySelector('.span-sous-total');
+        let base = p * q;
+        if (tr === 'MONTANT') base = Math.max(0, base - vr);
+        else if (tr === 'POURCENTAGE') base = Math.max(0, base * (1 - vr / 100));
+        base += totalAcc(card);
+        span.dataset.amount = String(base);
+        span.textContent = fmt(base) + ' ' + DEVISE;
+    }
+
+    function ajouterAcc(cont, n, card) {
+        const clone = templateAcc.content.cloneNode(true);
+        const row = clone.querySelector('.acc-ligne-row');
+        row.innerHTML = row.innerHTML.replaceAll('__N__', n);
+
+        const sel = row.querySelector('.select-acc-item');
+        remplirSelect(sel, accessoiresData, function (a) {
+            return a.nom + ' — ' + fmt(parseFloat(a.prix_unitaire)) + ' ' + DEVISE;
+        }, 'prix_unitaire');
+
+        const inPrix = row.querySelector('.input-acc-prix');
+        sel.addEventListener('change', function () {
+            const o = this.options[this.selectedIndex];
+            if (this.value && o.dataset.prix) {
+                inPrix.value = parseFloat(o.dataset.prix);
+                inPrix.readOnly = true;
+                inPrix.classList.add('input-locked');
+            } else {
+                inPrix.readOnly = false;
+                inPrix.classList.remove('input-locked');
+            }
+            recalcul(card);
+        });
+        row.querySelectorAll('input').forEach(function (el) {
+            el.addEventListener('input', function () { recalcul(card); });
+        });
+        row.querySelector('.btn-suppr-acc').addEventListener('click', function () {
+            row.remove();
+            recalcul(card);
+        });
+        cont.appendChild(clone);
+    }
+
+    function bindLigne(card, n) {
+        const selModele = card.querySelector('.select-modele-ligne');
+        const inPrix    = card.querySelector('.input-prix-ligne');
+        const inQte     = card.querySelector('.input-qte-ligne');
+        const selRemise = card.querySelector('.select-remise-ligne');
+        const blocRem   = card.querySelector('.bloc-remise-ligne');
+        const lblRem    = card.querySelector('.label-remise-ligne');
+        const inRemise  = card.querySelector('.input-remise-ligne');
+        const selMens   = card.querySelector('.select-mensuration-ligne');
+        const btnAcc    = card.querySelector('.btn-ajouter-acc-ligne');
+        const contAcc   = card.querySelector('.conteneur-acc-ligne');
+        const btnSuppr  = card.querySelector('.btn-supprimer-ligne');
+
+        const inSec   = card.querySelector('.input-client-sec');
+        const hidSec  = card.querySelector('.hidden-client-sec');
+        const listSec = card.querySelector('.list-client-sec');
+        initCombo(inSec, listSec, hidSec, '— Même client principal —', function (cid) {
+            chargerMensurations(cid || selectClient.value, selMens);
+        });
+
+        selModele.addEventListener('change', function () {
+            const opt = this.options[this.selectedIndex];
+            if (this.value && opt.dataset.prix) {
+                inPrix.value = parseFloat(opt.dataset.prix);
+                verrouillerPrix(inPrix, card, true);
+            } else {
+                verrouillerPrix(inPrix, card, false);
+            }
+            recalcul(card);
+        });
+
+        selRemise.addEventListener('change', function () {
+            if (this.value) {
+                blocRem.classList.remove('d-none');
+                lblRem.textContent = this.value === 'POURCENTAGE'
+                    ? 'Remise (%)' : 'Remise (' + DEVISE + ')';
+            } else {
+                blocRem.classList.add('d-none');
+                inRemise.value = 0;
+            }
+            recalcul(card);
+        });
+
+        [inPrix, inQte, inRemise].forEach(function (el) {
+            el.addEventListener('input', function () { recalcul(card); });
+        });
+
+        btnAcc.addEventListener('click', function () { ajouterAcc(contAcc, n, card); });
+
+        btnSuppr.addEventListener('click', function () {
+            card.remove();
+            majCompteur();
+        });
+    }
+
+    function creerLigne() {
+        nextId += 1;
+        const n = nextId;
+        const clone = templateLigne.content.cloneNode(true);
+        const card = clone.querySelector('.ligne-card');
+        card.innerHTML = card.innerHTML.replaceAll('__N__', n);
+        card.dataset.ligne = n;
+
+        remplirSelect(card.querySelector('.select-modele-ligne'), modelesCouture, function (m) {
+            return m.nom + ' — ' + fmt(parseFloat(m.prix_base)) + ' ' + DEVISE;
+        }, 'prix_base');
+
+        conteneurNouvelles.appendChild(clone);
+        const el = conteneurNouvelles.querySelector('[data-ligne="' + n + '"]');
+        bindLigne(el, n);
+        majCompteur();
+        chargerMensurations(selectClient.value, el.querySelector('.select-mensuration-ligne'));
+        return el;
+    }
+
+    // Bouton "Ajouter" de la carte coutures → ouvre le modal sur l'onglet 2
+    const btnOuvrirAjout = document.getElementById('btn_ouvrir_ajout');
+    if (btnOuvrirAjout) {
+        btnOuvrirAjout.addEventListener('click', function () {
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+            setTimeout(function () {
+                bootstrap.Tab.getOrCreateInstance(
+                    document.getElementById('tab-btn-ajout')).show();
+            }, 200);
+        });
+    }
+
+    // Créer une première ligne à l'ouverture de l'onglet 2
+    document.getElementById('tab-btn-ajout').addEventListener('shown.bs.tab', function () {
+        if (conteneurNouvelles.querySelectorAll('.ligne-card').length === 0) {
+            creerLigne();
+        }
+    });
+
+    document.getElementById('btn_une_couture_de_plus').addEventListener('click', function () {
+        const el = creerLigne();
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+
+    // Client principal changé → recharger les mensurations des nouvelles lignes
+    selectClient.addEventListener('change', function () {
+        const self = this;
+        conteneurNouvelles.querySelectorAll('.ligne-card').forEach(function (card) {
+            const hid = card.querySelector('.hidden-client-sec');
+            if (!hid.value) {
+                chargerMensurations(self.value, card.querySelector('.select-mensuration-ligne'));
+            }
+        });
+    });
+
+    // Remise globale
+    document.getElementById('remise_type_global').addEventListener('change', function () {
+        const bloc  = document.getElementById('bloc_remise_global');
+        const label = document.getElementById('label_remise_global');
+        const input = document.getElementById('remise_valeur_global');
+        if (this.value) {
+            bloc.classList.remove('d-none');
+            label.textContent = this.value === 'POURCENTAGE'
+                ? 'Remise (%)' : 'Remise (' + DEVISE + ')';
+        } else {
+            bloc.classList.add('d-none');
+            input.value = 0;
+        }
+    });
+
+    // Réindexation au submit des nouvelles lignes
+    formAjout.addEventListener('submit', function (e) {
+        const cards = [].slice.call(conteneurNouvelles.querySelectorAll('.ligne-card'));
+        if (!cards.length) {
+            e.preventDefault();
+            alert('Ajoutez au moins une couture.');
+            return;
+        }
+        cards.forEach(function (card, i) {
+            card.querySelectorAll('[name]').forEach(function (el) {
+                el.name = el.name.replace(/ligne_\d+_/, 'ligne_' + (i + 1) + '_');
+            });
+        });
+        inputCount.value = cards.length;
+    });
+
+    // Reset à la fermeture
+    modalEl.addEventListener('hidden.bs.modal', function () {
+        conteneurNouvelles.innerHTML = '';
+        nextId = 0;
+        majCompteur();
+        bootstrap.Tab.getOrCreateInstance(
+            modalEl.querySelector('[data-bs-target="#tab-infos"]')).show();
+    });
+
+})();
+</script>
+{% endblock %}

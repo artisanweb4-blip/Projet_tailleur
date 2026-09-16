@@ -1,0 +1,151 @@
+<!-- core/templates/core/facture_commande.html -->
+{% extends "base.html" %}
+{% block title %}Facture — {{ commande.code }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width:680px;">
+
+  <div class="card shadow-sm border-0">
+    <div class="card-header d-flex justify-content-between align-items-center
+      {% if commande.est_soldee %}bg-success{% else %}bg-warning{% endif %} text-white">
+      <div>
+        <h5 class="mb-0">
+          <i class="bi bi-file-earmark-text me-2"></i>
+          {% if commande.est_soldee %}Facture Soldée{% else %}Facture (Solde restant){% endif %}
+        </h5>
+        <small>{{ atelier.nom }}</small>
+      </div>
+      <span class="badge bg-light {% if commande.est_soldee %}text-success{% else %}text-warning{% endif %} fs-6">
+        {{ commande.code }}
+      </span>
+    </div>
+
+    <div class="card-body">
+
+      <!-- Infos atelier -->
+      <div class="row mb-3">
+        <div class="col-6">
+          {% if atelier.logo %}
+            <img src="{{ atelier.logo.url }}" alt="Logo" style="max-height:60px;" class="mb-2">
+          {% endif %}
+          <p class="mb-0 fw-bold">{{ atelier.nom }}</p>
+          {% if atelier.telephone %}<p class="mb-0 text-muted small">{{ atelier.telephone }}</p>{% endif %}
+          {% if atelier.adresse %}<p class="mb-0 text-muted small">{{ atelier.adresse }}</p>{% endif %}
+        </div>
+        <div class="col-6 text-end">
+          <p class="mb-0 text-muted small">Date de livraison</p>
+          <p class="mb-0 fw-semibold">
+            {{ commande.date_livraison_effective|date:"d/m/Y"|default:commande.date_livraison_prevue|date:"d/m/Y" }}
+          </p>
+        </div>
+      </div>
+
+      <hr>
+
+      <!-- Client -->
+      <div class="mb-3">
+        <p class="mb-0 text-muted small">Facturé à</p>
+        <p class="mb-0 fw-semibold">{{ commande.client }}</p>
+        <p class="mb-0 text-muted small">{{ commande.client.telephone }}</p>
+      </div>
+
+      <!-- Détail -->
+      <table class="table table-bordered table-sm mb-3">
+        <thead class="table-light">
+          <tr>
+            <th>Désignation</th>
+            <th class="text-end">Montant</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              {% if commande.modele %}{{ commande.modele.nom }}{% else %}Confection sur mesure{% endif %}
+              <br><small class="text-muted">{{ commande.description_vetement|truncatechars:80 }}</small>
+            </td>
+            <td class="text-end">{{ commande.prix_total|floatformat:0 }} {{ atelier.devise }}</td>
+          </tr>
+          {% if commande.remise_type and commande.remise_valeur %}
+          <tr class="table-warning">
+            <td>Remise {% if commande.remise_type == 'POURCENTAGE' %}({{ commande.remise_valeur }}%){% endif %}</td>
+            <td class="text-end text-danger">
+              - {% if commande.remise_type == 'MONTANT' %}{{ commande.remise_valeur|floatformat:0 }}{% else %}{{ commande.prix_total|floatformat:0 }} × {{ commande.remise_valeur }}%{% endif %} {{ atelier.devise }}
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+        <tfoot>
+          <tr class="table-light fw-bold">
+            <td>Prix net</td>
+            <td class="text-end">{{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- Historique des paiements -->
+      <h6 class="fw-semibold mb-2"><i class="bi bi-clock-history me-1"></i>Historique des paiements</h6>
+      <table class="table table-sm table-striped mb-3">
+        <thead class="table-light">
+          <tr>
+            <th>Date</th>
+            <th>Mode</th>
+            <th class="text-end">Montant</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in paiements %}
+          <tr>
+            <td>{{ p.date_paiement|date:"d/m/Y" }}</td>
+            <td>{{ p.get_mode_paiement_display }}</td>
+            <td class="text-end">{{ p.montant|floatformat:0 }} {{ atelier.devise }}</td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="text-center text-muted">Aucun paiement enregistré</td></tr>
+          {% endfor %}
+        </tbody>
+        <tfoot>
+          <tr class="fw-bold table-success">
+            <td colspan="2">Total encaissé</td>
+            <td class="text-end">{{ commande.montant_paye|floatformat:0 }} {{ atelier.devise }}</td>
+          </tr>
+          <tr class="fw-bold {% if commande.est_soldee %}table-success{% else %}table-danger{% endif %}">
+            <td colspan="2">
+              {% if commande.est_soldee %}
+                <i class="bi bi-check-circle me-1"></i>Soldée
+              {% else %}
+                <i class="bi bi-exclamation-circle me-1"></i>Reste à payer
+              {% endif %}
+            </td>
+            <td class="text-end">{{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}</td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- Signature -->
+      <div class="row mt-4">
+        <div class="col-6 text-center">
+          <p class="text-muted small mb-0">Signature du client</p>
+          <div style="border-top:1px solid #ccc; margin-top:40px;"></div>
+        </div>
+        <div class="col-6 text-center">
+          <p class="text-muted small mb-0">Cachet / Signature atelier</p>
+          <div style="border-top:1px solid #ccc; margin-top:40px;"></div>
+        </div>
+      </div>
+
+    </div><!-- /card-body -->
+
+    {% if not pdf %}
+    <div class="card-footer d-flex gap-2 justify-content-end">
+      <a href="{% url 'core:facture_commande_pdf' commande.pk %}" class="btn btn-outline-success">
+        <i class="bi bi-file-pdf me-1"></i>Télécharger PDF
+      </a>
+      <a href="{% url 'core:detail_commande' commande.pk %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Retour commande
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

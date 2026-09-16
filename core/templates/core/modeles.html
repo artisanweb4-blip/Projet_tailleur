@@ -1,0 +1,941 @@
+{% extends "base.html" %}
+{% block title %}Catalogue — Modèles, Prêt-à-porter & Accessoires{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cat-wrap { background: #f7f8fc; min-height: 100vh; margin: -1.5rem -1rem; padding: 1.5rem 1rem; }
+
+    .kpi-mini {
+        background: #fff; border: 1px solid #eef0f6; border-radius: 14px;
+        padding: .9rem 1.1rem; height: 100%;
+    }
+    .kpi-mini .lbl { color: #6b7280; font-size: .8rem; }
+    .kpi-mini .val { font-size: 1.5rem; font-weight: 700; color: #111827; line-height: 1.2; }
+    .kpi-ic {
+        width: 38px; height: 38px; border-radius: 10px; color: #fff;
+        display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .ic-couture { background: linear-gradient(135deg,#7c3aed,#6d28d9); }
+    .ic-pap     { background: linear-gradient(135deg,#0ea5e9,#0284c7); }
+    .ic-acc     { background: linear-gradient(135deg,#f59e0b,#ea580c); }
+    .ic-alert   { background: linear-gradient(135deg,#f43f5e,#e11d48); }
+
+    /* ===== CARTES CATALOGUE ===== */
+    .item-card {
+        background: #fff; border: 1px solid #eef0f6; border-radius: 14px;
+        overflow: hidden; height: 100%; transition: all .18s ease;
+        display: flex; flex-direction: column;
+    }
+    .item-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 22px rgba(0,0,0,.08);
+        border-color: #ddd6fe;
+    }
+    .item-photo {
+        height: 165px; background: #f3f4f6; position: relative;
+        display: flex; align-items: center; justify-content: center; overflow: hidden;
+    }
+    .item-photo img { width: 100%; height: 100%; object-fit: cover; }
+    .item-photo .ph-vide { color: #cbd5e1; font-size: 2.4rem; }
+    .item-badge {
+        position: absolute; top: .6rem; left: .6rem;
+        padding: .2rem .6rem; border-radius: 999px;
+        font-size: .7rem; font-weight: 700; letter-spacing: .3px;
+    }
+    .b-couture { background: rgba(124,58,237,.92); color: #fff; }
+    .b-pap     { background: rgba(14,165,233,.92); color: #fff; }
+    .item-stock {
+        position: absolute; top: .6rem; right: .6rem;
+        padding: .2rem .55rem; border-radius: 999px;
+        font-size: .72rem; font-weight: 700;
+    }
+    .s-ok    { background: rgba(16,185,129,.95); color: #fff; }
+    .s-low   { background: rgba(245,158,11,.95); color: #fff; }
+    .s-out   { background: rgba(225,29,72,.95); color: #fff; }
+
+    .item-body { padding: .85rem 1rem; flex: 1 1 auto; }
+    .item-nom { font-weight: 700; color: #111827; font-size: .97rem; line-height: 1.3; }
+    .item-desc {
+        color: #9ca3af; font-size: .82rem; margin-top: .25rem;
+        display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .item-prix { font-size: 1.12rem; font-weight: 700; color: #6d28d9; }
+    .item-meta { font-size: .78rem; color: #6b7280; }
+    .item-foot {
+        padding: .6rem 1rem; border-top: 1px solid #f1f2f7;
+        display: flex; justify-content: space-between; align-items: center;
+        background: #fcfcfe;
+    }
+
+    .tag {
+        display: inline-block; padding: .12rem .5rem; border-radius: 6px;
+        font-size: .73rem; background: #f3f4f6; color: #4b5563; margin-right: .25rem;
+    }
+
+    .empty-state { padding: 3.5rem 1rem; text-align: center; color: #9ca3af; }
+
+    .nav-pills .nav-link { color: #4b5563; font-weight: 600; border-radius: 10px; }
+    .nav-pills .nav-link.active { background: #6d28d9; }
+
+    .champ-pap { transition: opacity .2s; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cat-wrap">
+<div class="container-fluid px-md-3">
+
+    <!-- En-tête -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 gap-3">
+        <div>
+            <h1 class="h4 fw-bold text-dark mb-1">
+                <i class="bi bi-collection me-2 text-primary"></i>Catalogue
+            </h1>
+            <p class="text-muted small mb-0">
+                Modèles sur mesure, articles prêt-à-porter et accessoires de l'atelier.
+            </p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <button type="button" class="btn btn-primary shadow-sm"
+                data-bs-toggle="modal" data-bs-target="#modalAjoutModele"
+                data-type="COUTURE">
+                <i class="bi bi-scissors me-1"></i> Modèle couture
+            </button>
+            <button type="button" class="btn btn-info text-white shadow-sm"
+                data-bs-toggle="modal" data-bs-target="#modalAjoutModele"
+                data-type="PRET_A_PORTER">
+                <i class="bi bi-bag me-1"></i> Article prêt-à-porter
+            </button>
+            <button type="button" class="btn btn-outline-secondary shadow-sm"
+                data-bs-toggle="modal" data-bs-target="#modalAjoutAccessoire">
+                <i class="bi bi-gem me-1"></i> Accessoire
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div id="messagesZone">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3" role="alert">
+            <i class="bi bi-check-circle me-2"></i>{{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- KPI -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-mini d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Modèles couture</div>
+                    <div class="val">{{ nb_couture }}</div>
+                </div>
+                <div class="kpi-ic ic-couture"><i class="bi bi-scissors"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-mini d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Prêt-à-porter</div>
+                    <div class="val">{{ nb_pap }}</div>
+                </div>
+                <div class="kpi-ic ic-pap"><i class="bi bi-bag-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-mini d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Valeur stock PAP</div>
+                    <div class="val" style="font-size:1.15rem;">
+                        {{ valeur_stock_pap|floatformat:0 }} {{ atelier.devise }}
+                    </div>
+                </div>
+                <div class="kpi-ic ic-acc"><i class="bi bi-box-seam"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-mini d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Alertes stock</div>
+                    <div class="val {% if pap_rupture or accessoires_stock_faible %}text-danger{% endif %}">
+                        {{ pap_rupture|add:accessoires_stock_faible }}
+                    </div>
+                </div>
+                <div class="kpi-ic ic-alert"><i class="bi bi-exclamation-triangle-fill"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Onglets -->
+    <ul class="nav nav-pills mb-4 gap-2" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active px-4" data-bs-toggle="tab" data-bs-target="#tab-couture" type="button">
+                <i class="bi bi-scissors me-1"></i>Couture sur mesure
+                <span class="badge bg-white text-dark ms-1">{{ nb_couture }}</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link px-4" data-bs-toggle="tab" data-bs-target="#tab-pap" type="button">
+                <i class="bi bi-bag me-1"></i>Prêt-à-porter
+                <span class="badge bg-secondary ms-1">{{ nb_pap }}</span>
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link px-4" data-bs-toggle="tab" data-bs-target="#tab-acc" type="button">
+                <i class="bi bi-gem me-1"></i>Accessoires
+                <span class="badge bg-secondary ms-1">{{ nb_accessoires }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content">
+
+        <!-- ===== ONGLET 1 : COUTURE ===== -->
+        <div class="tab-pane fade show active" id="tab-couture" role="tabpanel">
+            <div class="input-group mb-4" style="max-width:340px;">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="bi bi-search text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-start-0 recherche-grille"
+                       data-cible="grille-couture" placeholder="Rechercher un modèle…">
+            </div>
+
+            <div class="row g-3" id="grille-couture">
+                {% for m in modeles_couture %}
+                <div class="col-6 col-md-4 col-xl-3 item-wrap" data-nom="{{ m.nom|lower }}">
+                    <div class="item-card">
+                        <div class="item-photo">
+                            {% if m.photo %}
+                                <img src="{{ m.photo.url }}" alt="{{ m.nom }}">
+                            {% else %}
+                                <i class="bi bi-scissors ph-vide"></i>
+                            {% endif %}
+                            <span class="item-badge b-couture">SUR MESURE</span>
+                        </div>
+                        <div class="item-body">
+                            <div class="item-nom">{{ m.nom }}</div>
+                            {% if m.description %}
+                                <div class="item-desc">{{ m.description }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="item-foot">
+                            <span class="item-prix">{{ m.prix_base|floatformat:0 }} {{ atelier.devise }}</span>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-light border btn-edit-modele"
+                                    data-bs-toggle="modal" data-bs-target="#modalEditModele"
+                                    data-url="{% url 'core:modifier_modele' m.pk %}"
+                                    data-nom="{{ m.nom }}"
+                                    data-type="{{ m.type_modele }}"
+                                    data-description="{{ m.description|default:'' }}"
+                                    data-prix="{{ m.prix_int|stringformat:'d' }}"
+                                    data-taille="{{ m.taille_disponible|default:'' }}"
+                                    data-couleur="{{ m.couleur|default:'' }}"
+                                    data-stock="{{ m.stock_pret_a_porter|stringformat:'d' }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-light border text-danger btn-del-modele"
+                                    data-bs-toggle="modal" data-bs-target="#modalSupprModele"
+                                    data-url="{% url 'core:supprimer_modele' m.pk %}"
+                                    data-nom="{{ m.nom }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="item-card empty-state">
+                        <i class="bi bi-scissors display-5 d-block mb-2 opacity-50"></i>
+                        <span class="fw-semibold text-dark">Aucun modèle de couture</span><br>
+                        <small>Créez vos modèles pour les proposer lors des commandes sur mesure.</small>
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-primary btn-sm"
+                                data-bs-toggle="modal" data-bs-target="#modalAjoutModele" data-type="COUTURE">
+                                <i class="bi bi-plus-lg me-1"></i>Créer un modèle
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- ===== ONGLET 2 : PRÊT-À-PORTER ===== -->
+        <div class="tab-pane fade" id="tab-pap" role="tabpanel">
+            <div class="d-flex flex-wrap gap-2 align-items-center mb-4">
+                <div class="input-group" style="max-width:340px;">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="bi bi-search text-muted"></i>
+                    </span>
+                    <input type="text" class="form-control border-start-0 recherche-grille"
+                           data-cible="grille-pap" placeholder="Rechercher un article…">
+                </div>
+                {% if pap_rupture %}
+                <span class="badge bg-danger-subtle text-danger border border-danger rounded-pill px-3 py-2">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    {{ pap_rupture }} article{{ pap_rupture|pluralize }} en rupture
+                </span>
+                {% endif %}
+                <a href="{% url 'core:liste_ventes_directes' %}" class="btn btn-sm btn-outline-info ms-auto">
+                    <i class="bi bi-bag-check me-1"></i>Vendre en caisse
+                </a>
+            </div>
+
+            <div class="row g-3" id="grille-pap">
+                {% for m in modeles_pap %}
+                <div class="col-6 col-md-4 col-xl-3 item-wrap" data-nom="{{ m.nom|lower }}">
+                    <div class="item-card">
+                        <div class="item-photo">
+                            {% if m.photo %}
+                                <img src="{{ m.photo.url }}" alt="{{ m.nom }}">
+                            {% else %}
+                                <i class="bi bi-bag ph-vide"></i>
+                            {% endif %}
+                            <span class="item-badge b-pap">PRÊT-À-PORTER</span>
+                            {% if m.stock_pret_a_porter == 0 %}
+                                <span class="item-stock s-out">Rupture</span>
+                            {% elif m.stock_pret_a_porter <= 3 %}
+                                <span class="item-stock s-low">{{ m.stock_pret_a_porter }} restant{{ m.stock_pret_a_porter|pluralize }}</span>
+                            {% else %}
+                                <span class="item-stock s-ok">{{ m.stock_pret_a_porter }} en stock</span>
+                            {% endif %}
+                        </div>
+                        <div class="item-body">
+                            <div class="item-nom">{{ m.nom }}</div>
+                            <div class="mt-2">
+                                {% if m.taille_disponible %}
+                                    <span class="tag"><i class="bi bi-rulers"></i> {{ m.taille_disponible }}</span>
+                                {% endif %}
+                                {% if m.couleur %}
+                                    <span class="tag"><i class="bi bi-palette"></i> {{ m.couleur }}</span>
+                                {% endif %}
+                            </div>
+                            {% if m.description %}
+                                <div class="item-desc">{{ m.description }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="item-foot">
+                            <span class="item-prix">{{ m.prix_base|floatformat:0 }} {{ atelier.devise }}</span>
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-light border btn-edit-modele"
+                                    data-bs-toggle="modal" data-bs-target="#modalEditModele"
+                                    data-url="{% url 'core:modifier_modele' m.pk %}"
+                                    data-nom="{{ m.nom }}"
+                                    data-type="{{ m.type_modele }}"
+                                    data-description="{{ m.description|default:'' }}"
+                                    data-prix="{{ m.prix_int|stringformat:'d' }}"
+                                    data-taille="{{ m.taille_disponible|default:'' }}"
+                                    data-couleur="{{ m.couleur|default:'' }}"
+                                    data-stock="{{ m.stock_pret_a_porter|stringformat:'d' }}">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-light border text-danger btn-del-modele"
+                                    data-bs-toggle="modal" data-bs-target="#modalSupprModele"
+                                    data-url="{% url 'core:supprimer_modele' m.pk %}"
+                                    data-nom="{{ m.nom }}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="item-card empty-state">
+                        <i class="bi bi-bag display-5 d-block mb-2 opacity-50"></i>
+                        <span class="fw-semibold text-dark">Aucun article prêt-à-porter</span><br>
+                        <small>Ajoutez vos articles déjà confectionnés pour les vendre en caisse.</small>
+                        <div class="mt-3">
+                            <button type="button" class="btn btn-info text-white btn-sm"
+                                data-bs-toggle="modal" data-bs-target="#modalAjoutModele" data-type="PRET_A_PORTER">
+                                <i class="bi bi-plus-lg me-1"></i>Ajouter un article
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- ===== ONGLET 3 : ACCESSOIRES ===== -->
+        <div class="tab-pane fade" id="tab-acc" role="tabpanel">
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                <button class="btn btn-sm btn-dark active filtre-cat" data-cat="">Tous</button>
+                {% for code, label in categories_acc %}
+                <button class="btn btn-sm btn-outline-secondary filtre-cat" data-cat="{{ code }}">{{ label }}</button>
+                {% endfor %}
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-4">Accessoire</th>
+                                    <th>Catégorie</th>
+                                    <th>Prix unitaire</th>
+                                    <th>Unité</th>
+                                    <th>Stock</th>
+                                    <th class="text-end pe-4">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for acc in accessoires %}
+                                <tr class="acc-row" data-cat="{{ acc.categorie }}">
+                                    <td class="ps-4">
+                                        <div class="d-flex align-items-center gap-3">
+                                            {% if acc.photo %}
+                                            <img src="{{ acc.photo.url }}" alt="{{ acc.nom }}"
+                                                 class="rounded-2 border"
+                                                 style="width:42px; height:42px; object-fit:cover;">
+                                            {% else %}
+                                            <div class="rounded-2 bg-light d-flex align-items-center justify-content-center border"
+                                                 style="width:42px; height:42px;">
+                                                <i class="bi bi-gem text-secondary"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div>
+                                                <div class="fw-semibold text-dark">{{ acc.nom }}</div>
+                                                {% if acc.description %}
+                                                <div class="text-muted small text-truncate" style="max-width:200px;">
+                                                    {{ acc.description }}
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge rounded-pill
+                                            {% if acc.categorie == 'BOUTON' %}bg-primary-subtle text-primary
+                                            {% elif acc.categorie == 'FERMETURE' %}bg-info-subtle text-info
+                                            {% elif acc.categorie == 'BRODERIE' %}bg-warning-subtle text-warning
+                                            {% elif acc.categorie == 'DOUBLURE' %}bg-secondary-subtle text-secondary
+                                            {% elif acc.categorie == 'FIL' %}bg-danger-subtle text-danger
+                                            {% elif acc.categorie == 'ELASTIQUE' %}bg-success-subtle text-success
+                                            {% else %}bg-light text-dark{% endif %}">
+                                            {{ acc.get_categorie_display }}
+                                        </span>
+                                    </td>
+                                    <td class="fw-semibold text-dark">
+                                        {{ acc.prix_unitaire|floatformat:0 }} {{ atelier.devise }}
+                                    </td>
+                                    <td class="text-muted small">{{ acc.get_unite_display }}</td>
+                                    <td>
+                                        {% if acc.stock_disponible == 0 %}
+                                        <span class="badge bg-danger-subtle text-danger">
+                                            <i class="bi bi-exclamation-circle me-1"></i>Épuisé
+                                        </span>
+                                        {% elif acc.stock_disponible <= 5 %}
+                                        <span class="badge bg-warning-subtle text-warning">
+                                            <i class="bi bi-exclamation-triangle me-1"></i>{{ acc.stock_disponible }}
+                                        </span>
+                                        {% else %}
+                                        <span class="badge bg-success-subtle text-success">{{ acc.stock_disponible }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-end pe-4">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-light border btn-edit-acc"
+                                                data-bs-toggle="modal" data-bs-target="#modalEditAccessoire"
+                                                data-url="{% url 'core:modifier_accessoire' acc.pk %}"
+                                                data-nom="{{ acc.nom }}"
+                                                data-categorie="{{ acc.categorie }}"
+                                                data-description="{{ acc.description|default:'' }}"
+                                                data-prix="{{ acc.prix_int|stringformat:'d' }}"
+                                                data-unite="{{ acc.unite }}"
+                                                data-stock="{{ acc.stock_disponible|stringformat:'d' }}">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-light border text-danger btn-del-acc"
+                                                data-bs-toggle="modal" data-bs-target="#modalSupprAccessoire"
+                                                data-url="{% url 'core:supprimer_accessoire' acc.pk %}"
+                                                data-nom="{{ acc.nom }}">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-5 text-muted">
+                                        <i class="bi bi-gem display-5 d-block mb-2 opacity-50"></i>
+                                        <span class="fw-semibold">Aucun accessoire enregistré</span><br>
+                                        <small>Boutons, fermetures, broderies, doublures…</small>
+                                        <div class="mt-3">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm"
+                                                data-bs-toggle="modal" data-bs-target="#modalAjoutAccessoire">
+                                                <i class="bi bi-plus-lg me-1"></i>Ajouter un accessoire
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+</div>
+
+<!-- ===== MODAL AJOUT MODÈLE ===== -->
+<div class="modal fade" id="modalAjoutModele" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="{% url 'core:ajouter_modele' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-plus-circle me-2"></i>
+                        <span id="titre_ajout">Nouveau modèle</span>
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Type d'article <span class="text-danger">*</span></label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="type_modele" id="t_couture"
+                                   value="COUTURE" checked>
+                            <label class="btn btn-outline-primary" for="t_couture">
+                                <i class="bi bi-scissors me-1"></i>Couture sur mesure
+                            </label>
+                            <input type="radio" class="btn-check" name="type_modele" id="t_pap"
+                                   value="PRET_A_PORTER">
+                            <label class="btn btn-outline-info" for="t_pap">
+                                <i class="bi bi-bag me-1"></i>Prêt-à-porter
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                        <input type="text" name="nom" class="form-control" required
+                            placeholder="Ex: Boubou brodé, Chemise lin blanche…">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Prix ({{ atelier.devise }}) <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" name="prix_base" class="form-control"
+                            step="any" min="0" required placeholder="25000">
+                    </div>
+
+                    <!-- Champs PAP -->
+                    <div class="col-md-4 champ-pap d-none">
+                        <label class="form-label fw-semibold">Taille(s)</label>
+                        <input type="text" name="taille_disponible" class="form-control"
+                            placeholder="Ex: M, L, XL ou 40-42">
+                    </div>
+                    <div class="col-md-4 champ-pap d-none">
+                        <label class="form-label fw-semibold">Couleur</label>
+                        <input type="text" name="couleur" class="form-control" placeholder="Ex: Bleu nuit">
+                    </div>
+                    <div class="col-md-4 champ-pap d-none">
+                        <label class="form-label fw-semibold">Stock disponible</label>
+                        <input type="number" name="stock_pret_a_porter" class="form-control" min="0" value="0">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" class="form-control" rows="3"
+                            placeholder="Tissu, finitions, délai moyen, occasions…"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Photo</label>
+                        <input type="file" name="photo" class="form-control" accept="image/*">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="bi bi-save me-1"></i>Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL EDIT MODÈLE ===== -->
+<div class="modal fade" id="modalEditModele" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" id="formEditModele" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-pencil-square me-2"></i>Modifier l'article
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Type d'article</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="type_modele" id="e_couture" value="COUTURE">
+                            <label class="btn btn-outline-primary" for="e_couture">
+                                <i class="bi bi-scissors me-1"></i>Couture sur mesure
+                            </label>
+                            <input type="radio" class="btn-check" name="type_modele" id="e_pap" value="PRET_A_PORTER">
+                            <label class="btn btn-outline-info" for="e_pap">
+                                <i class="bi bi-bag me-1"></i>Prêt-à-porter
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                        <input type="text" name="nom" id="e_nom" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Prix ({{ atelier.devise }})</label>
+                        <input type="number" name="prix_base" id="e_prix" class="form-control"
+                               step="any" min="0" required>
+                    </div>
+
+                    <div class="col-md-4 champ-pap-edit d-none">
+                        <label class="form-label fw-semibold">Taille(s)</label>
+                        <input type="text" name="taille_disponible" id="e_taille" class="form-control">
+                    </div>
+                    <div class="col-md-4 champ-pap-edit d-none">
+                        <label class="form-label fw-semibold">Couleur</label>
+                        <input type="text" name="couleur" id="e_couleur" class="form-control">
+                    </div>
+                    <div class="col-md-4 champ-pap-edit d-none">
+                        <label class="form-label fw-semibold">Stock disponible</label>
+                        <input type="number" name="stock_pret_a_porter" id="e_stock" class="form-control" min="0">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" id="e_description" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Photo</label>
+                        <input type="file" name="photo" class="form-control" accept="image/*">
+                        <small class="text-muted">Laissez vide pour conserver la photo actuelle.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL SUPPRESSION MODÈLE ===== -->
+<div class="modal fade" id="modalSupprModele" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" id="formSupprModele">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white py-2">
+                    <h6 class="modal-title fw-bold">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Supprimer
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 text-center">
+                    <i class="bi bi-trash3 text-danger fs-1 mb-2 d-block"></i>
+                    Supprimer définitivement<br>
+                    <strong id="suppr_modele_nom"></strong> ?
+                    <p class="text-muted small mt-2 mb-0">Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer py-2 justify-content-center gap-2">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="bi bi-trash me-1"></i>Supprimer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL AJOUT ACCESSOIRE ===== -->
+<div class="modal fade" id="modalAjoutAccessoire" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="{% url 'core:ajouter_accessoire' %}" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header bg-secondary text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-gem me-2"></i>Nouvel accessoire
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                        <input type="text" name="nom" class="form-control" required
+                            placeholder="Ex: Boutons dorés 4 trous, Fermeture invisible 20cm…">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Catégorie <span class="text-danger">*</span></label>
+                        <select name="categorie" class="form-select" required>
+                            {% for code, label in categories_acc %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">
+                            Prix unitaire ({{ atelier.devise }}) <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" name="prix_unitaire" class="form-control"
+                            step="any" min="0" required placeholder="500">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Unité <span class="text-danger">*</span></label>
+                        <select name="unite" class="form-select" required>
+                            {% for code, label in unites_acc %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Stock disponible</label>
+                        <input type="number" name="stock_disponible" class="form-control" min="0" value="0">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" class="form-control" rows="2"
+                            placeholder="Couleur, taille, référence fournisseur…"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Photo</label>
+                        <input type="file" name="photo" class="form-control" accept="image/*">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-secondary fw-semibold">
+                        <i class="bi bi-save me-1"></i>Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL EDIT ACCESSOIRE ===== -->
+<div class="modal fade" id="modalEditAccessoire" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" id="formEditAccessoire" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-pencil-square me-2"></i>Modifier l'accessoire
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                        <input type="text" name="nom" id="ea_nom" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Catégorie</label>
+                        <select name="categorie" id="ea_categorie" class="form-select">
+                            {% for code, label in categories_acc %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Prix unitaire ({{ atelier.devise }})</label>
+                        <input type="number" name="prix_unitaire" id="ea_prix" class="form-control"
+                               step="any" min="0">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Unité</label>
+                        <select name="unite" id="ea_unite" class="form-select">
+                            {% for code, label in unites_acc %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Stock disponible</label>
+                        <input type="number" name="stock_disponible" id="ea_stock" class="form-control" min="0">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" id="ea_description" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Photo</label>
+                        <input type="file" name="photo" class="form-control" accept="image/*">
+                        <small class="text-muted">Laissez vide pour conserver la photo actuelle.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL SUPPRESSION ACCESSOIRE ===== -->
+<div class="modal fade" id="modalSupprAccessoire" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" id="formSupprAccessoire">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white py-2">
+                    <h6 class="modal-title fw-bold">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Supprimer
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 text-center">
+                    <i class="bi bi-trash3 text-danger fs-1 mb-2 d-block"></i>
+                    Supprimer définitivement<br>
+                    <strong id="suppr_acc_nom"></strong> ?
+                    <p class="text-muted small mt-2 mb-0">Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer py-2 justify-content-center gap-2">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="bi bi-trash me-1"></i>Supprimer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ===== Bascule champs PAP (ajout) ===== */
+    function majChampsAjout() {
+        const estPap = document.getElementById('t_pap').checked;
+        document.querySelectorAll('.champ-pap').forEach(function (el) {
+            el.classList.toggle('d-none', !estPap);
+        });
+        document.getElementById('titre_ajout').textContent =
+            estPap ? 'Nouvel article prêt-à-porter' : 'Nouveau modèle de couture';
+    }
+    document.getElementById('t_couture').addEventListener('change', majChampsAjout);
+    document.getElementById('t_pap').addEventListener('change', majChampsAjout);
+
+    // Pré-sélection du type depuis le bouton cliqué
+    document.querySelectorAll('[data-bs-target="#modalAjoutModele"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const type = this.dataset.type || 'COUTURE';
+            document.getElementById(type === 'PRET_A_PORTER' ? 't_pap' : 't_couture').checked = true;
+            majChampsAjout();
+        });
+    });
+
+    /* ===== Bascule champs PAP (édition) ===== */
+    function majChampsEdit() {
+        const estPap = document.getElementById('e_pap').checked;
+        document.querySelectorAll('.champ-pap-edit').forEach(function (el) {
+            el.classList.toggle('d-none', !estPap);
+        });
+    }
+    document.getElementById('e_couture').addEventListener('change', majChampsEdit);
+    document.getElementById('e_pap').addEventListener('change', majChampsEdit);
+
+    /* ===== Pré-remplissage édition modèle ===== */
+    document.querySelectorAll('.btn-edit-modele').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const d = this.dataset;
+            document.getElementById('formEditModele').action = d.url;
+            document.getElementById('e_nom').value = d.nom;
+            document.getElementById('e_prix').value = d.prix;
+            document.getElementById('e_description').value = d.description;
+            document.getElementById('e_taille').value = d.taille;
+            document.getElementById('e_couleur').value = d.couleur;
+            document.getElementById('e_stock').value = d.stock;
+            document.getElementById(d.type === 'PRET_A_PORTER' ? 'e_pap' : 'e_couture').checked = true;
+            majChampsEdit();
+        });
+    });
+
+    document.querySelectorAll('.btn-del-modele').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('formSupprModele').action = this.dataset.url;
+            document.getElementById('suppr_modele_nom').textContent = this.dataset.nom;
+        });
+    });
+
+    /* ===== Pré-remplissage édition accessoire ===== */
+    document.querySelectorAll('.btn-edit-acc').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const d = this.dataset;
+            document.getElementById('formEditAccessoire').action = d.url;
+            document.getElementById('ea_nom').value = d.nom;
+            document.getElementById('ea_prix').value = d.prix;
+            document.getElementById('ea_stock').value = d.stock;
+            document.getElementById('ea_description').value = d.description;
+            document.getElementById('ea_categorie').value = d.categorie;
+            document.getElementById('ea_unite').value = d.unite;
+        });
+    });
+
+    document.querySelectorAll('.btn-del-acc').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('formSupprAccessoire').action = this.dataset.url;
+            document.getElementById('suppr_acc_nom').textContent = this.dataset.nom;
+        });
+    });
+
+    /* ===== Recherche dans les grilles ===== */
+    document.querySelectorAll('.recherche-grille').forEach(function (input) {
+        input.addEventListener('input', function () {
+            const terme = this.value.toLowerCase().trim();
+            const grille = document.getElementById(this.dataset.cible);
+            grille.querySelectorAll('.item-wrap').forEach(function (el) {
+                el.style.display = el.dataset.nom.indexOf(terme) !== -1 ? '' : 'none';
+            });
+        });
+    });
+
+    /* ===== Filtre catégories accessoires ===== */
+    document.querySelectorAll('.filtre-cat').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.filtre-cat').forEach(function (b) {
+                b.classList.remove('btn-dark', 'active');
+                b.classList.add('btn-outline-secondary');
+            });
+            this.classList.add('btn-dark', 'active');
+            this.classList.remove('btn-outline-secondary');
+            const cat = this.dataset.cat;
+            document.querySelectorAll('.acc-row').forEach(function (row) {
+                row.style.display = (!cat || row.dataset.cat === cat) ? '' : 'none';
+            });
+        });
+    });
+
+    /* ===== Auto-masquage messages ===== */
+    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+        setTimeout(function () {
+            bootstrap.Alert.getOrCreateInstance(el).close();
+        }, 3500);
+    });
+});
+</script>
+{% endblock %}

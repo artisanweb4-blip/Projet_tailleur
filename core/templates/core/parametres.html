@@ -1,0 +1,715 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Paramètres — {{ atelier.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .pa-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
+
+    .nav-param .list-group-item {
+        border:none; padding:.85rem 1rem; cursor:pointer;
+        display:flex; align-items:center; gap:.85rem; background:transparent;
+    }
+    .nav-param .list-group-item + .list-group-item { border-top:1px solid #f1f2f7; }
+    .nav-param .list-group-item.active {
+        background:#f5f3ff; color:#111827;
+        border-left:3px solid #ceced1;
+    }
+    .nav-ic {
+        width:36px; height:36px; border-radius:10px; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+        background:#ede9fe; color:#cbcacf; font-size:1rem;
+    }
+    .nav-titre { font-weight:600; font-size:.92rem; color:#111827; }
+    .nav-sub { color:#9ca3af; font-size:.74rem; }
+
+    .panel { background:#fff; border:1px solid #eef0f6; border-radius:16px; }
+    .panel-head {
+        padding:1rem 1.25rem; border-bottom:1px solid #f1f2f7;
+        display:flex; justify-content:space-between; align-items:center; gap:1rem;
+    }
+    .panel-title { font-weight:600; color:#111827; font-size:1rem; margin:0; }
+
+    .u-row {
+        display:flex; align-items:center; gap:.9rem;
+        padding:.9rem 1.25rem; border-top:1px solid #f4f5f9;
+    }
+    .u-row:first-of-type { border-top:none; }
+    .u-row:hover { background:#fafbff; }
+    .u-row.inactif { opacity:.55; }
+    .avatar-u {
+        width:44px; height:44px; border-radius:12px; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+        font-weight:700; font-size:.85rem; overflow:hidden;
+    }
+    .avatar-u img { width:100%; height:100%; object-fit:cover; }
+    .u-nom { font-weight:600; color:#111827; font-size:.95rem; }
+    .u-meta { color:#9ca3af; font-size:.79rem; }
+
+    .tag {
+        display:inline-flex; align-items:center; gap:.28rem;
+        padding:.14rem .55rem; border-radius:999px;
+        font-size:.73rem; font-weight:600;
+    }
+    .t-admin { background:#f5f3ff; color:#6d28d9; border:1px solid #ddd6fe; }
+    .t-gest  { background:#eff6ff; color:#0284c7; border:1px solid #bae6fd; }
+    .t-off   { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
+
+    .carte-moi {
+        background:linear-gradient(120deg,#e8e4f5,#c9c7cc);
+        border-radius:14px; color:#0e0202; padding:1.1rem 1.25rem;
+    }
+    .carte-moi .av {
+        width:52px; height:52px; border-radius:14px;
+        background:rgba(166, 164, 164, 0.2); border:1px solid rgba(0, 0, 0, 0.3);
+        display:flex; align-items:center; justify-content:center;
+        font-weight:700; font-size:1.05rem;
+    }
+
+    .role-help {
+        background:#fafbff; border:1px solid #eef0f6; border-radius:10px;
+        padding:.65rem .85rem; font-size:.8rem; color:#4b5563;
+    }
+
+    .empty-u { padding:3rem 1rem; text-align:center; color:#9ca3af; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="pa-wrap">
+<div class="container-fluid px-md-3">
+
+    <!-- En-tête -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 gap-3">
+        <div>
+            <h1 class="h4 fw-bold text-dark mb-1">
+                <i class="bi bi-gear-fill me-2 text-primary"></i>Paramètres
+            </h1>
+            <p class="text-muted small mb-0">
+                Informations de l'atelier, utilisateurs et facturation.
+            </p>
+        </div>
+        {% if est_admin %}
+        <button type="submit" form="formAtelier" class="btn btn-primary shadow-sm">
+            <i class="bi bi-check-lg me-1"></i> Enregistrer
+        </button>
+        {% endif %}
+    </div>
+
+    {% if messages %}
+    <div id="messagesZone">
+        {% for message in messages %}
+        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm rounded-3">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not est_admin %}
+    <div class="alert alert-info border-0 shadow-sm">
+        <i class="bi bi-info-circle me-2"></i>
+        Vous êtes connecté en <strong>Gestionnaire</strong>.
+        Seul l'administrateur peut modifier les paramètres et gérer les utilisateurs.
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+
+        <!-- ===== NAVIGATION ===== -->
+        <div class="col-lg-3">
+            <div class="panel overflow-hidden mb-3">
+                <div class="list-group list-group-flush nav-param" id="nav-param" role="tablist">
+                    <button class="list-group-item active" data-bs-toggle="tab"
+                            data-bs-target="#tab-atelier" type="button">
+                        <span class="nav-ic"><i class="bi bi-shop"></i></span>
+                        <span>
+                            <span class="nav-titre d-block">Atelier</span>
+                            <span class="nav-sub">Nom, contact, adresse</span>
+                        </span>
+                    </button>
+                    <button class="list-group-item" data-bs-toggle="tab"
+                            data-bs-target="#tab-users" type="button">
+                        <span class="nav-ic"><i class="bi bi-shield-lock"></i></span>
+                        <span>
+                            <span class="nav-titre d-block">Utilisateurs</span>
+                            <span class="nav-sub">{{ nb_membres }} compte{{ nb_membres|pluralize }}</span>
+                        </span>
+                    </button>
+                    <button class="list-group-item" data-bs-toggle="tab"
+                            data-bs-target="#tab-factu" type="button">
+                        <span class="nav-ic"><i class="bi bi-receipt"></i></span>
+                        <span>
+                            <span class="nav-titre d-block">Facturation</span>
+                            <span class="nav-sub">Devise, logo, stock</span>
+                        </span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mon compte -->
+            {% if profil %}
+            <div class="carte-moi">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="av">{{ profil.initiales }}</div>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="fw-bold text-truncate">{{ profil.nom_affiche }}</div>
+                        <div style="opacity:.85; font-size:.8rem;">
+                            {{ profil.get_role_display }}
+                            {% if profil.est_fondateur %} &middot; Fondateur{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'core:mon_profil' %}"
+                   class="btn btn-sm btn-light w-100 mt-3">
+                    <i class="bi bi-person-gear me-1"></i>Mon profil
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ===== CONTENU ===== -->
+        <div class="col-lg-9">
+            <div class="tab-content">
+
+                <!-- ONGLET 1 : ATELIER -->
+                <div class="tab-pane fade show active" id="tab-atelier" role="tabpanel">
+                    <form id="formAtelier" method="POST"
+                          action="{% url 'core:parametres' %}" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="update_atelier" value="1">
+
+                        <div class="panel mb-3">
+                            <div class="panel-head">
+                                <p class="panel-title">
+                                    <i class="bi bi-shop me-2 text-primary"></i>Profil de l'atelier
+                                </p>
+                            </div>
+                            <div class="p-4">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">
+                                            Nom de l'atelier <span class="text-danger">*</span>
+                                        </label>
+                                        <input type="text" class="form-control" name="nom"
+                                               value="{{ atelier.nom }}"
+                                               {% if not est_admin %}disabled{% endif %} required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Téléphone</label>
+                                        <input type="tel" class="form-control" name="telephone"
+                                               value="{{ atelier.telephone|default:'' }}"
+                                               placeholder="+223 00 00 00 00"
+                                               {% if not est_admin %}disabled{% endif %}>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Email de contact</label>
+                                        <input type="email" class="form-control" name="email"
+                                               value="{{ atelier.email|default:'' }}"
+                                               placeholder="contact@atelier.com"
+                                               {% if not est_admin %}disabled{% endif %}>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Identifiant</label>
+                                        <input type="text" class="form-control bg-light"
+                                               value="{{ atelier.slug }}" disabled>
+                                        <small class="text-muted">Généré automatiquement.</small>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Adresse physique</label>
+                                        <textarea class="form-control" name="adresse" rows="2"
+                                                  placeholder="Ex : Rue 100, Porte 45, près de la pharmacie"
+                                                  {% if not est_admin %}disabled{% endif %}>{{ atelier.adresse|default:'' }}</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ONGLET 2 : UTILISATEURS -->
+                <div class="tab-pane fade" id="tab-users" role="tabpanel">
+
+                    <div class="panel mb-3">
+                        <div class="panel-head">
+                            <div>
+                                <p class="panel-title">
+                                    <i class="bi bi-people-fill me-2 text-primary"></i>
+                                    Comptes d'accès
+                                    <span class="badge bg-secondary ms-1">{{ nb_membres }}</span>
+                                </p>
+                                <small class="text-muted">
+                                    Utilisateurs pouvant se connecter à l'application.
+                                </small>
+                            </div>
+                            {% if est_admin %}
+                            <button type="button" class="btn btn-sm btn-primary"
+                                    data-bs-toggle="modal" data-bs-target="#modalAjoutUser">
+                                <i class="bi bi-person-plus-fill me-1"></i> Ajouter
+                            </button>
+                            {% endif %}
+                        </div>
+
+                        {% for r in rows %}
+                        <div class="u-row {% if not r.m.actif %}inactif{% endif %}">
+                            <div class="avatar-u" style="{{ r.style_avatar }}">
+                                {% if r.m.photo %}
+                                    <img src="{{ r.m.photo.url }}" alt="{{ r.m.nom_affiche }}">
+                                {% else %}
+                                    {{ r.m.initiales }}
+                                {% endif %}
+                            </div>
+
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="u-nom text-truncate">{{ r.m.nom_affiche }}</div>
+                                <div class="u-meta">
+                                    @{{ r.m.user.username }}
+                                    {% if r.m.user.email %} &middot; {{ r.m.user.email }}{% endif %}
+                                    {% if r.m.telephone %} &middot; {{ r.m.telephone }}{% endif %}
+                                </div>
+                                {% if r.m.cree_par %}
+                                <div class="u-meta" style="font-size:.72rem;">
+                                    Créé par {{ r.m.cree_par.get_full_name|default:r.m.cree_par.username }}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="d-none d-md-block text-center" style="min-width:130px;">
+                                {% if r.m.role == 'ADMIN' %}
+                                    <span class="tag t-admin">
+                                        <i class="bi bi-shield-check"></i>Administrateur
+                                    </span>
+                                {% else %}
+                                    <span class="tag t-gest">
+                                        <i class="bi bi-briefcase"></i>Gestionnaire
+                                    </span>
+                                {% endif %}
+                                {% if not r.m.actif %}
+                                <div class="mt-1">
+                                    <span class="tag t-off">Désactivé</span>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            {% if est_admin %}
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-light border btn-edit-user"
+                                        data-url="{% url 'core:modifier_utilisateur' r.m.user_id %}"
+                                        title="Modifier">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                                <button type="button" class="btn btn-light border text-danger btn-del-user"
+                                        data-bs-toggle="modal" data-bs-target="#modalSupprUser"
+                                        data-url="{% url 'core:supprimer_utilisateur' r.m.user_id %}"
+                                        data-nom="{{ r.m.nom_affiche }}"
+                                        title="Supprimer">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% empty %}
+                        <div class="empty-u">
+                            <i class="bi bi-people display-5 d-block opacity-50 mb-3"></i>
+                            <span class="fw-semibold text-dark d-block mb-1">
+                                Aucun utilisateur créé
+                            </span>
+                            <small>
+                                Ajoutez des comptes pour que votre équipe accède à l'application.
+                            </small>
+                            {% if est_admin %}
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-primary"
+                                        data-bs-toggle="modal" data-bs-target="#modalAjoutUser">
+                                    <i class="bi bi-person-plus-fill me-1"></i>Créer un utilisateur
+                                </button>
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Rappel des rôles -->
+                    <div class="panel p-3">
+                        <p class="panel-title mb-3">
+                            <i class="bi bi-key me-2 text-primary"></i>Niveaux d'accès
+                        </p>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <div class="role-help">
+                                    <span class="tag t-admin mb-2">
+                                        <i class="bi bi-shield-check"></i>Administrateur
+                                    </span>
+                                    <div>{{ descriptions_roles.ADMIN }}</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="role-help">
+                                    <span class="tag t-gest mb-2">
+                                        <i class="bi bi-briefcase"></i>Gestionnaire
+                                    </span>
+                                    <div>{{ descriptions_roles.GESTIONNAIRE }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="alert alert-light border mt-3 mb-0 small">
+                            <i class="bi bi-info-circle me-1 text-primary"></i>
+                            Les <strong>employés de l'atelier</strong> (couturiers, brodeurs)
+                            n'ont pas de compte d'accès. Gérez-les dans
+                            <a href="{% url 'core:liste_employes' %}">la section Employés</a>.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ONGLET 3 : FACTURATION -->
+                <div class="tab-pane fade" id="tab-factu" role="tabpanel">
+                    <form method="POST" action="{% url 'core:parametres' %}"
+                          enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <input type="hidden" name="update_atelier" value="1">
+                        <input type="hidden" name="nom" value="{{ atelier.nom }}">
+                        <input type="hidden" name="telephone" value="{{ atelier.telephone|default:'' }}">
+                        <input type="hidden" name="email" value="{{ atelier.email|default:'' }}">
+                        <input type="hidden" name="adresse" value="{{ atelier.adresse|default:'' }}">
+
+                        <div class="panel">
+                            <div class="panel-head">
+                                <p class="panel-title">
+                                    <i class="bi bi-receipt me-2 text-primary"></i>
+                                    Devise, logo et alertes
+                                </p>
+                            </div>
+                            <div class="p-4">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">Devise</label>
+                                        <select class="form-select" name="devise"
+                                                {% if not est_admin %}disabled{% endif %}>
+                                            {% for code, label in devises %}
+                                            <option value="{{ code }}"
+                                                {% if atelier.devise == code %}selected{% endif %}>
+                                                {{ label }}
+                                            </option>
+                                            {% endfor %}
+                                        </select>
+                                        <small class="text-muted">
+                                            Utilisée sur les reçus, factures et tableaux de bord.
+                                        </small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-semibold">
+                                            Seuil d'alerte de stock
+                                        </label>
+                                        <input type="number" class="form-control"
+                                               name="seuil_stock_faible" min="0"
+                                               value="{{ atelier.seuil_stock_faible }}"
+                                               {% if not est_admin %}disabled{% endif %}>
+                                        <small class="text-muted">
+                                            En dessous, les articles sont signalés en stock faible.
+                                        </small>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Logo de l'atelier</label>
+                                        <div class="d-flex align-items-center gap-3">
+                                            {% if atelier.logo %}
+                                            <img src="{{ atelier.logo.url }}" alt="Logo"
+                                                 class="rounded-3 border"
+                                                 style="width:72px; height:72px; object-fit:contain; background:#fff;">
+                                            {% else %}
+                                            <div class="rounded-3 border d-flex align-items-center justify-content-center bg-light"
+                                                 style="width:72px; height:72px;">
+                                                <i class="bi bi-image text-secondary fs-4"></i>
+                                            </div>
+                                            {% endif %}
+                                            <div class="flex-grow-1">
+                                                <input type="file" class="form-control" name="logo"
+                                                       accept="image/*"
+                                                       {% if not est_admin %}disabled{% endif %}>
+                                                <small class="text-muted">
+                                                    Apparaît sur les reçus et factures. PNG ou JPG.
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {% if est_admin %}
+                                <div class="mt-4 pt-3 border-top">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check-lg me-1"></i>Enregistrer
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+</div>
+
+<!-- ===== MODAL AJOUT UTILISATEUR ===== -->
+<div class="modal fade" id="modalAjoutUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="{% url 'core:ajouter_utilisateur' %}">
+                {% csrf_token %}
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-person-plus-fill me-2"></i>Nouvel utilisateur
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Prénom <span class="text-danger">*</span></label>
+                        <input type="text" name="first_name" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Nom</label>
+                        <input type="text" name="last_name" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Nom d'utilisateur <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" name="username" class="form-control" required
+                               placeholder="Pour la connexion">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Téléphone</label>
+                        <input type="tel" name="telephone" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" name="email" class="form-control">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Rôle <span class="text-danger">*</span></label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="role"
+                                   id="r_gest" value="GESTIONNAIRE" checked>
+                            <label class="btn btn-outline-primary" for="r_gest">
+                                <i class="bi bi-briefcase me-1"></i>Gestionnaire
+                            </label>
+                            <input type="radio" class="btn-check" name="role"
+                                   id="r_admin" value="ADMIN">
+                            <label class="btn btn-outline-danger" for="r_admin">
+                                <i class="bi bi-shield-check me-1"></i>Administrateur
+                            </label>
+                        </div>
+                        <div class="role-help mt-2" id="aide_role">
+                            {{ descriptions_roles.GESTIONNAIRE }}
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Mot de passe <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" name="password" class="form-control"
+                               minlength="6" required placeholder="6 caractères minimum">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Confirmer <span class="text-danger">*</span>
+                        </label>
+                        <input type="password" name="password2" class="form-control"
+                               minlength="6" required>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="bi bi-person-check me-1"></i>Créer le compte
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL MODIFICATION UTILISATEUR ===== -->
+<div class="modal fade" id="modalEditUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" id="formEditUser" action="">
+                {% csrf_token %}
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-pencil-square me-2"></i>Modifier l'utilisateur
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Prénom</label>
+                        <input type="text" name="first_name" id="e_first" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Nom</label>
+                        <input type="text" name="last_name" id="e_last" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Nom d'utilisateur</label>
+                        <input type="text" name="username" id="e_username" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Téléphone</label>
+                        <input type="tel" name="telephone" id="e_tel" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" name="email" id="e_email" class="form-control">
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Rôle</label>
+                        <select name="role" id="e_role" class="form-select">
+                            {% for code, label in roles %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Nouveau mot de passe</label>
+                        <input type="password" name="nouveau_mot_de_passe"
+                               class="form-control" minlength="6"
+                               placeholder="Laisser vide pour conserver l'actuel">
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox"
+                                   name="actif" id="e_actif" checked>
+                            <label class="form-check-label fw-semibold" for="e_actif">
+                                Compte actif
+                            </label>
+                            <div class="text-muted small">
+                                Désactivé, l'utilisateur ne peut plus se connecter.
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL SUPPRESSION ===== -->
+<div class="modal fade" id="modalSupprUser" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" id="formSupprUser">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white py-2">
+                    <h6 class="modal-title fw-bold">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Supprimer
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 text-center">
+                    <i class="bi bi-person-x text-danger fs-1 mb-2 d-block"></i>
+                    Supprimer le compte de<br>
+                    <strong id="sup_nom"></strong> ?
+                    <p class="text-muted small mt-2 mb-0">
+                        Cet utilisateur ne pourra plus se connecter.
+                    </p>
+                </div>
+                <div class="modal-footer py-2 justify-content-center gap-2">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="bi bi-trash me-1"></i>Supprimer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const DESCRIPTIONS = {
+        'ADMIN': "{{ descriptions_roles.ADMIN|escapejs }}",
+        'GESTIONNAIRE': "{{ descriptions_roles.GESTIONNAIRE|escapejs }}"
+    };
+
+    /* ===== Onglet mémorisé ===== */
+    const onglet = localStorage.getItem('ongletParam');
+    if (onglet) {
+        const btn = document.querySelector('#nav-param button[data-bs-target="' + onglet + '"]');
+        if (btn) bootstrap.Tab.getOrCreateInstance(btn).show();
+    }
+    document.querySelectorAll('#nav-param button').forEach(function (b) {
+        b.addEventListener('shown.bs.tab', function (e) {
+            localStorage.setItem('ongletParam', e.target.dataset.bsTarget);
+        });
+    });
+
+    /* ===== Aide dynamique sur le rôle ===== */
+    document.querySelectorAll('input[name="role"]').forEach(function (r) {
+        r.addEventListener('change', function () {
+            const aide = document.getElementById('aide_role');
+            if (aide) aide.textContent = DESCRIPTIONS[this.value] || '';
+        });
+    });
+
+    /* ===== Pré-remplissage modification ===== */
+    document.querySelectorAll('.btn-edit-user').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const url = this.dataset.url;
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('formEditUser').action = url;
+                    document.getElementById('e_first').value = d.first_name;
+                    document.getElementById('e_last').value = d.last_name;
+                    document.getElementById('e_username').value = d.username;
+                    document.getElementById('e_email').value = d.email;
+                    document.getElementById('e_tel').value = d.telephone;
+                    document.getElementById('e_role').value = d.role;
+                    document.getElementById('e_actif').checked = d.actif;
+                    localStorage.setItem('ongletParam', '#tab-users');
+                    bootstrap.Modal.getOrCreateInstance(
+                        document.getElementById('modalEditUser')).show();
+                })
+                .catch(() => alert("Impossible de charger cet utilisateur."));
+        });
+    });
+
+    /* ===== Suppression ===== */
+    document.querySelectorAll('.btn-del-user').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('formSupprUser').action = this.dataset.url;
+            document.getElementById('sup_nom').textContent = this.dataset.nom;
+            localStorage.setItem('ongletParam', '#tab-users');
+        });
+    });
+
+    /* ===== Auto-masquage des messages ===== */
+    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+        setTimeout(function () {
+            bootstrap.Alert.getOrCreateInstance(el).close();
+        }, 4000);
+    });
+});
+</script>
+{% endblock %}

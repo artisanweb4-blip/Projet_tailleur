@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #1e293b; }
+        h1 { font-size: 18px; margin-bottom: 4px; }
+        .sous-titre { color: #64748b; margin-bottom: 20px; font-size: 11px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #cbd5e1; padding: 6px 10px; text-align: left; }
+        th { background-color: #f1f5f9; }
+        .footer { margin-top: 30px; font-size: 9px; color: #94a3b8; }
+    </style>
+</head>
+<body>
+    <h1>{{ mensuration.libelle }}</h1>
+    <p class="sous-titre">
+        Client : {{ mensuration.client.nom }} {{ mensuration.client.prenom }}<br/>
+        Date de prise : {{ mensuration.date_prise|date:"d/m/Y" }}
+    </p>
+
+    {% if mensuration.donnees %}
+    <table>
+        <tr>
+            <th>Champ</th>
+            <th>Valeur</th>
+        </tr>
+        {% for nom, valeur in mensuration.donnees.items %}
+        <tr>
+            <td>{{ nom }}</td>
+            <td>{{ valeur }} cm</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <p>Aucune mesure enregistrée sur cette fiche.</p>
+    {% endif %}
+
+    <p class="footer">Document généré automatiquement — TailleurPro</p>
+</body>
+</html>

@@ -1,0 +1,195 @@
+{% extends 'saas_admin/base_superadmin.html' %}
+
+{% block title %}Détails {{ boutique.nom_boutique }} - Super Admin TailleurPro{% endblock %}
+{% block nav_boutiques %}active{% endblock %}
+
+{% block top_navbar %}
+<div class="d-flex align-items-center justify-content-between w-100">
+    <div class="d-flex align-items-center gap-2">
+        <a href="{% url 'saas_admin:superadmin_liste_boutiques' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Retour
+        </a>
+        <h5 class="m-0 fw-bold">{{ boutique.nom_boutique }}</h5>
+    </div>
+    <!-- Bouton d'ajout retiré d'ici -->
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row g-4 mb-4">
+    <!-- Formulaire d'édition et Historique des factures -->
+    <div class="col-lg-8">
+        <div class="card-custom p-4 shadow-sm mb-4">
+            <h6 class="fw-bold border-bottom pb-3 mb-3"><i class="bi bi-info-circle me-2"></i>Informations de la Boutique</h6>
+            <form method="post" action="{% url 'saas_admin:modifier_boutique' boutique.id %}">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Nom du magasin</label>
+                        <input type="text" name="nom_boutique" class="form-control" value="{{ boutique.nom_boutique }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Sous-domaine / URL</label>
+                        <div class="input-group">
+                            <input type="text" name="slug" class="form-control" value="{{ boutique.slug }}">
+                            <span class="input-group-text bg-light">.tailleurpro.com</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Propriétaire</label>
+                        <input type="text" class="form-control bg-light" value="{{ boutique.proprietaire.get_full_name|default:boutique.proprietaire.username }}" readonly>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Email de contact</label>
+                        <input type="email" name="email" class="form-control" value="{{ boutique.email|default:boutique.proprietaire.email }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Téléphone / WhatsApp</label>
+                        <input type="text" name="telephone" class="form-control" value="{{ boutique.telephone }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-semibold">Date d'inscription</label>
+                        <input type="text" class="form-control bg-light" value="{{ boutique.date_creation|date:'d F Y' }}" readonly>
+                    </div>
+                    <div class="col-12 text-end mt-4">
+                        <button type="submit" class="btn btn-primary px-4 fw-semibold">
+                            <i class="bi bi-check2 me-1"></i> Sauvegarder les modifications
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-custom p-4 shadow-sm">
+            <h6 class="fw-bold border-bottom pb-3 mb-3"><i class="bi bi-receipt me-2"></i>Historique des Factures & Paiements</h6>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light small text-uppercase">
+                        <tr>
+                            <th>Date</th>
+                            <th>Montant</th>
+                            <th>Moyen de Paiement</th>
+                            <th>Statut</th>
+                            <th class="text-end">Reçu</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for facture in factures %}
+                            <tr>
+                                <td>{{ facture.date_paiement|date:"d/m/Y" }}</td>
+                                <td>{{ facture.montant }} FCFA</td>
+                                <td>{{ facture.mode_paiement }}</td>
+                                <td>
+                                    {% if facture.est_paye %}
+                                        <span class="badge bg-success-subtle text-success">Payé</span>
+                                    {% else %}
+                                        <span class="badge bg-danger-subtle text-danger">En attente</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    {% if facture.recu_pdf %}
+                                        <a href="{{ facture.recu_pdf.url }}" class="btn btn-sm btn-light" target="_blank"><i class="bi bi-download"></i></a>
+                                    {% else %}
+                                        <span class="text-muted small">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">Aucune facture disponible pour cet atelier.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions & Abonnement -->
+    <div class="col-lg-4">
+        <div class="card-custom p-4 shadow-sm mb-4">
+            <h6 class="fw-bold border-bottom pb-3 mb-3"><i class="bi bi-card-checklist me-2"></i>Abonnement Actuel</h6>
+            <div class="p-3 bg-light rounded mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="fw-bold text-primary">{{ boutique.formule_abonnement.nom|default:"Aucun plan" }}</span>
+                    <span class="badge bg-primary">{{ boutique.formule_abonnement.prix|default:"0" }} F/mois</span>
+                </div>
+                <small class="text-muted d-block">Renouvellement le : {{ boutique.date_expiration_abonnement|date:"d F Y" }}</small>
+            </div>
+
+            <form method="post" action="{% url 'saas_admin:changer_plan_boutique' boutique.id %}">
+                {% csrf_token %}
+                <label class="form-label small fw-semibold">Changer le plan de cette boutique :</label>
+                <select name="formule_id" class="form-select mb-3">
+                    {% for formule in formules %}
+                        <option value="{{ formule.id }}" {% if boutique.formule_abonnement.id == formule.id %}selected{% endif %}>
+                            {{ formule.nom }} ({{ formule.prix }} FCFA / mois)
+                        </option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-outline-primary w-100 fw-semibold">Mettre à jour le Plan</button>
+            </form>
+        </div>
+
+        <div class="card-custom p-4 shadow-sm border-danger border-opacity-25">
+            <h6 class="fw-bold text-danger border-bottom pb-3 mb-3"><i class="bi bi-shield-lock me-2"></i>Actions d'Administration</h6>
+            <div class="d-grid gap-2">
+                <form method="post" action="{% url 'saas_admin:reinitialiser_pass_boutique' boutique.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-light text-start text-dark border w-100">
+                        <i class="bi bi-key me-2 text-warning"></i> Réinitialiser mot de passe admin
+                    </button>
+                </form>
+
+                <a href="{% url 'saas_admin:impersonner_boutique' boutique.id %}" class="btn btn-light text-start text-dark border">
+                    <i class="bi bi-box-arrow-in-right me-2 text-primary"></i> Se connecter en tant que cet atelier
+                </a>
+
+                {% if boutique.statut == 'SUSPENDU' %}
+                    <form method="post" action="{% url 'saas_admin:reactiver_boutique' boutique.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-success text-start w-100">
+                            <i class="bi bi-check-circle me-2"></i> Réactiver la boutique
+                        </button>
+                    </form>
+                {% else %}
+                    <form method="post" action="{% url 'saas_admin:suspendre_boutique' boutique.id %}">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger text-start w-100">
+                            <i class="bi bi-slash-circle me-2"></i> Suspendre la boutique
+                        </button>
+                    </form>
+                {% endif %}
+
+                <button type="button" class="btn btn-danger text-start" data-bs-toggle="modal" data-bs-target="#deleteShopModal">
+                    <i class="bi bi-trash me-2"></i> Supprimer définitivement
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block modals %}
+<div class="modal fade" id="deleteShopModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-danger">Suppression de Boutique</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p>Êtes-vous sûr de vouloir supprimer la boutique <strong>{{ boutique.nom_boutique }}</strong> ?</p>
+                <p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i> Cette action est irréversible et supprimera toutes les données associées.</p>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                <form method="post" action="{% url 'saas_admin:supprimer_boutique' boutique.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Oui, supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

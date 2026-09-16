@@ -1,0 +1,676 @@
+{% extends 'base.html' %}
+{% block title %}Clients — {{ atelier.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .cl-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
+
+    /* ===== KPI ===== */
+    .kpi-c {
+        background:#fff; border:1px solid #eef0f6; border-radius:14px;
+        padding:1rem 1.15rem; height:100%;
+    }
+    .kpi-c .lbl { color:#6b7280; font-size:.8rem; }
+    .kpi-c .val { font-size:1.6rem; font-weight:700; color:#111827; line-height:1.2; }
+    .kpi-c .hint { color:#9ca3af; font-size:.76rem; }
+    .kpi-ic {
+        width:40px; height:40px; border-radius:11px; color:#fff; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .ic-viol { background:linear-gradient(135deg,#7c3aed,#6d28d9); }
+    .ic-blue { background:linear-gradient(135deg,#0ea5e9,#0284c7); }
+    .ic-grn  { background:linear-gradient(135deg,#10b981,#059669); }
+    .ic-org  { background:linear-gradient(135deg,#f59e0b,#ea580c); }
+
+    /* ===== CARTE CLIENT ===== */
+    .client-card {
+        background:#fff; border:1px solid #eef0f6; border-radius:14px;
+        padding:1rem; height:100%; transition:all .16s;
+        display:flex; flex-direction:column;
+    }
+    .client-card:hover {
+        transform:translateY(-3px); border-color:#ddd6fe;
+        box-shadow:0 8px 22px rgba(0,0,0,.07);
+    }
+    .avatar {
+        width:46px; height:46px; border-radius:13px; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+        font-weight:700; font-size:.95rem;
+    }
+    .avatar-sm { width:38px; height:38px; border-radius:10px; font-size:.8rem; }
+    .cc-nom { font-weight:700; color:#111827; font-size:.98rem; line-height:1.25; }
+    .cc-tel { color:#6b7280; font-size:.83rem; }
+    .cc-mail { color:#9ca3af; font-size:.78rem; }
+
+    .stats-row {
+        display:flex; gap:.4rem; margin:.75rem 0;
+        padding:.55rem 0; border-top:1px solid #f4f5f9; border-bottom:1px solid #f4f5f9;
+    }
+    .stat-box { flex:1; text-align:center; }
+    .stat-val { font-weight:700; color:#111827; font-size:.95rem; line-height:1.1; }
+    .stat-lbl { color:#9ca3af; font-size:.68rem; text-transform:uppercase; letter-spacing:.3px; }
+
+    .tag {
+        display:inline-flex; align-items:center; gap:.25rem;
+        padding:.13rem .5rem; border-radius:999px;
+        font-size:.72rem; font-weight:600;
+    }
+    .t-m     { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
+    .t-f     { background:#fdf2f8; color:#be185d; border:1px solid #fbcfe8; }
+    .t-actif { background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; }
+    .t-org   { background:#f3f4f6; color:#4b5563; border:1px solid #e5e7eb; }
+
+    .cc-foot { margin-top:auto; display:flex; gap:.35rem; }
+
+    /* ===== TABLEAU ===== */
+    .tbl-card { background:#fff; border:1px solid #eef0f6; border-radius:14px; overflow:hidden; }
+    .tbl-card table { margin:0; }
+    .tbl-card thead th {
+        background:#fafbff; color:#6b7280; font-size:.76rem;
+        text-transform:uppercase; letter-spacing:.4px; font-weight:600;
+        border-bottom:1px solid #eef0f6; padding:.7rem .75rem;
+    }
+    .tbl-card tbody td { padding:.7rem .75rem; border-bottom:1px solid #f4f5f9; vertical-align:middle; }
+    .tbl-card tbody tr:hover { background:#fafbff; }
+
+    .empty-c { padding:4rem 1rem; text-align:center; color:#9ca3af; }
+    .vue-btn.active { background:#6d28d9 !important; color:#fff !important; border-color:#6d28d9 !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cl-wrap">
+<div class="container-fluid px-md-3">
+
+    <!-- En-tête -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 gap-3">
+        <div>
+            <h1 class="h4 fw-bold text-dark mb-1">
+                <i class="bi bi-people-fill me-2 text-primary"></i>Clients
+            </h1>
+            <p class="text-muted small mb-0">
+                Base clients de l'atelier — coordonnées, mensurations et historique.
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-secondary vue-btn active" data-vue="grille" title="Vue cartes">
+                    <i class="bi bi-grid-3x3-gap-fill"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary vue-btn" data-vue="tableau" title="Vue tableau">
+                    <i class="bi bi-list-ul"></i>
+                </button>
+            </div>
+            <button type="button" class="btn btn-primary shadow-sm"
+                    data-bs-toggle="modal" data-bs-target="#modalAjoutClient">
+                <i class="bi bi-person-plus-fill me-1"></i> Nouveau client
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+    <div id="messagesZone">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- KPI -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-c d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Total clients</div>
+                    <div class="val">{{ total_clients }}</div>
+                    <div class="hint">Base complète</div>
+                </div>
+                <div class="kpi-ic ic-viol"><i class="bi bi-people-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-c d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Nouveaux ce mois</div>
+                    <div class="val">{{ nouveaux_mois }}</div>
+                    <div class="hint">Depuis le 1er</div>
+                </div>
+                <div class="kpi-ic ic-blue"><i class="bi bi-person-plus-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-c d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Commandes en cours</div>
+                    <div class="val">{{ actifs }}</div>
+                    <div class="hint">Clients actifs</div>
+                </div>
+                <div class="kpi-ic ic-grn"><i class="bi bi-bag-check-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-c d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Avec mensurations</div>
+                    <div class="val">{{ avec_mensurations }}</div>
+                    <div class="hint">Fiches enregistrées</div>
+                </div>
+                <div class="kpi-ic ic-org"><i class="bi bi-rulers"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-body p-3">
+            <form method="GET" action="{% url 'core:liste_clients' %}" class="row g-2 align-items-end">
+                <div class="col-12 col-md-4 col-lg-3">
+                    <label class="form-label small fw-medium text-muted">Recherche</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                        <input type="text" name="q" value="{{ query }}" class="form-control"
+                               placeholder="Nom, téléphone, email…">
+                    </div>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <label class="form-label small fw-medium text-muted">Genre</label>
+                    <select name="genre" class="form-select form-select-sm">
+                        <option value="">Tous</option>
+                        <option value="M" {% if genre_filter == 'M' %}selected{% endif %}>Masculin</option>
+                        <option value="F" {% if genre_filter == 'F' %}selected{% endif %}>Féminin</option>
+                    </select>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <label class="form-label small fw-medium text-muted">Origine</label>
+                    <select name="origine" class="form-select form-select-sm">
+                        <option value="">Toutes</option>
+                        {% for value, label in origine_choices %}
+                            <option value="{{ value }}" {% if origine_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6 col-lg-2">
+                    <label class="form-label small fw-medium text-muted">Trier par</label>
+                    <select name="tri" class="form-select form-select-sm">
+                        <option value="nom" {% if tri == 'nom' %}selected{% endif %}>Nom (A-Z)</option>
+                        <option value="recent" {% if tri == 'recent' %}selected{% endif %}>Plus récents</option>
+                        <option value="commandes" {% if tri == 'commandes' %}selected{% endif %}>Plus de commandes</option>
+                    </select>
+                </div>
+                <div class="col-3 col-lg-1">
+                    <label class="form-label small fw-medium text-muted">Du</label>
+                    <input type="date" name="date_debut" value="{{ date_debut }}" class="form-control form-control-sm">
+                </div>
+                <div class="col-3 col-lg-1">
+                    <label class="form-label small fw-medium text-muted">Au</label>
+                    <input type="date" name="date_fin" value="{{ date_fin }}" class="form-control form-control-sm">
+                </div>
+                <div class="col-6 col-lg-1 d-flex gap-1">
+                    <button type="submit" class="btn btn-sm btn-primary w-100"><i class="bi bi-funnel"></i></button>
+                    <a href="{% url 'core:liste_clients' %}" class="btn btn-sm btn-outline-secondary w-100">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== VUE GRILLE ===== -->
+    <div id="vue-grille">
+        <div class="row g-3">
+            {% for r in rows %}
+            <div class="col-12 col-sm-6 col-lg-4 col-xxl-3">
+                <div class="client-card">
+
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="avatar" style="{{ r.style_avatar }}">{{ r.initiales }}</div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="cc-nom text-truncate">
+                                {{ r.c.nom }}{% if r.c.prenom %} {{ r.c.prenom }}{% endif %}
+                            </div>
+                            <div class="cc-tel">
+                                <i class="bi bi-telephone"></i> {{ r.c.telephone }}
+                            </div>
+                            {% if r.c.email %}
+                            <div class="cc-mail text-truncate">
+                                <i class="bi bi-envelope"></i> {{ r.c.email }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-1 mt-2">
+                        {% if r.c.genre == 'F' %}
+                            <span class="tag t-f"><i class="bi bi-gender-female"></i>Féminin</span>
+                        {% else %}
+                            <span class="tag t-m"><i class="bi bi-gender-male"></i>Masculin</span>
+                        {% endif %}
+                        {% if r.actif %}
+                            <span class="tag t-actif"><i class="bi bi-dot"></i>Commande active</span>
+                        {% endif %}
+                        {% if r.c.origine %}
+                            <span class="tag t-org">{{ r.c.get_origine_display }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="stats-row">
+                        <div class="stat-box">
+                            <div class="stat-val">{{ r.nb_commandes }}</div>
+                            <div class="stat-lbl">Cmd</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-val">{{ r.nb_mensurations }}</div>
+                            <div class="stat-lbl">Mesures</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-val">{{ r.total_paye|floatformat:0 }}</div>
+                            <div class="stat-lbl">{{ atelier.devise }}</div>
+                        </div>
+                    </div>
+
+                    <div class="cc-mail mb-2">
+                        {% if r.derniere %}
+                            <i class="bi bi-clock-history"></i>
+                            Dernière commande le {{ r.derniere.date_commande|date:"d/m/Y" }}
+                        {% else %}
+                            <i class="bi bi-dash-circle"></i> Aucune commande
+                        {% endif %}
+                    </div>
+
+                    <div class="cc-foot">
+                        <a href="{% url 'core:detail_client' r.c.id %}"
+                           class="btn btn-sm btn-primary flex-grow-1">
+                            <i class="bi bi-eye me-1"></i>Fiche
+                        </a>
+                        <button type="button" class="btn btn-sm btn-light border btn-edit"
+                            data-bs-toggle="modal" data-bs-target="#modalEditClient"
+                            data-url="{% url 'core:modifier_client' r.c.id %}"
+                            data-nom="{{ r.c.nom }}"
+                            data-genre="{{ r.c.genre }}"
+                            data-telephone="{{ r.c.telephone }}"
+                            data-email="{{ r.c.email|default:'' }}"
+                            data-adresse="{{ r.c.adresse|default:'' }}"
+                            data-origine="{{ r.c.origine|default:'' }}"
+                            title="Modifier">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-light border text-danger btn-del"
+                            data-bs-toggle="modal" data-bs-target="#modalSupprClient"
+                            data-url="{% url 'core:supprimer_client' r.c.id %}"
+                            data-nom="{{ r.c.nom }} {{ r.c.prenom|default:'' }}"
+                            title="Supprimer">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="tbl-card empty-c">
+                    <i class="bi bi-people display-5 d-block opacity-50 mb-3"></i>
+                    <span class="fw-semibold text-dark d-block mb-1">Aucun client trouvé</span>
+                    <small>Modifiez vos filtres ou ajoutez votre premier client.</small>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-primary"
+                                data-bs-toggle="modal" data-bs-target="#modalAjoutClient">
+                            <i class="bi bi-person-plus-fill me-1"></i>Nouveau client
+                        </button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- ===== VUE TABLEAU ===== -->
+    <div id="vue-tableau" class="d-none">
+        <div class="tbl-card">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-3">Client</th>
+                            <th>Contact</th>
+                            <th>Genre</th>
+                            <th>Origine</th>
+                            <th class="text-center">Cmd</th>
+                            <th class="text-center">Mesures</th>
+                            <th class="text-end">Total payé</th>
+                            <th>Ajouté le</th>
+                            <th class="text-end pe-3">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in rows %}
+                        <tr>
+                            <td class="ps-3">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="avatar avatar-sm" style="{{ r.style_avatar }}">{{ r.initiales }}</div>
+                                    <div>
+                                        <div class="fw-semibold text-dark">
+                                            {{ r.c.nom }}{% if r.c.prenom %} {{ r.c.prenom }}{% endif %}
+                                        </div>
+                                        {% if r.actif %}
+                                        <span class="tag t-actif" style="font-size:.66rem;">Active</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="fw-medium text-dark small">{{ r.c.telephone }}</div>
+                                {% if r.c.email %}
+                                <div class="text-muted" style="font-size:.76rem;">{{ r.c.email }}</div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if r.c.genre == 'F' %}
+                                    <span class="tag t-f">Féminin</span>
+                                {% else %}
+                                    <span class="tag t-m">Masculin</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if r.c.origine %}
+                                    <span class="tag t-org">{{ r.c.get_origine_display }}</span>
+                                {% else %}
+                                    <span class="text-muted small">—</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center fw-semibold">{{ r.nb_commandes }}</td>
+                            <td class="text-center fw-semibold">{{ r.nb_mensurations }}</td>
+                            <td class="text-end fw-bold text-dark">
+                                {{ r.total_paye|floatformat:0 }} {{ atelier.devise }}
+                            </td>
+                            <td class="text-muted small">{{ r.c.date_creation|date:"d/m/Y" }}</td>
+                            <td class="text-end pe-3">
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'core:detail_client' r.c.id %}"
+                                       class="btn btn-light border" title="Fiche">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-light border btn-edit"
+                                        data-bs-toggle="modal" data-bs-target="#modalEditClient"
+                                        data-url="{% url 'core:modifier_client' r.c.id %}"
+                                        data-nom="{{ r.c.nom }}"
+                                        data-genre="{{ r.c.genre }}"
+                                        data-telephone="{{ r.c.telephone }}"
+                                        data-email="{{ r.c.email|default:'' }}"
+                                        data-adresse="{{ r.c.adresse|default:'' }}"
+                                        data-origine="{{ r.c.origine|default:'' }}">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-light border text-danger btn-del"
+                                        data-bs-toggle="modal" data-bs-target="#modalSupprClient"
+                                        data-url="{% url 'core:supprimer_client' r.c.id %}"
+                                        data-nom="{{ r.c.nom }} {{ r.c.prenom|default:'' }}">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="empty-c">
+                                <i class="bi bi-people display-6 d-block opacity-50 mb-2"></i>
+                                Aucun client trouvé.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4">
+        <span class="text-muted small">
+            Page {{ page_obj.number }} sur {{ paginator.num_pages }}
+            &middot; {{ paginator.count }} client{{ paginator.count|pluralize }}
+        </span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ querystring }}">
+                        <i class="bi bi-chevron-left"></i></a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-left"></i></span></li>
+                {% endif %}
+
+                {% for num in paginator.page_range %}
+                    {% if page_obj.number == num %}
+                        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ num }}&{{ querystring }}">{{ num }}</a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ querystring }}">
+                        <i class="bi bi-chevron-right"></i></a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link"><i class="bi bi-chevron-right"></i></span></li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+</div>
+</div>
+
+<!-- ===== MODAL AJOUT ===== -->
+<div class="modal fade" id="modalAjoutClient" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="{% url 'core:ajouter_client' %}">
+                {% csrf_token %}
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-person-plus-fill me-2"></i>Nouveau client
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Nom complet <span class="text-danger">*</span></label>
+                        <input type="text" name="nom" class="form-control" required
+                               placeholder="Ex : Adama Traoré">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Téléphone <span class="text-danger">*</span></label>
+                        <input type="tel" name="telephone" class="form-control" required
+                               placeholder="+223 00 00 00 00">
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Genre</label>
+                        <select name="genre" class="form-select">
+                            <option value="M">Masculin</option>
+                            <option value="F">Féminin</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Comment vous a-t-il connu ?</label>
+                        <select name="origine" class="form-select">
+                            <option value="">&mdash; Non renseignée &mdash;</option>
+                            {% for value, label in origine_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" name="email" class="form-control" placeholder="exemple@mail.com">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Adresse / Quartier</label>
+                        <textarea name="adresse" class="form-control" rows="2"
+                                  placeholder="Ex : Korofina Nord, Rue 12"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="bi bi-save me-1"></i>Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL MODIFICATION ===== -->
+<div class="modal fade" id="modalEditClient" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" id="formEditClient">
+                {% csrf_token %}
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title fw-bold">
+                        <i class="bi bi-pencil-square me-2"></i>Modifier le client
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Nom complet <span class="text-danger">*</span></label>
+                        <input type="text" name="nom" id="e_nom" class="form-control" required>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Téléphone <span class="text-danger">*</span></label>
+                        <input type="tel" name="telephone" id="e_tel" class="form-control" required>
+                    </div>
+                    <div class="col-12 col-md-6">
+                        <label class="form-label fw-semibold">Genre</label>
+                        <select name="genre" id="e_genre" class="form-select">
+                            <option value="M">Masculin</option>
+                            <option value="F">Féminin</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Origine / Canal</label>
+                        <select name="origine" id="e_origine" class="form-select">
+                            <option value="">&mdash; Non renseignée &mdash;</option>
+                            {% for value, label in origine_choices %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" name="email" id="e_email" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Adresse / Quartier</label>
+                        <textarea name="adresse" id="e_adresse" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL SUPPRESSION ===== -->
+<div class="modal fade" id="modalSupprClient" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" id="formSupprClient">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white py-2">
+                    <h6 class="modal-title fw-bold">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Supprimer
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 text-center">
+                    <i class="bi bi-person-x text-danger fs-1 mb-2 d-block"></i>
+                    Supprimer définitivement<br>
+                    <strong id="suppr_nom"></strong> ?
+                    <p class="text-muted small mt-2 mb-0">
+                        Ses mensurations et commandes seront également supprimées.
+                    </p>
+                </div>
+                <div class="modal-footer py-2 justify-content-center gap-2">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="bi bi-trash me-1"></i>Supprimer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ===== Bascule grille / tableau (mémorisée) ===== */
+    const vueGrille  = document.getElementById('vue-grille');
+    const vueTableau = document.getElementById('vue-tableau');
+
+    function appliquerVue(vue) {
+        const estTableau = vue === 'tableau';
+        vueGrille.classList.toggle('d-none', estTableau);
+        vueTableau.classList.toggle('d-none', !estTableau);
+        document.querySelectorAll('.vue-btn').forEach(function (b) {
+            b.classList.toggle('active', b.dataset.vue === vue);
+        });
+        try { localStorage.setItem('vue_clients', vue); } catch (e) {}
+    }
+
+    document.querySelectorAll('.vue-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () { appliquerVue(this.dataset.vue); });
+    });
+
+    let vueSauvee = 'grille';
+    try { vueSauvee = localStorage.getItem('vue_clients') || 'grille'; } catch (e) {}
+    appliquerVue(vueSauvee);
+
+    /* ===== Pré-remplissage modification ===== */
+    document.querySelectorAll('.btn-edit').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const d = this.dataset;
+            document.getElementById('formEditClient').action = d.url;
+            document.getElementById('e_nom').value     = d.nom;
+            document.getElementById('e_tel').value     = d.telephone;
+            document.getElementById('e_email').value   = d.email;
+            document.getElementById('e_adresse').value = d.adresse;
+            document.getElementById('e_genre').value   = d.genre;
+            document.getElementById('e_origine').value = d.origine;
+        });
+    });
+
+    /* ===== Pré-remplissage suppression ===== */
+    document.querySelectorAll('.btn-del').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('formSupprClient').action = this.dataset.url;
+            document.getElementById('suppr_nom').textContent = this.dataset.nom;
+        });
+    });
+
+    /* ===== Auto-masquage des messages ===== */
+    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+        setTimeout(function () {
+            bootstrap.Alert.getOrCreateInstance(el).close();
+        }, 3500);
+    });
+});
+</script>
+{% endblock %}

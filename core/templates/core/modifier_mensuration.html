@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Modifier mensurations du {{ mensuration.date_prise|date:"d/m/Y" }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-warning text-white d-flex justify-content-between align-items-center">
+            <h3 class="mb-0"><i class="bi bi-rulers me-2"></i>Modifier mensurations du {{ mensuration.date_prise|date:"d/m/Y" }}</h3>
+            <span class="badge bg-white text-dark">{{ mensuration.client.nom }}</span>
+        </div>
+        <div class="card-body p-4">
+            <p class="text-muted small">Seuls les champs déjà renseignés lors de l'ajout sont affichés ci-dessous. Vous pouvez les modifier, les supprimer, ou en ajouter de nouveaux.</p>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div id="champsExistants">
+                    {% for nom, valeur in mensuration.donnees.items %}
+                    <div class="row g-2 mb-2 dynamic-row align-items-center">
+                        <div class="col-6">
+                            <input type="text" name="champ_nom[]" class="form-control" value="{{ nom }}">
+                        </div>
+                        <div class="col-4">
+                            <input type="number" name="champ_valeur[]" class="form-control" step="0.1" value="{{ valeur }}">
+                        </div>
+                        <div class="col-2 d-flex">
+                            <button type="button" class="btn btn-outline-danger btn-remove-row"><i class="bi bi-x-lg"></i></button>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <p class="text-muted fst-italic">Aucun champ enregistré pour cette fiche pour l'instant.</p>
+                    {% endfor %}
+                </div>
+
+                <button type="button" id="btnAjouterChamp" class="btn btn-sm btn-outline-primary mb-4">
+                    <i class="bi bi-plus-lg me-1"></i> Ajouter un champ
+                </button>
+
+                <div class="mt-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                        <i class="bi bi-check-lg me-1"></i>Enregistrer
+                    </button>
+                    <a href="{% url 'core:detail_client' client.id %}" class="btn btn-secondary rounded-pill px-4">
+                        <i class="bi bi-x-lg me-1"></i>Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        function attacherSuppression(row) {
+            row.querySelector('.btn-remove-row').addEventListener('click', function () {
+                row.remove();
+            });
+        }
+
+        document.querySelectorAll('#champsExistants .dynamic-row').forEach(attacherSuppression);
+
+        document.getElementById('btnAjouterChamp').addEventListener('click', function () {
+            const row = document.createElement('div');
+            row.className = 'row g-2 mb-2 dynamic-row align-items-center';
+            row.innerHTML = `
+                <div class="col-6">
+                    <input type="text" name="champ_nom[]" class="form-control" placeholder="Nom du champ">
+                </div>
+                <div class="col-4">
+                    <input type="number" name="champ_valeur[]" class="form-control" step="0.1" placeholder="Valeur (cm)">
+                </div>
+                <div class="col-2 d-flex">
+                    <button type="button" class="btn btn-outline-danger btn-remove-row"><i class="bi bi-x-lg"></i></button>
+                </div>
+            `;
+            document.getElementById('champsExistants').appendChild(row);
+            attacherSuppression(row);
+        });
+    });
+</script>
+{% endblock %}

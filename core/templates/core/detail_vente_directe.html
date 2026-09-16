@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Vente {{ commande.code }}{% endblock %}
+{% block content %}
+<div class="container-fluid py-4 px-md-4">
+
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pb-3 mb-4 border-bottom">
+        <div>
+            <h2 class="h4 mb-0 fw-bold text-dark">
+                Vente {{ commande.code }}
+                {% if commande.statut == 'ANNULE' %}
+                    <span class="badge bg-danger ms-2">Annulée</span>
+                {% endif %}
+            </h2>
+            <p class="text-muted small mb-0">
+                {{ commande.date_creation|date:"d/m/Y H:i" }} —
+                {{ commande.client.nom }}{% if commande.client.prenom %} {{ commande.client.prenom }}{% endif %}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'core:liste_ventes_directes' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i> Retour
+            </a>
+            <button type="button" class="btn btn-outline-info"
+                data-url-view="{% url 'core:recu_caisse' commande.pk %}"
+                data-url-pdf="{% url 'core:recu_caisse_pdf' commande.pk %}"
+                data-bs-toggle="modal" data-bs-target="#modalRecuCaisseGlobal">
+                <i class="bi bi-receipt me-1"></i> Reçu de caisse
+            </button>
+            {% if commande.statut != 'ANNULE' %}
+            <form method="post" action="{% url 'core:annuler_vente_directe' commande.pk %}"
+                onsubmit="return confirm('Annuler cette vente ?');">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-danger">
+                    <i class="bi bi-x-circle me-1"></i> Annuler la vente
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Messages Flash -->
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- KPI -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-3">
+                    <span class="text-muted small d-block">Sous-total</span>
+                    <span class="h5 mb-0 fw-bold text-dark">
+                        {{ commande.prix_total|floatformat:0 }} {{ atelier.devise }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-3">
+                    <span class="text-muted small d-block">Total net</span>
+                    <span class="h5 mb-0 fw-bold text-primary">
+                        {{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-3">
+                    <span class="text-muted small d-block">Encaissé</span>
+                    <span class="h5 mb-0 fw-bold text-success">
+                        {{ commande.montant_paye|floatformat:0 }} {{ atelier.devise }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm rounded-3">
+                <div class="card-body p-3">
+                    <span class="text-muted small d-block">Reste à payer</span>
+                    <span class="h5 mb-0 fw-bold text-danger">
+                        {{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Articles -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-white fw-bold">
+            <i class="bi bi-list-ul me-2 text-primary"></i>Articles
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Article</th>
+                            <th>Type</th>
+                            <th class="text-end">Qté</th>
+                            <th class="text-end">Prix unit.</th>
+                            <th class="text-end pe-4">Sous-total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ligne in lignes %}
+                        <tr>
+                            <td class="ps-4 fw-medium">{{ ligne.libelle }}</td>
+                            <td>
+                                <span class="badge bg-secondary-subtle text-secondary">
+                                    {{ ligne.get_type_ligne_display }}
+                                </span>
+                            </td>
+                            <td class="text-end">{{ ligne.quantite }}</td>
+                            <td class="text-end">{{ ligne.prix_unitaire|floatformat:0 }}</td>
+                            <td class="text-end pe-4 fw-bold">
+                                {{ ligne.prix_net|floatformat:0 }} {{ atelier.devise }}
+                            </td>
+                        </tr>
+                        {% for acc in ligne.accessoires_ligne.all %}
+                        <tr class="small text-muted">
+                            <td class="ps-4">+ {{ acc.accessoire.nom }}</td>
+                            <td></td>
+                            <td class="text-end">{{ acc.quantite }}</td>
+                            <td class="text-end">{{ acc.prix_unitaire|floatformat:0 }}</td>
+                            <td class="text-end pe-4">{{ acc.sous_total|floatformat:0 }}</td>
+                        </tr>
+                        {% endfor %}
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-4 text-muted">Aucun article.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paiements -->
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-white fw-bold">
+            <i class="bi bi-cash-stack me-2 text-primary"></i>Paiements
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">Date</th>
+                            <th>Mode</th>
+                            <th>Référence</th>
+                            <th class="text-end pe-4">Montant</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in paiements %}
+                        <tr>
+                            <td class="ps-4">{{ p.date_paiement|date:"d/m/Y H:i" }}</td>
+                            <td>{{ p.get_mode_paiement_display }}</td>
+                            <td>{{ p.reference_transaction|default:"—" }}</td>
+                            <td class="text-end pe-4 fw-bold text-success">
+                                {{ p.montant|floatformat:0 }} {{ atelier.devise }}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4 text-muted">Aucun paiement.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Reçu de Caisse -->
+<div class="modal fade" id="modalRecuCaisseGlobal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold">
+          <i class="bi bi-receipt me-2 text-primary"></i>Reçu de caisse
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body text-center py-4">
+        <p class="text-muted mb-4">Choisissez une action pour ce reçu.</p>
+        <div class="d-flex gap-2 justify-content-center">
+          <a href="#" id="lnkRecuVoirImprimer" target="_blank" class="btn btn-primary">
+            <i class="bi bi-printer me-1"></i> Voir / Imprimer
+          </a>
+          <a href="#" id="lnkRecuPdf" class="btn btn-success">
+            <i class="bi bi-download me-1"></i> Télécharger PDF
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('show.bs.modal', function (event) {
+  const modal = event.target;
+  if (modal.id !== 'modalRecuCaisseGlobal') return;
+  const btn = event.relatedTarget;
+  if (!btn) return;
+  document.getElementById('lnkRecuVoirImprimer').href = btn.dataset.urlView;
+  document.getElementById('lnkRecuPdf').href = btn.dataset.urlPdf;
+});
+</script>
+{% endblock %}

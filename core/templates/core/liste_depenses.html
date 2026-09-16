@@ -1,0 +1,586 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Dépenses — {{ atelier.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dp-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
+
+    /* ===== KPI ===== */
+    .kpi-d {
+        background:#fff; border:1px solid #eef0f6; border-radius:14px;
+        padding:1rem 1.15rem; height:100%;
+    }
+    .kpi-d .lbl { color:#6b7280; font-size:.79rem; }
+    .kpi-d .val { font-size:1.5rem; font-weight:700; color:#111827; line-height:1.2; }
+    .kpi-d .hint { color:#9ca3af; font-size:.75rem; }
+    .kpi-ic {
+        width:40px; height:40px; border-radius:11px; color:#fff; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+    }
+    .ic-g { background:linear-gradient(135deg,#10b981,#059669); }
+    .ic-r { background:linear-gradient(135deg,#f43f5e,#e11d48); }
+    .ic-v { background:linear-gradient(135deg,#7c3aed,#6d28d9); }
+    .ic-o { background:linear-gradient(135deg,#f59e0b,#ea580c); }
+
+    .trend { font-size:.73rem; font-weight:700; }
+    .trend.up { color:#e11d48; }
+    .trend.down { color:#059669; }
+
+    /* ===== PANEL ===== */
+    .panel { background:#fff; border:1px solid #eef0f6; border-radius:16px; }
+    .panel-head {
+        padding:1rem 1.25rem .6rem;
+        display:flex; justify-content:space-between; align-items:center;
+    }
+    .panel-title { font-weight:600; color:#111827; font-size:1rem; margin:0; }
+
+    /* ===== RÉPARTITION ===== */
+    .cat-row { padding:.6rem 1.25rem; }
+    .cat-top {
+        display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:.3rem; font-size:.87rem;
+    }
+    .cat-nom { display:flex; align-items:center; gap:.5rem; color:#111827; font-weight:500; }
+    .cat-ic {
+        width:26px; height:26px; border-radius:7px; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center; font-size:.78rem;
+    }
+    .cat-track { height:7px; background:#eef0f6; border-radius:4px; overflow:hidden; }
+    .cat-fill { height:100%; border-radius:4px; transition:width .4s ease; }
+    .cat-pct { color:#9ca3af; font-size:.74rem; margin-left:.35rem; }
+
+    /* ===== LIGNES DÉPENSES ===== */
+    .dep-row {
+        display:flex; align-items:center; gap:.9rem;
+        padding:.85rem 1.25rem; border-top:1px solid #f4f5f9;
+        transition:background .12s;
+    }
+    .dep-row:first-of-type { border-top:none; }
+    .dep-row:hover { background:#fafbff; }
+    .dep-ic {
+        width:42px; height:42px; border-radius:11px; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center; font-size:1.05rem;
+    }
+    .dep-lib { font-weight:600; color:#111827; font-size:.93rem; }
+    .dep-meta { color:#9ca3af; font-size:.79rem; }
+    .dep-montant { font-weight:700; color:#111827; font-size:1rem; white-space:nowrap; }
+
+    .tag-cat {
+        display:inline-block; padding:.12rem .5rem; border-radius:999px;
+        font-size:.71rem; font-weight:600;
+    }
+
+    .empty-d { padding:3.5rem 1rem; text-align:center; color:#9ca3af; }
+
+    /* ===== MODALS ===== */
+    .modal-dep .modal-content { border:none; border-radius:16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dp-wrap">
+<div class="container-fluid px-md-3">
+
+    <!-- En-tête -->
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between pb-3 mb-4 gap-3">
+        <div>
+            <h1 class="h4 fw-bold text-dark mb-1">
+                <i class="bi bi-cash-stack me-2 text-primary"></i>Comptabilité
+            </h1>
+            <p class="text-muted small mb-0">
+                Charges de l'atelier et rentabilité — <strong>{{ libelle_periode }}</strong>
+            </p>
+        </div>
+        <button type="button" class="btn btn-primary shadow-sm"
+                data-bs-toggle="modal" data-bs-target="#modalAjoutDepense">
+            <i class="bi bi-plus-lg me-1"></i> Nouvelle dépense
+        </button>
+    </div>
+
+    {% if messages %}
+    <div id="messagesZone">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- KPI -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-d d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Revenus encaissés</div>
+                    <div class="val text-success">{{ revenus_mois|floatformat:0 }}</div>
+                    <div class="hint">{{ atelier.devise }} &middot; {{ libelle_periode }}</div>
+                </div>
+                <div class="kpi-ic ic-g"><i class="bi bi-wallet2"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-d d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Dépenses</div>
+                    <div class="val text-danger">{{ total_depenses|floatformat:0 }}</div>
+                    <div class="hint">
+                        {% if dep_prec %}
+                            <span class="trend {% if en_hausse %}up{% else %}down{% endif %}">
+                                <i class="bi bi-arrow-{% if en_hausse %}up{% else %}down{% endif %}"></i>
+                                {{ variation }}%
+                            </span>
+                            vs mois précédent
+                        {% else %}
+                            {{ atelier.devise }} &middot; {{ libelle_periode }}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="kpi-ic ic-r"><i class="bi bi-arrow-down-right-circle-fill"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-d d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Résultat net</div>
+                    <div class="val {% if rentabilite >= 0 %}text-success{% else %}text-danger{% endif %}">
+                        {{ rentabilite|floatformat:0 }}
+                    </div>
+                    <div class="hint">
+                        {% if rentabilite >= 0 %}Bénéfice{% else %}Perte{% endif %}
+                        &middot; {{ atelier.devise }}
+                    </div>
+                </div>
+                <div class="kpi-ic ic-v"><i class="bi bi-graph-up-arrow"></i></div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="kpi-d d-flex justify-content-between align-items-start">
+                <div>
+                    <div class="lbl">Mois précédent</div>
+                    <div class="val">{{ dep_prec|floatformat:0 }}</div>
+                    <div class="hint">Dépenses &middot; {{ atelier.devise }}</div>
+                </div>
+                <div class="kpi-ic ic-o"><i class="bi bi-calendar-minus"></i></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+
+        <!-- ===== RÉPARTITION ===== -->
+        <div class="col-12 col-lg-5">
+            <div class="panel pb-3 h-100">
+                <div class="panel-head">
+                    <div>
+                        <p class="panel-title">Répartition des charges</p>
+                        <span class="text-muted small">{{ libelle_periode }}</span>
+                    </div>
+                    <span class="fw-bold text-dark">
+                        {{ total_depenses|floatformat:0 }} {{ atelier.devise }}
+                    </span>
+                </div>
+
+                {% for r in repartition %}
+                <div class="cat-row">
+                    <div class="cat-top">
+                        <span class="cat-nom">
+                            <span class="cat-ic" style="{{ r.style_pastille }}">
+                                <i class="bi {{ r.icone }}"></i>
+                            </span>
+                            {{ r.label }}
+                        </span>
+                        <span class="fw-semibold text-dark">
+                            {{ r.montant|floatformat:0 }}
+                            <span class="cat-pct">{{ r.pct }}%</span>
+                        </span>
+                    </div>
+                    <div class="cat-track">
+                        <div class="cat-fill" style="{{ r.style_barre }}"></div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-d py-4">
+                    <i class="bi bi-pie-chart fs-2 d-block opacity-50 mb-2"></i>
+                    <small>Aucune dépense sur cette période.</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- ===== FILTRES + LISTE ===== -->
+        <div class="col-12 col-lg-7">
+
+            <div class="panel p-3 mb-3">
+                <form method="get" class="row g-2 align-items-end">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label small fw-medium text-muted">Recherche</label>
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white">
+                                <i class="bi bi-search text-muted"></i>
+                            </span>
+                            <input type="text" name="q" value="{{ q }}"
+                                   class="form-control" placeholder="Libellé…">
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small fw-medium text-muted">Mois</label>
+                        <select name="mois" class="form-select form-select-sm"
+                                onchange="this.form.submit()">
+                            <option value="">Tous</option>
+                            {% for val, label in mois_options %}
+                            <option value="{{ val }}" {% if mois_selectionne == val %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-label small fw-medium text-muted">Catégorie</label>
+                        <select name="categorie" class="form-select form-select-sm"
+                                onchange="this.form.submit()">
+                            <option value="">Toutes</option>
+                            {% for code, label in categories %}
+                            <option value="{{ code }}" {% if categorie_filtre == code %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12 col-md-2 d-flex gap-1">
+                        <button type="submit" class="btn btn-sm btn-primary w-100">
+                            <i class="bi bi-funnel"></i>
+                        </button>
+                        <a href="{% url 'core:liste_depenses' %}"
+                           class="btn btn-sm btn-outline-secondary w-100">
+                            <i class="bi bi-arrow-clockwise"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="panel pb-2">
+                <div class="panel-head">
+                    <p class="panel-title">
+                        Journal des dépenses
+                        <span class="badge bg-secondary ms-1">{{ nb_filtre }}</span>
+                    </p>
+                    <span class="fw-bold text-dark">
+                        {{ total_filtre|floatformat:0 }} {{ atelier.devise }}
+                    </span>
+                </div>
+
+                {% for r in rows %}
+                <div class="dep-row">
+                    <div class="dep-ic" style="{{ r.style_icone }}">
+                        <i class="bi {{ r.icone }}"></i>
+                    </div>
+                    <div class="flex-grow-1 min-w-0">
+                        <div class="dep-lib text-truncate">{{ r.d.libelle }}</div>
+                        <div class="dep-meta">
+                            <i class="bi bi-calendar3"></i> {{ r.d.date|date:"d/m/Y" }}
+                            &middot;
+                            <span class="tag-cat" style="{{ r.style_icone }}">
+                                {{ r.d.get_categorie_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="dep-montant">
+                        {{ r.d.montant|floatformat:0 }} {{ atelier.devise }}
+                    </div>
+                    <div class="btn-group btn-group-sm">
+                        <button type="button" class="btn btn-light border btn-modifier"
+                                data-url="{% url 'core:modifier_depense' r.d.id %}"
+                                title="Modifier">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button type="button" class="btn btn-light border text-danger btn-supprimer"
+                                data-bs-toggle="modal" data-bs-target="#modalSupprDepense"
+                                data-url="{% url 'core:supprimer_depense' r.d.id %}"
+                                data-libelle="{{ r.d.libelle }}"
+                                data-montant="{{ r.montant_int }}"
+                                title="Supprimer">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-d">
+                    <i class="bi bi-receipt display-5 d-block opacity-50 mb-3"></i>
+                    <span class="fw-semibold text-dark d-block mb-1">Aucune dépense</span>
+                    <small>Modifiez vos filtres ou enregistrez une première charge.</small>
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-primary"
+                                data-bs-toggle="modal" data-bs-target="#modalAjoutDepense">
+                            <i class="bi bi-plus-lg me-1"></i>Nouvelle dépense
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+
+                {% if is_paginated %}
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 p-3 border-top">
+                    <span class="text-muted small">
+                        {{ page_obj.start_index }}–{{ page_obj.end_index }}
+                        sur {{ paginator.count }}
+                    </span>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            {% if page_obj.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&{{ querystring }}">
+                                    <i class="bi bi-chevron-left"></i></a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                            </li>
+                            {% endif %}
+
+                            {% for i in paginator.page_range %}
+                                {% if page_obj.number == i %}
+                                    <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                                {% elif i > page_obj.number|add:'-3' and i < page_obj.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ i }}&{{ querystring }}">{{ i }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_obj.next_page_number }}&{{ querystring }}">
+                                    <i class="bi bi-chevron-right"></i></a>
+                            </li>
+                            {% else %}
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+
+</div>
+</div>
+
+<!-- ===== MODAL AJOUT ===== -->
+<div class="modal fade modal-dep" id="modalAjoutDepense" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-plus-circle me-2"></i>Nouvelle dépense
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formAjout" method="post" action="{% url 'core:ajouter_depense' %}">
+                {% csrf_token %}
+                <div class="modal-body row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+                        <input type="date" name="date" id="aj_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            Montant ({{ atelier.devise }}) <span class="text-danger">*</span>
+                        </label>
+                        <input type="number" name="montant" class="form-control"
+                               step="any" min="0" placeholder="0" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Catégorie <span class="text-danger">*</span></label>
+                        <select name="categorie" class="form-select" required>
+                            {% for code, label in categories %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
+                        <input type="text" name="libelle" class="form-control"
+                               placeholder="Ex : Achat tissu wax, facture électricité…" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="bi bi-save me-1"></i>Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL MODIFICATION ===== -->
+<div class="modal fade modal-dep" id="modalEditDepense" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-pencil-square me-2"></i>Modifier la dépense
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formEdit" method="post" action="">
+                {% csrf_token %}
+                <div class="modal-body row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Date</label>
+                        <input type="date" name="date" id="ed_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Montant ({{ atelier.devise }})</label>
+                        <input type="number" name="montant" id="ed_montant" class="form-control"
+                               step="any" min="0" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Catégorie</label>
+                        <select name="categorie" id="ed_categorie" class="form-select" required>
+                            {% for code, label in categories %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Description</label>
+                        <input type="text" name="libelle" id="ed_libelle" class="form-control" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-success fw-semibold">
+                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- ===== MODAL SUPPRESSION ===== -->
+<div class="modal fade modal-dep" id="modalSupprDepense" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow">
+            <form method="POST" id="formSuppr">
+                {% csrf_token %}
+                <div class="modal-header bg-danger text-white py-2">
+                    <h6 class="modal-title fw-bold">
+                        <i class="bi bi-exclamation-triangle-fill me-2"></i>Supprimer
+                    </h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body py-3 text-center">
+                    <i class="bi bi-trash3 text-danger fs-1 mb-2 d-block"></i>
+                    Supprimer définitivement<br>
+                    <strong id="sup_libelle"></strong><br>
+                    <span class="text-muted small">
+                        <span id="sup_montant"></span> {{ atelier.devise }}
+                    </span>
+                    <p class="text-muted small mt-2 mb-0">Cette action est irréversible.</p>
+                </div>
+                <div class="modal-footer py-2 justify-content-center gap-2">
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="bi bi-trash me-1"></i>Supprimer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    /* ===== Date du jour par défaut ===== */
+    const modalAjout = document.getElementById('modalAjoutDepense');
+    modalAjout.addEventListener('show.bs.modal', function () {
+        const champ = document.getElementById('aj_date');
+        if (!champ.value) {
+            const n = new Date();
+            const p = x => String(x).padStart(2, '0');
+            champ.value = n.getFullYear() + '-' + p(n.getMonth() + 1) + '-' + p(n.getDate());
+        }
+    });
+
+    /* ===== Ajout en AJAX ===== */
+    document.getElementById('formAjout').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const f = this;
+        fetch(f.action, {
+            method: 'POST',
+            body: new FormData(f),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) location.reload();
+                else alert(d.error || 'Veuillez vérifier les champs.');
+            })
+            .catch(() => alert('Erreur de connexion.'));
+    });
+
+    /* ===== Pré-remplissage modification ===== */
+    document.querySelectorAll('.btn-modifier').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const url = this.dataset.url;
+            fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(r => r.json())
+                .then(d => {
+                    document.getElementById('formEdit').action = url;
+                    document.getElementById('ed_date').value = d.date;
+                    document.getElementById('ed_categorie').value = d.categorie;
+                    document.getElementById('ed_libelle').value = d.libelle;
+                    document.getElementById('ed_montant').value = parseFloat(d.montant);
+                    bootstrap.Modal.getOrCreateInstance(
+                        document.getElementById('modalEditDepense')).show();
+                })
+                .catch(() => alert('Impossible de charger cette dépense.'));
+        });
+    });
+
+    /* ===== Modification en AJAX ===== */
+    document.getElementById('formEdit').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const f = this;
+        fetch(f.action, {
+            method: 'POST',
+            body: new FormData(f),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(r => r.json())
+            .then(d => {
+                if (d.success) location.reload();
+                else alert(d.error || 'Erreur lors de la modification.');
+            })
+            .catch(() => alert('Erreur de connexion.'));
+    });
+
+    /* ===== Suppression (POST classique) ===== */
+    document.querySelectorAll('.btn-supprimer').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            document.getElementById('formSuppr').action = this.dataset.url;
+            document.getElementById('sup_libelle').textContent = this.dataset.libelle;
+            document.getElementById('sup_montant').textContent =
+                Number(this.dataset.montant).toLocaleString('fr-FR');
+        });
+    });
+
+    /* ===== Auto-masquage des messages ===== */
+    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+        setTimeout(function () {
+            bootstrap.Alert.getOrCreateInstance(el).close();
+        }, 3500);
+    });
+});
+</script>
+{% endblock %}

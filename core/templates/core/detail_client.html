@@ -1,0 +1,733 @@
+{% extends "base.html" %}
+{% block title %}Détail - {{ client.nom }}{% endblock %}
+
+{% block extra_css %}
+<style>
+  .dynamic-row .btn-remove-row { flex-shrink: 0; }
+  .groupe-personne { border-left: 3px solid var(--bs-primary); }
+  .groupe-proche  { border-left-color: var(--bs-info); }
+
+  /* ===== Modal mensurations : scroll fluide ===== */
+  #mensurationModal .modal-dialog { max-height: 95vh; }
+  #mensurationModal .modal-content {
+    max-height: 95vh;
+    display: flex;
+    flex-direction: column;
+  }
+  #mensurationModal .modal-header,
+  #mensurationModal .modal-footer {
+    position: sticky;
+    z-index: 5;
+    background: #fff;
+    flex-shrink: 0;
+  }
+  #mensurationModal .modal-header { top: 0; }
+  #mensurationModal .modal-footer { bottom: 0; box-shadow: 0 -2px 8px rgba(0,0,0,.06); }
+
+  #mensurationModal .modal-body {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    flex: 1 1 auto;
+    padding-bottom: 1rem;
+  }
+  /* Barre de défilement discrète */
+  #mensurationModal .modal-body::-webkit-scrollbar { width: 8px; }
+  #mensurationModal .modal-body::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,.18);
+    border-radius: 4px;
+  }
+  #mensurationModal .modal-body::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.3); }
+
+  /* Bloc bénéficiaire toujours visible en haut du scroll */
+  #blocBeneficiaire {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #fff;
+    padding-top: .25rem;
+  }
+
+  /* Sections repliables */
+  .section-toggle { cursor: pointer; user-select: none; }
+  .section-toggle .chevron { transition: transform .2s ease; }
+  .section-toggle.collapsed .chevron { transform: rotate(-90deg); }
+
+  /* Bouton remonter */
+  #btnScrollTop {
+    position: absolute;
+    right: 1.5rem;
+    bottom: 5.5rem;
+    z-index: 6;
+    display: none;
+    border-radius: 50%;
+    width: 40px; height: 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.18);
+  }
+
+  @media (max-width: 576px) {
+    #mensurationModal .modal-body { max-height: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-md-4">
+
+  <!-- En-tête -->
+  <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pb-3 mb-4 border-bottom">
+    <div class="d-flex align-items-center gap-3">
+      <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center fw-bold fs-4"
+           style="width:52px;height:52px;">
+        {{ client.nom|slice:":2"|upper }}
+      </div>
+      <div>
+        <h2 class="h4 mb-0 fw-bold text-dark">
+          {{ client.nom }}{% if client.prenom %} {{ client.prenom }}{% endif %}
+        </h2>
+        <span class="text-muted small">
+          <i class="bi bi-calendar3 me-1"></i>Client depuis le {{ client.date_creation|date:"d/m/Y" }}
+        </span>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a href="{% url 'core:liste_clients' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i> Retour
+      </a>
+      <button type="button" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modifierClientModal">
+        <i class="bi bi-pencil me-1"></i> Modifier
+      </button>
+      <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#supprimerClientModal">
+        <i class="bi bi-trash me-1"></i> Supprimer
+      </button>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <div class="row g-4">
+
+    <!-- Coordonnées -->
+    <div class="col-lg-4">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-transparent border-bottom py-3">
+          <h6 class="card-title mb-0 fw-bold text-dark">
+            <i class="bi bi-person-vcard me-2 text-primary"></i>Coordonnées
+          </h6>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="text-muted small d-block">Téléphone</label>
+            <span class="fw-medium text-dark"><i class="bi bi-telephone me-2 text-secondary"></i>{{ client.telephone }}</span>
+          </div>
+          <div class="mb-3">
+            <label class="text-muted small d-block">Email</label>
+            <span class="fw-medium text-dark"><i class="bi bi-envelope me-2 text-secondary"></i>{{ client.email|default:"Non renseigné" }}</span>
+          </div>
+          <div class="mb-0">
+            <label class="text-muted small d-block">Adresse</label>
+            <span class="fw-medium text-dark"><i class="bi bi-geo-alt me-2 text-secondary"></i>{{ client.adresse|linebreaksbr|default:"Non renseignée" }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-8">
+
+      <!-- Mensurations -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-transparent border-bottom py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h6 class="card-title mb-0 fw-bold text-dark">
+            <i class="bi bi-rulers me-2 text-primary"></i>Mensurations
+          </h6>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-sm btn-primary rounded-pill px-3"
+                    data-bs-toggle="modal" data-bs-target="#mensurationModal" data-pour="client">
+              <i class="bi bi-plus-lg me-1"></i> Pour {{ client.nom }}
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-info rounded-pill px-3"
+                    data-bs-toggle="modal" data-bs-target="#mensurationModal" data-pour="proche">
+              <i class="bi bi-people me-1"></i> Pour un proche
+            </button>
+          </div>
+        </div>
+
+        <div class="card-body p-3">
+          {% if groupes_mensurations %}
+            {% for g in groupes_mensurations %}
+            <div class="mb-3 ps-3 groupe-personne {% if not g.est_client %}groupe-proche{% endif %}">
+              <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                <strong class="text-dark">{{ g.nom }}</strong>
+                {% if g.est_client %}
+                  <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-2">Client</span>
+                {% else %}
+                  <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-2">{{ g.lien }}</span>
+                {% endif %}
+                <span class="text-muted small">{{ g.fiches|length }} fiche(s)</span>
+              </div>
+
+              <div class="table-responsive">
+                <table class="table table-sm table-hover align-middle mb-0">
+                  <tbody>
+                    {% for m in g.fiches %}
+                    <tr>
+                      <td class="text-nowrap small text-muted" style="width:110px;">
+                        <i class="bi bi-clock-history me-1"></i>{{ m.date_prise|date:"d/m/Y" }}
+                      </td>
+                      <td class="fw-medium text-dark">{{ m.libelle }}</td>
+                      <td class="small text-muted">{{ m.donnees|length }} mesure(s)</td>
+                      <td class="text-end">
+                        <div class="btn-group btn-group-sm">
+                          <a href="{% url 'core:detail_mensuration' m.id %}" class="btn btn-light text-dark" title="Voir">
+                            <i class="bi bi-eye"></i>
+                          </a>
+                          <a href="{% url 'core:mensuration_pdf' m.id %}" class="btn btn-light text-dark" title="PDF">
+                            <i class="bi bi-file-earmark-pdf"></i>
+                          </a>
+                          <a href="{% url 'core:modifier_mensuration' m.id %}" class="btn btn-light text-dark" title="Modifier">
+                            <i class="bi bi-pencil"></i>
+                          </a>
+                          <form method="post" action="{% url 'core:supprimer_mensuration' m.id %}"
+                                class="d-inline" onsubmit="return confirm('Supprimer cette fiche de mensurations ?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-light text-danger" title="Supprimer">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </form>
+                        </div>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            {% endfor %}
+          {% else %}
+            <div class="text-center py-4 text-muted">
+              <i class="bi bi-rulers fs-3 opacity-50"></i>
+              <p class="mb-0 mt-2 small">Aucune mensuration enregistrée.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Commandes -->
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-transparent border-bottom py-3 d-flex justify-content-between align-items-center">
+          <h6 class="card-title mb-0 fw-bold text-dark">
+            <i class="bi bi-bag-check me-2 text-primary"></i>Commandes
+          </h6>
+          <a href="{% url 'core:liste_commandes' %}" class="btn btn-sm btn-primary rounded-pill px-3">
+            <i class="bi bi-plus-lg me-1"></i> Nouvelle commande
+          </a>
+        </div>
+        <div class="card-body p-0">
+          {% if commandes %}
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light border-0">
+                  <tr>
+                    <th class="ps-4">Date</th>
+                    <th>Code</th>
+                    <th>Articles</th>
+                    <th>Total net</th>
+                    <th>Statut</th>
+                    <th class="text-end pe-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for cmd in commandes %}
+                  <tr>
+                    <td class="ps-4 text-nowrap fw-medium">{{ cmd.date_commande|date:"d/m/Y" }}</td>
+                    <td><span class="badge bg-light text-dark border font-monospace">{{ cmd.code }}</span></td>
+                    <td class="small text-muted">{{ cmd.nb_lignes }} ligne(s)</td>
+                    <td class="fw-bold text-dark text-nowrap">
+                      {{ cmd.prix_net|floatformat:0 }} {{ atelier.devise }}
+                    </td>
+                    <td>
+                      {% if cmd.statut == 'EN_ATTENTE' %}
+                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-2">En attente</span>
+                      {% elif cmd.statut == 'EN_COURS' %}
+                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-2">En cours</span>
+                      {% elif cmd.statut == 'PRET' %}
+                        <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-2">Prêt</span>
+                      {% elif cmd.statut == 'LIVRE' %}
+                        <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-2">Livré</span>
+                      {% elif cmd.statut == 'ANNULE' %}
+                        <span class="badge bg-danger bg-opacity-10 text-danger border border-danger rounded-pill px-2">Annulé</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-end pe-4">
+                      <a href="{% url 'core:detail_commande' cmd.id %}" class="btn btn-sm btn-light text-dark">
+                        <i class="bi bi-eye"></i>
+                      </a>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="text-center py-4 text-muted">
+              <i class="bi bi-cart-x fs-3 opacity-50"></i>
+              <p class="mb-0 mt-2 small">Aucune commande pour ce client.</p>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== MODAL : Ajouter des mensurations ===== -->
+<div class="modal fade" id="mensurationModal" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content border-0 shadow position-relative">
+
+      <div class="modal-header border-bottom py-3">
+        <div>
+          <h5 class="modal-title fw-bold text-dark mb-0">
+            <i class="bi bi-rulers me-2 text-primary"></i>Ajouter des mensurations
+          </h5>
+          <small class="text-muted" id="sousTitreModal">Pour {{ client.nom }}</small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <form method="post" action="{% url 'core:ajouter_mensuration' client.id %}" id="formMensuration">
+        {% csrf_token %}
+
+        <div class="modal-body p-4" id="modalBodyMensuration">
+
+          <!-- Bénéficiaire (collant) -->
+          <div id="blocBeneficiaire">
+            <div class="card border shadow-none mb-4">
+              <div class="card-header bg-light fw-bold text-dark small py-2">
+                <i class="bi bi-person-badge me-1"></i>Personne concernée
+              </div>
+              <div class="card-body">
+                <div class="btn-group w-100 mb-3" role="group">
+                  <input type="radio" class="btn-check" name="pour" id="pourClient" value="client" checked>
+                  <label class="btn btn-outline-primary py-2 fw-medium" for="pourClient">
+                    <i class="bi bi-person me-1"></i>
+                    {{ client.nom }}{% if client.prenom %} {{ client.prenom }}{% endif %}
+                  </label>
+
+                  <input type="radio" class="btn-check" name="pour" id="pourProche" value="proche">
+                  <label class="btn btn-outline-info py-2 fw-medium" for="pourProche">
+                    <i class="bi bi-people me-1"></i> Un proche
+                  </label>
+                </div>
+
+                <div id="blocProche" class="row g-3 d-none">
+                  <div class="col-md-7">
+                    <label class="form-label small fw-medium">
+                      Nom de la personne <span class="text-danger">*</span>
+                    </label>
+                    <input type="text" name="beneficiaire" id="inputBeneficiaire"
+                           class="form-control" placeholder="Ex: Awa Diallo">
+                  </div>
+                  <div class="col-md-5">
+                    <label class="form-label small fw-medium">Lien avec le client</label>
+                    <select name="lien_parente" id="selectLien" class="form-select">
+                      {% for val, lbl in liens_parente %}
+                        {% if val != 'MOI' %}
+                          <option value="{{ val }}">{{ lbl }}</option>
+                        {% endif %}
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+
+                <div class="row g-3 mt-1">
+                  <div class="col-md-7">
+                    <label class="form-label small fw-medium">Libellé de la fiche</label>
+                    <input type="text" name="libelle" class="form-control"
+                           placeholder="Ex: Boubou de mariage, Costume…">
+                  </div>
+                  <div class="col-md-5">
+                    <label class="form-label small fw-medium">Type de mesures</label>
+                    <div class="btn-group w-100" role="group">
+                      <input type="radio" class="btn-check" name="genre" id="btnHomme" value="homme" checked>
+                      <label class="btn btn-outline-secondary" for="btnHomme">
+                        <i class="bi bi-gender-male me-1"></i>Homme
+                      </label>
+                      <input type="radio" class="btn-check" name="genre" id="btnFemme" value="femme">
+                      <label class="btn btn-outline-secondary" for="btnFemme">
+                        <i class="bi bi-gender-female me-1"></i>Femme
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sections de mesures (repliables) -->
+          <div class="card border shadow-none mb-3">
+            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center section-toggle"
+                 data-bs-toggle="collapse" data-bs-target="#secBase">
+              <span class="fw-bold text-dark small">
+                <i class="bi bi-chevron-down chevron me-1"></i>Mesures de base
+                <span class="badge bg-secondary-subtle text-secondary ms-1 compteur-section">0</span>
+              </span>
+              <button type="button" class="btn btn-sm btn-outline-primary btn-add-row">
+                <i class="bi bi-plus-lg"></i> Ajouter un champ
+              </button>
+            </div>
+            <div class="collapse show" id="secBase">
+              <div class="card-body dynamic-section" data-rows="3"></div>
+            </div>
+          </div>
+
+          <div id="sectionHomme" class="card border shadow-none mb-3">
+            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center section-toggle"
+                 data-bs-toggle="collapse" data-bs-target="#secHomme">
+              <span class="fw-bold text-dark small">
+                <i class="bi bi-chevron-down chevron me-1"></i>Mesures Homme
+                <span class="badge bg-secondary-subtle text-secondary ms-1 compteur-section">0</span>
+              </span>
+              <button type="button" class="btn btn-sm btn-outline-primary btn-add-row">
+                <i class="bi bi-plus-lg"></i> Ajouter un champ
+              </button>
+            </div>
+            <div class="collapse show" id="secHomme">
+              <div class="card-body dynamic-section" data-rows="3"></div>
+            </div>
+          </div>
+
+          <div id="sectionFemme" class="card border shadow-none mb-3" style="display:none;">
+            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center section-toggle"
+                 data-bs-toggle="collapse" data-bs-target="#secFemme">
+              <span class="fw-bold text-dark small">
+                <i class="bi bi-chevron-down chevron me-1"></i>Mesures Femme
+                <span class="badge bg-secondary-subtle text-secondary ms-1 compteur-section">0</span>
+              </span>
+              <button type="button" class="btn btn-sm btn-outline-primary btn-add-row">
+                <i class="bi bi-plus-lg"></i> Ajouter un champ
+              </button>
+            </div>
+            <div class="collapse show" id="secFemme">
+              <div class="card-body dynamic-section" data-rows="3"></div>
+            </div>
+          </div>
+
+          <div class="card border shadow-none mb-3">
+            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center section-toggle"
+                 data-bs-toggle="collapse" data-bs-target="#secPantalon">
+              <span class="fw-bold text-dark small">
+                <i class="bi bi-chevron-down chevron me-1"></i>Mesures Pantalon
+                <span class="badge bg-secondary-subtle text-secondary ms-1 compteur-section">0</span>
+              </span>
+              <button type="button" class="btn btn-sm btn-outline-primary btn-add-row">
+                <i class="bi bi-plus-lg"></i> Ajouter un champ
+              </button>
+            </div>
+            <div class="collapse show" id="secPantalon">
+              <div class="card-body dynamic-section" data-rows="3"></div>
+            </div>
+          </div>
+
+          <div class="card border shadow-none">
+            <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center section-toggle"
+                 data-bs-toggle="collapse" data-bs-target="#secAutres">
+              <span class="fw-bold text-dark small">
+                <i class="bi bi-chevron-down chevron me-1"></i>Autres mesures
+                <span class="badge bg-secondary-subtle text-secondary ms-1 compteur-section">0</span>
+              </span>
+              <button type="button" class="btn btn-sm btn-outline-primary btn-add-row">
+                <i class="bi bi-plus-lg"></i> Ajouter un champ
+              </button>
+            </div>
+            <div class="collapse show" id="secAutres">
+              <div class="card-body dynamic-section" data-rows="3"></div>
+            </div>
+          </div>
+
+        </div>
+
+        <button type="button" class="btn btn-dark" id="btnScrollTop" title="Remonter">
+          <i class="bi bi-arrow-up"></i>
+        </button>
+
+        <div class="modal-footer border-0 d-flex justify-content-between align-items-center">
+          <span class="small text-muted">
+            <i class="bi bi-check2-circle me-1"></i>
+            <strong id="totalMesures">0</strong> mesure(s) remplie(s)
+          </span>
+          <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-save me-1"></i>Enregistrer
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL : Modifier client -->
+<div class="modal fade" id="modifierClientModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-scrollable">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-bottom py-3">
+        <h5 class="modal-title fw-bold text-dark"><i class="bi bi-pencil me-2 text-primary"></i>Modifier le client</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'core:modifier_client' client.id %}">
+        {% csrf_token %}
+        <div class="modal-body p-4">
+          <div class="mb-3">
+            <label class="form-label small fw-medium">Nom complet</label>
+            <input type="text" name="nom" class="form-control" value="{{ client.nom }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-medium">Email</label>
+            <input type="email" name="email" class="form-control" value="{{ client.email|default:'' }}">
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-medium">Téléphone</label>
+            <input type="text" name="telephone" class="form-control" value="{{ client.telephone }}" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-medium">Genre</label>
+            <select name="genre" class="form-select">
+              <option value="M" {% if client.genre == 'M' %}selected{% endif %}>Masculin</option>
+              <option value="F" {% if client.genre == 'F' %}selected{% endif %}>Féminin</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-medium">Origine / Canal</label>
+            <select name="origine" class="form-select">
+              <option value="">-- Non renseignée --</option>
+              {% for value, label in client.ORIGINE_CHOICES %}
+                <option value="{{ value }}" {% if client.origine == value %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-0">
+            <label class="form-label small fw-medium">Adresse</label>
+            <textarea name="adresse" class="form-control" rows="3">{{ client.adresse|default:'' }}</textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+
+<!-- MODAL : Supprimer client -->
+<div class="modal fade" id="supprimerClientModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header border-bottom py-3">
+        <h5 class="modal-title fw-bold text-danger">
+          <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        Supprimer définitivement le client <strong>{{ client.nom }}</strong> ?
+        Cette action supprimera aussi ses commandes et toutes les mensurations
+        (y compris celles de ses proches).
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+        <form method="post" action="{% url 'core:supprimer_client' client.id %}" class="d-inline">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const modal            = document.getElementById('mensurationModal');
+  const modalBody        = document.getElementById('modalBodyMensuration');
+  const btnHomme         = document.getElementById('btnHomme');
+  const btnFemme         = document.getElementById('btnFemme');
+  const sectionHomme     = document.getElementById('sectionHomme');
+  const sectionFemme     = document.getElementById('sectionFemme');
+  const pourClient       = document.getElementById('pourClient');
+  const pourProche       = document.getElementById('pourProche');
+  const blocProche       = document.getElementById('blocProche');
+  const inputBeneficiaire= document.getElementById('inputBeneficiaire');
+  const selectLien       = document.getElementById('selectLien');
+  const sousTitre        = document.getElementById('sousTitreModal');
+  const totalMesures     = document.getElementById('totalMesures');
+  const btnScrollTop     = document.getElementById('btnScrollTop');
+  const form             = document.getElementById('formMensuration');
+  const NOM_CLIENT       = "{{ client.nom }}{% if client.prenom %} {{ client.prenom }}{% endif %}";
+
+  // --- Hauteur du body adaptée à l'écran ---
+  function ajusterHauteur() {
+    const h = Math.max(260, window.innerHeight * 0.95 - 190);
+    modalBody.style.maxHeight = h + 'px';
+  }
+  window.addEventListener('resize', ajusterHauteur);
+  ajusterHauteur();
+
+  // --- Bouton remonter ---
+  modalBody.addEventListener('scroll', function () {
+    btnScrollTop.style.display = modalBody.scrollTop > 250 ? 'block' : 'none';
+  });
+  btnScrollTop.addEventListener('click', function () {
+    modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // --- Homme / Femme ---
+  function toggleSections() {
+    sectionHomme.style.display = btnHomme.checked ? 'block' : 'none';
+    sectionFemme.style.display = btnFemme.checked ? 'block' : 'none';
+    majCompteurs();
+  }
+  btnHomme.addEventListener('change', toggleSections);
+  btnFemme.addEventListener('change', toggleSections);
+
+  // --- Client / Proche ---
+  function toggleProche() {
+    const estProche = pourProche.checked;
+    blocProche.classList.toggle('d-none', !estProche);
+    inputBeneficiaire.required = estProche;
+    if (!estProche) {
+      inputBeneficiaire.value = '';
+      sousTitre.textContent = 'Pour ' + NOM_CLIENT;
+    } else {
+      majSousTitre();
+      setTimeout(() => inputBeneficiaire.focus(), 150);
+    }
+  }
+  function majSousTitre() {
+    const nom = inputBeneficiaire.value.trim();
+    const lien = selectLien.options[selectLien.selectedIndex].text;
+    sousTitre.textContent = nom ? `Pour ${nom} (${lien})` : `Pour un proche (${lien})`;
+  }
+  pourClient.addEventListener('change', toggleProche);
+  pourProche.addEventListener('change', toggleProche);
+  inputBeneficiaire.addEventListener('input', majSousTitre);
+  selectLien.addEventListener('change', majSousTitre);
+
+  modal.addEventListener('show.bs.modal', function (event) {
+    const trigger = event.relatedTarget;
+    const pour = trigger ? trigger.dataset.pour : 'client';
+    if (pour === 'proche') pourProche.checked = true;
+    else pourClient.checked = true;
+    toggleProche();
+  });
+
+  modal.addEventListener('shown.bs.modal', function () {
+    ajusterHauteur();
+    modalBody.scrollTop = 0;
+  });
+
+  // --- Lignes dynamiques ---
+  function creerLigne() {
+    const row = document.createElement('div');
+    row.className = 'row g-2 mb-2 dynamic-row align-items-center';
+    row.innerHTML = `
+      <div class="col-6">
+        <input type="text" name="champ_nom[]" class="form-control form-control-sm"
+               placeholder="Nom du champ (ex: Épaule)">
+      </div>
+      <div class="col-4">
+        <input type="number" name="champ_valeur[]" class="form-control form-control-sm"
+               step="0.1" placeholder="Valeur (cm)">
+      </div>
+      <div class="col-2 d-flex">
+        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-row">
+          <i class="bi bi-x-lg"></i>
+        </button>
+      </div>`;
+    row.querySelector('.btn-remove-row').addEventListener('click', () => {
+      row.remove();
+      majCompteurs();
+    });
+    row.querySelectorAll('input').forEach(i => i.addEventListener('input', majCompteurs));
+    return row;
+  }
+
+  document.querySelectorAll('.dynamic-section').forEach(section => {
+    const nb = parseInt(section.dataset.rows || '3', 10);
+    for (let i = 0; i < nb; i++) section.appendChild(creerLigne());
+  });
+
+  document.querySelectorAll('.btn-add-row').forEach(btn => {
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();                    // ne pas replier la section
+      const card = this.closest('.card');
+      const collapseEl = card.querySelector('.collapse');
+      if (collapseEl && !collapseEl.classList.contains('show')) {
+        bootstrap.Collapse.getOrCreateInstance(collapseEl).show();
+      }
+      const section = card.querySelector('.dynamic-section');
+      const ligne = creerLigne();
+      section.appendChild(ligne);
+      ligne.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      ligne.querySelector('input').focus();
+      majCompteurs();
+    });
+  });
+
+  // --- Compteurs ---
+  function majCompteurs() {
+    let total = 0;
+    document.querySelectorAll('#mensurationModal .card').forEach(card => {
+      const section = card.querySelector('.dynamic-section');
+      const badge = card.querySelector('.compteur-section');
+      if (!section || !badge) return;
+      let n = 0;
+      section.querySelectorAll('.dynamic-row').forEach(row => {
+        const nom = row.querySelector('input[name="champ_nom[]"]').value.trim();
+        const val = row.querySelector('input[name="champ_valeur[]"]').value.trim();
+        if (nom && val) n++;
+      });
+      badge.textContent = n;
+      badge.classList.toggle('bg-success-subtle', n > 0);
+      badge.classList.toggle('text-success', n > 0);
+      if (card.offsetParent !== null) total += n;
+    });
+    totalMesures.textContent = total;
+  }
+
+  // --- Validation avant envoi ---
+  form.addEventListener('submit', function (e) {
+    majCompteurs();
+    if (parseInt(totalMesures.textContent) === 0) {
+      e.preventDefault();
+      alert('Renseignez au moins une mesure (nom + valeur).');
+      modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (pourProche.checked && !inputBeneficiaire.value.trim()) {
+      e.preventDefault();
+      alert('Indiquez le nom de la personne concernée.');
+      modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+      inputBeneficiaire.focus();
+    }
+  });
+
+  toggleSections();
+  toggleProche();
+  majCompteurs();
+});
+</script>
+{% endblock %}
