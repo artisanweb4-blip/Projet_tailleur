@@ -75,7 +75,7 @@
                 <h3 class="my-0 h5">{{ plan.nom }}</h3>
                 {% if abonnement_actuel.plan_id == plan.id and not abonnement_expire %}
                     <span class="badge bg-light text-primary mt-1">Plan actuel</span>
-                {% elif plan.support_prioritaire %}
+                {% elif plan.est_populaire %}
                     <span class="badge bg-primary mt-1">Populaire</span>
                 {% endif %}
             </div>
@@ -88,6 +88,7 @@
                     {% endif %}
                     <small class="text-muted fs-6">/ mois</small>
                 </h1>
+                {% if plan.description %}<p class="text-muted small mt-2 mb-3">{{ plan.description }}</p>{% endif %}
                 <ul class="list-unstyled mt-3 mb-4 text-start mx-auto small">
                     <li class="mb-1">
                         ✅ {% if plan.max_commandes_mois >= 99999 %}Commandes illimitées{% else %}{{ plan.max_commandes_mois }} commandes / mois{% endif %}

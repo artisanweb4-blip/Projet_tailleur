@@ -313,61 +313,38 @@
                 <p class="text-muted">Choisissez l'offre qui correspond à la taille de votre activité.</p>
             </div>
 
-            <div class="row g-4 align-items-center">
-                <!-- Plan 1 -->
-                <div class="col-lg-4">
-                    <div class="pricing-card">
-                        <h4 class="fw-bold mb-2">Débutant</h4>
-                        <p class="text-muted small">Idéal pour les couturiers indépendants</p>
+            <div class="row g-4 align-items-center justify-content-center">
+                {% for plan in plans %}
+                <!-- Offre configurée depuis le back-office plateforme -->
+                <div class="col-lg-4 col-md-6">
+                    <div class="pricing-card {% if plan.est_populaire %}featured{% endif %}">
+                        {% if plan.est_populaire %}<span class="popular-badge">Populaire</span>{% endif %}
+                        <h4 class="fw-bold mb-2">{{ plan.nom }}</h4>
+                        <p class="text-muted small">{{ plan.description }}</p>
                         <div class="mb-4">
-                            <span class="price-number">5 000</span> <span class="text-muted">FCFA / mois</span>
+                            {% if plan.prix_mensuel == 0 %}
+                                <span class="price-number">Gratuit</span>
+                                <span class="text-muted">— 14 jours d'essai</span>
+                            {% else %}
+                                <span class="price-number">{{ plan.prix_mensuel|floatformat:0 }}</span>
+                                <span class="text-muted">FCFA / mois</span>
+                            {% endif %}
                         </div>
                         <ul class="list-unstyled mb-4">
-                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Jusqu'à 50 clients</li>
-                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Carnet de mesures illimité</li>
-                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Gestion des commandes</li>
-                            <li class="text-muted"><i class="bi bi-x text-secondary me-2"></i> Rappels SMS automatiques</li>
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> {% if plan.max_commandes_mois >= 99999 %}Commandes illimitées{% else %}Jusqu'à {{ plan.max_commandes_mois }} commandes / mois{% endif %}</li>
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> {{ plan.max_utilisateurs }} utilisateur{{ plan.max_utilisateurs|pluralize }}</li>
+                            <li class="mb-3 {% if not plan.support_prioritaire %}text-muted{% endif %}"><i class="bi bi-{% if plan.support_prioritaire %}check2 text-primary{% else %}x text-secondary{% endif %} me-2"></i> Support prioritaire</li>
                         </ul>
-                        <a href="{% url 'core:inscription_saas' %}" class="btn btn-outline-primary w-100 py-2">Choisir cette offre</a>
+                        <a href="{% url 'core:inscription_saas' %}" class="btn {% if plan.est_populaire %}btn-primary fw-bold{% else %}btn-outline-primary{% endif %} w-100 py-2">
+                            {% if plan.prix_mensuel == 0 %}Commencer l'essai gratuit{% else %}Choisir cette offre{% endif %}
+                        </a>
                     </div>
                 </div>
-
-                <!-- Plan 2 (Featured) -->
-                <div class="col-lg-4">
-                    <div class="pricing-card featured">
-                        <span class="popular-badge">Populaire</span>
-                        <h4 class="fw-bold mb-2">Atelier Pro</h4>
-                        <p class="text-muted small">Pour les ateliers avec employés</p>
-                        <div class="mb-4">
-                            <span class="price-number">15 000</span> <span class="text-muted">FCFA / mois</span>
-                        </div>
-                        <ul class="list-unstyled mb-4">
-                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Clients illimités</li>
-                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Multi-utilisateurs (3 couturiers)</li>
-                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Suivi des paiements & avances</li>
-                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Rappels SMS automatiques</li>
-                        </ul>
-                        <a href="{% url 'core:inscription_saas' %}" class="btn btn-primary w-100 py-2 fw-bold">Essayer 14 jours gratuits</a>
-                    </div>
+                {% empty %}
+                <div class="col-12 text-center">
+                    <p class="text-muted">Nos offres seront publiées très bientôt.</p>
                 </div>
-
-                <!-- Plan 3 -->
-                <div class="col-lg-4">
-                    <div class="pricing-card">
-                        <h4 class="fw-bold mb-2">Grande Maison</h4>
-                        <p class="text-muted small">Pour les grandes maisons de couture</p>
-                        <div class="mb-4">
-                            <span class="price-number">30 000</span> <span class="text-muted">FCFA / mois</span>
-                        </div>
-                        <ul class="list-unstyled mb-4">
-                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Fonctionnalités illimitées</li>
-                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Multi-ateliers</li>
-                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Module de facturation personnalisée</li>
-                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> Support prioritaire 24/7</li>
-                        </ul>
-                        <a href="{% url 'core:inscription_saas' %}" class="btn btn-outline-primary w-100 py-2">Choisir cette offre</a>
-                    </div>
-                </div>
+                {% endfor %}
             </div>
         </div>
     </section>

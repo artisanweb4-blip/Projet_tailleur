@@ -1,6 +1,5 @@
 from django.urls import path
 from . import views
-from django.views.generic import RedirectView
 
 app_name = 'core'
 
@@ -9,7 +8,7 @@ urlpatterns = [
     # ==========================================
     # 1. AUTHENTIFICATION & SAAS ONBOARDING
     # ==========================================
-    path('', RedirectView.as_view(pattern_name='core:connexion'), name='accueil'),
+    path('', views.landing, name='accueil'),
     path('connexion/', views.connexion, name='connexion'),
     path('deconnexion/', views.deconnexion, name='deconnexion'),
     path('inscription/', views.inscription_saas, name='inscription_saas'),

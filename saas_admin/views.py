@@ -5,8 +5,10 @@ from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Q, Sum, Count
 from django.shortcuts import get_object_or_404, redirect, render
+
+from core.models import Abonnement, PlanAbonnement
 
 from .models import Boutique, Facture, FormuleAbonnement
 
@@ -240,63 +242,69 @@ def impersonner_boutique(request, boutique_id):
 # ==========================================
 # 4. GESTION DES FORMULES D'ABONNEMENT
 # ==========================================
+# Le back-office pilote `core.PlanAbonnement`, le modèle réellement consommé
+# par la page « Abonnements & Offres » de l'application et par la landing
+# publique. L'ancien modèle FormuleAbonnement reste en base (clé étrangère
+# de Boutique) mais n'est plus édité ici.
 @superadmin_required
 def liste_abonnements(request):
-    formules = FormuleAbonnement.objects.all().order_by('prix')
+    formules = PlanAbonnement.objects.all().order_by('prix_mensuel').annotate(
+        nb_abonnes=Count('abonnement'))
     return render(request, 'saas_admin/abonnements.html', {'formules': formules})
 
 
 @superadmin_required
 def ajouter_abonnement(request):
     if request.method == 'POST':
-        duree_mois = request.POST.get('duree_mois', 1)
-        try:
-            duree_mois = int(duree_mois)
-        except ValueError:
-            duree_mois = 1
-
-        FormuleAbonnement.objects.create(
-            nom=request.POST.get('nom'),
-            description=request.POST.get('description'),
-            prix=request.POST.get('prix'),
-            duree_mois=duree_mois,
-            fonctionnalites_incluses=request.POST.get('fonctionnalites_incluses'),
-            fonctionnalites_exclues=request.POST.get('fonctionnalites_exclues'),
-            est_populaire=request.POST.get('est_populaire') == 'on'
+        PlanAbonnement.objects.create(
+            nom=request.POST.get('nom') or 'Nouvelle offre',
+            description=request.POST.get('description', ''),
+            prix_mensuel=request.POST.get('prix_mensuel') or 0,
+            max_commandes_mois=int(request.POST.get('max_commandes_mois') or 50),
+            max_utilisateurs=int(request.POST.get('max_utilisateurs') or 3),
+            support_prioritaire=request.POST.get('support_prioritaire') == 'on',
+            est_populaire=request.POST.get('est_populaire') == 'on',
+            actif=request.POST.get('actif') == 'on',
         )
-        messages.success(request, "L'abonnement a été créé avec succès.")
+        messages.success(request, "L'offre d'abonnement a été créée.")
     return redirect('saas_admin:abonnements')
 
 
 @superadmin_required
 def modifier_abonnement(request, formule_id):
-    formule = get_object_or_404(FormuleAbonnement, id=formule_id)
+    formule = get_object_or_404(PlanAbonnement, id=formule_id)
     if request.method == 'POST':
-        duree_mois = request.POST.get('duree_mois', 1)
-        try:
-            duree_mois = int(duree_mois)
-        except ValueError:
-            duree_mois = 1
-
-        formule.nom = request.POST.get('nom')
-        formule.description = request.POST.get('description')
-        formule.prix = request.POST.get('prix')
-        formule.duree_mois = duree_mois
-        formule.fonctionnalites_incluses = request.POST.get('fonctionnalites_incluses')
-        formule.fonctionnalites_exclues = request.POST.get('fonctionnalites_exclues')
+        formule.nom = request.POST.get('nom') or formule.nom
+        formule.description = request.POST.get('description', '')
+        formule.prix_mensuel = request.POST.get('prix_mensuel') or formule.prix_mensuel
+        formule.max_commandes_mois = int(
+            request.POST.get('max_commandes_mois') or formule.max_commandes_mois)
+        formule.max_utilisateurs = int(
+            request.POST.get('max_utilisateurs') or formule.max_utilisateurs)
+        formule.support_prioritaire = request.POST.get('support_prioritaire') == 'on'
         formule.est_populaire = request.POST.get('est_populaire') == 'on'
+        formule.actif = request.POST.get('actif') == 'on'
         formule.save()
-
-        messages.success(request, "L'abonnement a été mis à jour.")
+        messages.success(request, "L'offre d'abonnement a été mise à jour.")
     return redirect('saas_admin:abonnements')
 
 
 @superadmin_required
 def supprimer_abonnement(request, formule_id):
-    formule = get_object_or_404(FormuleAbonnement, id=formule_id)
+    formule = get_object_or_404(PlanAbonnement, id=formule_id)
     if request.method == 'POST':
-        formule.delete()
-        messages.success(request, "L'abonnement a été supprimé.")
+        nb = Abonnement.objects.filter(plan=formule).count()
+        if nb:
+            messages.error(
+                request,
+                "Impossible de supprimer « %s » : %d atelier(s) y sont "
+                "abonnés. Désactivez plutôt l'offre (case « actif ») pour la "
+                "masquer sans casser les abonnements en cours."
+                % (formule.nom, nb),
+            )
+        else:
+            formule.delete()
+            messages.success(request, "L'offre d'abonnement a été supprimée.")
     return redirect('saas_admin:abonnements')
 
 

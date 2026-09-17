@@ -2789,6 +2789,15 @@ def calendrier(request):
     })
 
 
+def landing(request):
+    """Racine du site : page publique avec les offres configurées en back-office."""
+    if request.user.is_authenticated:
+        return redirect('core:dashboard')
+    return render(request, 'core/landing.html', {
+        'plans': PlanAbonnement.objects.filter(actif=True).order_by('prix_mensuel'),
+    })
+
+
 @login_required
 def mon_abonnement(request):
     """Page « Abonnements & Offres » : abonnement en cours + grille des plans.
@@ -2809,7 +2818,7 @@ def mon_abonnement(request):
         'abonnement_actuel': abonnement,
         'jours_restants': jours_restants,
         'abonnement_expire': bool(abonnement) and abonnement.date_fin < aujourdhui,
-        'plans': PlanAbonnement.objects.all().order_by('prix_mensuel'),
+        'plans': PlanAbonnement.objects.filter(actif=True).order_by('prix_mensuel'),
         'aujourdhui': aujourdhui,
     })
 

@@ -233,6 +233,13 @@ class PlanAbonnement(models.Model):
     max_commandes_mois = models.PositiveIntegerField(default=50)
     max_utilisateurs = models.PositiveIntegerField(default=3)
     support_prioritaire = models.BooleanField(default=False)
+    # Configuration éditoriale, pilotée depuis le back-office saas_admin :
+    description = models.TextField(blank=True, default='')
+    est_populaire = models.BooleanField(default=False)
+    actif = models.BooleanField(
+        default=True,
+        help_text="Décocher pour masquer l'offre de la landing et de l'application.",
+    )
 
     def __str__(self):
         return f"{self.nom} - {self.prix_mensuel}"
