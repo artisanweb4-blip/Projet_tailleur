@@ -38,6 +38,15 @@
 {% endblock %}
 
 {% block content %}
+<!-- Messages d'alerte Django -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss-alert" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    {% endfor %}
+{% endif %}
 <div class="container-fluid px-4 py-4">
     <!-- En-tête de la page -->
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -220,6 +229,10 @@
 
                     <div class="mb-3">
                         <label for="id_new_password1" class="form-label fw-semibold">Nouveau mot de passe</label>
+                        <div class="form-text mb-1">
+                            Au moins 8 caractères, avec une majuscule, une minuscule,
+                            un chiffre et un caractère spécial.
+                        </div>
                         <input type="password" name="new_password1" id="id_new_password1" class="form-control" required>
                         {% if form.new_password1.errors %}
                             <div class="text-danger small mt-1" id="pwd-new1-errors">{{ form.new_password1.errors.0 }}</div>

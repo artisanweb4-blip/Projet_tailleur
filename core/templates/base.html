@@ -13,12 +13,16 @@
     <style>
         :root {
             --sidebar-width: 260px;
-            --primary-color: #828385c1;
-            --primary-hover: #4338ca;
+            /* Palette standard, identique à la page d'accueil (landing) */
+            --primary-color: #2b59c3;
+            --primary-hover: #1d4ed8;
+            --secondary-color: #0f172a;
+            --accent-color: #2563eb;
+            --accent-light: #60a5fa;
             --bg-light: #f8fafc;
             --sidebar-bg: #ffffff;
             --sidebar-color: #64748b;
-            --sidebar-border: #afb0b2;
+            --sidebar-border: #e2e8f0;
         }
 
         body {
@@ -70,12 +74,60 @@
             transition: all 0.3s ease-in-out;
         }
 
-        /* Header supérieur principal */
+        /* Header supérieur principal : mêmes couleurs que la landing */
         .top-navbar {
             height: 64px;
-            background-color: #ffffff;
-            border-bottom: 1px solid var(--sidebar-border);
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            border-bottom: none;
         }
+        .top-navbar .text-dark,
+        .top-navbar .text-secondary { color: #f8fafc !important; }
+        .top-navbar i { color: var(--accent-light); }
+        .top-navbar .btn-outline-secondary {
+            color: #f8fafc; border-color: rgba(248, 250, 252, .35);
+        }
+        .top-navbar .btn-outline-secondary:hover {
+            background: rgba(248, 250, 252, .12); color: #fff;
+        }
+        .top-navbar .dropdown-toggle,
+        .top-navbar .nav-link { color: #f8fafc; }
+
+        /* Entête standard de chaque page : icône + titre alignés */
+        .entete-page { margin-top: .25rem; }
+        .entete-page .entete-icone {
+            width: 44px; height: 44px; border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: #ffffff; font-size: 1.3rem;
+            display: inline-flex; align-items: center; justify-content: center;
+            flex-shrink: 0; box-shadow: 0 4px 10px rgba(43, 89, 195, .25);
+        }
+        .entete-page h1 {
+            color: var(--secondary-color);
+            display: flex; align-items: center; min-height: 44px;
+        }
+
+        /* Icônes de la sidebar : couleur standard, même niveau que le texte */
+        .sidebar .nav-link i {
+            color: var(--primary-color);
+            font-size: 1.05rem; width: 1.4rem; text-align: center;
+            flex-shrink: 0;
+        }
+        .sidebar .nav-link.active,
+        .sidebar .nav-link.active i { color: #ffffff !important; }
+
+        /* Boutons primaires alignés sur la palette standard */
+        .btn-primary {
+            --bs-btn-bg: var(--primary-color);
+            --bs-btn-border-color: var(--primary-color);
+            --bs-btn-hover-bg: var(--primary-hover);
+            --bs-btn-hover-border-color: var(--primary-hover);
+            --bs-btn-active-bg: var(--primary-hover);
+            --bs-btn-active-border-color: var(--primary-hover);
+            --bs-btn-disabled-bg: var(--primary-color);
+            --bs-btn-disabled-border-color: var(--primary-color);
+        }
+        .text-primary { color: var(--primary-color) !important; }
+        .bg-primary { background-color: var(--primary-color) !important; }
 
         .dropdown-menu-end {
             right: 0;
@@ -150,54 +202,54 @@
             <div class="px-3 pt-3 pb-2 text-uppercase text-muted fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">Menu Principal</div>
             <ul class="nav nav-pills flex-column">
                 <li class="nav-item">
-                    <a href="{% url 'core:dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <a href="{% url 'core:dashboard' %}" class="nav-link {% if section_active == 'dashboard' %}active{% endif %}">
                         <i class="bi bi-grid-1x2"></i> Tableau de bord
                     </a>
                 </li>
                 {% if peut.clients %}
                 <li class="nav-item">
-                    <a href="{% url 'core:liste_clients' %}" class="nav-link {% if 'client' in request.resolver_match.url_name %}active{% endif %}">
+                    <a href="{% url 'core:liste_clients' %}" class="nav-link {% if section_active == 'clients' %}active{% endif %}">
                         <i class="bi bi-people"></i> Clients
                     </a>
                 </li>
                 {% endif %}
                 {% if peut.catalogue %}
                 <li class="nav-item">
-                    <a href="{% url 'core:liste_modeles' %}" class="nav-link">
+                    <a href="{% url 'core:liste_modeles' %}" class="nav-link {% if section_active == 'catalogue' %}active{% endif %}">
                         <i class="bi bi-scissors"></i> Modèles & Accessoires
                     </a>
                 </li>
                 {% endif %}
                 {% if peut.commandes_voir %}
                 <li class="nav-item">
-                    <a href="{% url 'core:liste_commandes' %}" class="nav-link {% if 'commande' in request.resolver_match.url_name %}active{% endif %}">
+                    <a href="{% url 'core:liste_commandes' %}" class="nav-link {% if section_active == 'commandes' %}active{% endif %}">
                         <i class="bi bi-bag-check"></i> Commandes & Achats
                     </a>
                 </li>
                 {% endif %}
                 {% if peut.commandes_voir %}
                 <li class="nav-item">
-                    <a href="{% url 'core:calendrier' %}" class="nav-link {% if request.resolver_match.url_name == 'calendrier' %}active{% endif %}">
+                    <a href="{% url 'core:calendrier' %}" class="nav-link {% if section_active == 'calendrier' %}active{% endif %}">
                         <i class="bi bi-calendar-week"></i> Calendrier
                     </a>
                 </li>
                 {% endif %}
                 {% if peut.depenses %}
                 <li class="nav-item">
-                  <a href="{% url 'core:liste_depenses' %}" class="nav-link">
+                  <a href="{% url 'core:liste_depenses' %}" class="nav-link {% if section_active == 'comptabilite' %}active{% endif %}">
                         <i class="bi bi-calculator"></i> Comptabilité
                     </a>
                 </li>
                 {% endif %}
                 {% if peut.employes %}
                 <li class="nav-item">
-                    <a href="{% url 'core:liste_employes' %}" class="nav-link">
-                        <i class="bi bi-person-badge me-2"></i>Employés
+                    <a href="{% url 'core:liste_employes' %}" class="nav-link {% if section_active == 'employes' %}active{% endif %}">
+                        <i class="bi bi-person-badge"></i> Employés
                     </a>
                 </li>
                 {% endif %}
                 <li class="nav-item">
-                    <a href="{% url 'core:mon_abonnement' %}" class="nav-link {% if 'abonnement' in request.resolver_match.url_name %}active{% endif %}">
+                    <a href="{% url 'core:mon_abonnement' %}" class="nav-link {% if section_active == 'abonnement' %}active{% endif %}">
                         <i class="bi bi-journal-album"></i> Abonnements &amp; Offres
                     </a>
                 </li>
@@ -206,13 +258,13 @@
             <div class="px-3 pt-3 pb-2 text-uppercase text-muted fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">Préférences</div>
             <ul class="nav nav-pills flex-column mb-3">
                 <li class="nav-item">
-                    <a href="{% url 'core:mon_profil' %}" class="nav-link {% if request.resolver_match.url_name == 'mon_profil' %}active{% endif %}">
+                    <a href="{% url 'core:mon_profil' %}" class="nav-link {% if section_active == 'profil' %}active{% endif %}">
                         <i class="bi bi-person-circle"></i> Mon profil
                     </a>
                 </li>
                 {% if peut.parametres %}
                 <li class="nav-item">
-                    <a href="{% url 'core:parametres' %}" class="nav-link {% if 'parametre' in request.resolver_match.url_name %}active{% endif %}">
+                    <a href="{% url 'core:parametres' %}" class="nav-link {% if section_active == 'parametres' %}active{% endif %}">
                         <i class="bi bi-gear"></i> Paramètres
                     </a>
                 </li>
@@ -254,7 +306,7 @@
                 <button class="btn btn-outline-secondary btn-sm d-lg-none" onclick="toggleSidebar()">
                     <i class="bi bi-list fs-5"></i>
                 </button>
-                <span class="fw-bold text-dark d-none d-sm-inline">
+                <span class="fw-bold d-none d-sm-inline">
                     Bienvenue, {{ request.user.first_name|default:request.user.username }} !
                 </span>
             </div>
@@ -305,6 +357,11 @@
         </header>
 
         <main class="p-4">
+            <!-- Entête standard : icône + nom de page sur le même niveau -->
+            <div class="entete-page d-flex align-items-center gap-3 mb-4">
+                <span class="entete-icone"><i class="bi {{ icone_page }}"></i></span>
+                <h1 class="h3 mb-0 fw-bold">{{ titre_page }}</h1>
+            </div>
             {% block content %}{% endblock %}
         </main>
 

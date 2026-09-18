@@ -2,9 +2,11 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
-from django.utils.crypto import get_random_string
+from core.validators import generer_mot_de_passe_temporaire
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, Sum, Count
@@ -121,11 +123,13 @@ def ajouter_boutique(request):
         username = (request.POST.get('username') or '').strip()
         password = request.POST.get('password') or ''
         plan_id = request.POST.get('plan_id')
-        if not nom or not username or len(password) < 8:
-            messages.error(
-                request,
-                "Nom de boutique, identifiant et mot de passe (8 caractères "
-                "minimum) sont obligatoires.")
+        if not nom or not username:
+            messages.error(request, "Nom de boutique et identifiant sont obligatoires.")
+            return redirect('saas_admin:superadmin_liste_boutiques')
+        try:
+            validate_password(password)
+        except ValidationError as e:
+            messages.error(request, "Mot de passe du propriétaire : " + " ".join(e.messages))
             return redirect('saas_admin:superadmin_liste_boutiques')
         if User.objects.filter(username=username).exists():
             messages.error(request, f"L'identifiant « {username} » existe déjà.")
@@ -275,7 +279,7 @@ def reinitialiser_pass_boutique(request, boutique_id):
         if not atelier.membres.filter(user=user).exists():
             messages.error(request, "Cet utilisateur n'appartient pas à cette boutique.")
         else:
-            temporaire = get_random_string(10)
+            temporaire = generer_mot_de_passe_temporaire()
             user.set_password(temporaire)
             user.save()
             messages.success(
@@ -447,6 +451,11 @@ def ajouter_utilisateur(request):
 
         if User.objects.filter(username=username).exists():
             messages.error(request, f"L'identifiant '{username}' est déjà pris.")
+            return redirect('saas_admin:superadmin_liste_utilisateurs')
+        try:
+            validate_password(password or '')
+        except ValidationError as e:
+            messages.error(request, "Mot de passe : " + " ".join(e.messages))
             return redirect('saas_admin:superadmin_liste_utilisateurs')
 
         User.objects.create_user(

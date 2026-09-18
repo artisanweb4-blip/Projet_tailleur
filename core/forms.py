@@ -2,6 +2,8 @@ from datetime import timedelta
 from decimal import Decimal
 
 from django import forms
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.utils import timezone
@@ -88,6 +90,11 @@ class InscriptionSaaSForm(forms.Form):
         cleaned_data = super().clean()
         password = cleaned_data.get("password")
         confirm = cleaned_data.get("confirm_password")
+        if password:
+            try:
+                validate_password(password)
+            except ValidationError as e:
+                self.add_error('password', e)
         if password and confirm and password != confirm:
             self.add_error('confirm_password',
                            "Les mots de passe ne correspondent pas.")
@@ -275,6 +282,11 @@ class UtilisateurCreationForm(forms.ModelForm):
         data = super().clean()
         mdp = data.get('password')
         mdp2 = data.get('password2')
+        if mdp:
+            try:
+                validate_password(mdp)
+            except ValidationError as e:
+                self.add_error('password', e)
         if mdp and mdp2 and mdp != mdp2:
             self.add_error('password2',
                            "Les mots de passe ne correspondent pas.")
@@ -357,6 +369,15 @@ class UtilisateurEditionForm(forms.ModelForm):
                 raise forms.ValidationError(
                     "Un autre compte utilise déjà cette adresse email.")
         return email
+
+    def clean_nouveau_mot_de_passe(self):
+        mdp = self.cleaned_data.get('nouveau_mot_de_passe')
+        if mdp:
+            try:
+                validate_password(mdp, self.instance)
+            except ValidationError as e:
+                raise forms.ValidationError(e.messages)
+        return mdp
 
     def save(self, commit=True):
         user = super().save(commit=False)
