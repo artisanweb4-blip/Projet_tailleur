@@ -1,4 +1,5 @@
-{# {% load static %} #}
+{# {% load static %}
+{% load trad %} #}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -199,73 +200,73 @@
             </div>
 
             <!-- Navigation Principale -->
-            <div class="px-3 pt-3 pb-2 text-uppercase text-muted fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">Menu Principal</div>
+            <div class="px-3 pt-3 pb-2 text-uppercase text-muted fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">{% tr "Menu Principal" %}</div>
             <ul class="nav nav-pills flex-column">
                 <li class="nav-item">
                     <a href="{% url 'core:dashboard' %}" class="nav-link {% if section_active == 'dashboard' %}active{% endif %}">
-                        <i class="bi bi-grid-1x2"></i> Tableau de bord
+                        <i class="bi bi-grid-1x2"></i> {% tr "Tableau de bord" %}
                     </a>
                 </li>
                 {% if peut.clients %}
                 <li class="nav-item">
                     <a href="{% url 'core:liste_clients' %}" class="nav-link {% if section_active == 'clients' %}active{% endif %}">
-                        <i class="bi bi-people"></i> Clients
+                        <i class="bi bi-people"></i> {% tr "Clients" %}
                     </a>
                 </li>
                 {% endif %}
                 {% if peut.catalogue %}
                 <li class="nav-item">
                     <a href="{% url 'core:liste_modeles' %}" class="nav-link {% if section_active == 'catalogue' %}active{% endif %}">
-                        <i class="bi bi-scissors"></i> Modèles & Accessoires
+                        <i class="bi bi-scissors"></i> {% tr "Modèles & Accessoires" %}
                     </a>
                 </li>
                 {% endif %}
                 {% if peut.commandes_voir %}
                 <li class="nav-item">
                     <a href="{% url 'core:liste_commandes' %}" class="nav-link {% if section_active == 'commandes' %}active{% endif %}">
-                        <i class="bi bi-bag-check"></i> Commandes & Achats
+                        <i class="bi bi-bag-check"></i> {% tr "Commandes & Achats" %}
                     </a>
                 </li>
                 {% endif %}
                 {% if peut.commandes_voir %}
                 <li class="nav-item">
                     <a href="{% url 'core:calendrier' %}" class="nav-link {% if section_active == 'calendrier' %}active{% endif %}">
-                        <i class="bi bi-calendar-week"></i> Calendrier
+                        <i class="bi bi-calendar-week"></i> {% tr "Calendrier" %}
                     </a>
                 </li>
                 {% endif %}
                 {% if peut.depenses %}
                 <li class="nav-item">
                   <a href="{% url 'core:liste_depenses' %}" class="nav-link {% if section_active == 'comptabilite' %}active{% endif %}">
-                        <i class="bi bi-calculator"></i> Comptabilité
+                        <i class="bi bi-calculator"></i> {% tr "Comptabilité" %}
                     </a>
                 </li>
                 {% endif %}
                 {% if peut.employes %}
                 <li class="nav-item">
                     <a href="{% url 'core:liste_employes' %}" class="nav-link {% if section_active == 'employes' %}active{% endif %}">
-                        <i class="bi bi-person-badge"></i> Employés
+                        <i class="bi bi-person-badge"></i> {% tr "Employés" %}
                     </a>
                 </li>
                 {% endif %}
                 <li class="nav-item">
                     <a href="{% url 'core:mon_abonnement' %}" class="nav-link {% if section_active == 'abonnement' %}active{% endif %}">
-                        <i class="bi bi-journal-album"></i> Abonnements &amp; Offres
+                        <i class="bi bi-journal-album"></i> {% tr "Abonnements & Offres" %}
                     </a>
                 </li>
             </ul>
 
-            <div class="px-3 pt-3 pb-2 text-uppercase text-muted fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">Préférences</div>
+            <div class="px-3 pt-3 pb-2 text-uppercase text-muted fw-bold" style="font-size: 11px; letter-spacing: 0.5px;">{% tr "Préférences" %}</div>
             <ul class="nav nav-pills flex-column mb-3">
                 <li class="nav-item">
                     <a href="{% url 'core:mon_profil' %}" class="nav-link {% if section_active == 'profil' %}active{% endif %}">
-                        <i class="bi bi-person-circle"></i> Mon profil
+                        <i class="bi bi-person-circle"></i> {% tr "Mon profil" %}
                     </a>
                 </li>
                 {% if peut.parametres %}
                 <li class="nav-item">
                     <a href="{% url 'core:parametres' %}" class="nav-link {% if section_active == 'parametres' %}active{% endif %}">
-                        <i class="bi bi-gear"></i> Paramètres
+                        <i class="bi bi-gear"></i> {% tr "Paramètres" %}
                     </a>
                 </li>
                 {% endif %}
@@ -307,7 +308,7 @@
                     <i class="bi bi-list fs-5"></i>
                 </button>
                 <span class="fw-bold d-none d-sm-inline">
-                    Bienvenue, {{ request.user.first_name|default:request.user.username }} !
+                    {% tr "Bienvenue," %} {{ request.user.first_name|default:request.user.username }} !
                 </span>
             </div>
 
@@ -315,13 +316,13 @@
             <div class="d-flex align-items-center gap-3">
                 <!-- Selecteur de langue -->
                 <div class="dropdown">
-                    <button class="btn btn-sm btn-light border dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown">
+                    <button class="btn btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border: 1px solid rgba(255,255,255,0.3); border-radius: 10px; padding: 6px 12px; font-weight: 500; color: #fff;">
                         <i class="bi bi-globe"></i>
-                        <span id="current-lang">FR</span>
+                        <span id="current-lang">{{ langue|upper }}</span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                        <li><a class="dropdown-item active d-flex align-items-center justify-content-between" href="#" onclick="changeLanguage('fr')">Français <span>🇫🇷</span></a></li>
-                        <li><a class="dropdown-item d-flex align-items-center justify-content-between" href="#" onclick="changeLanguage('en')">English <span>🇬🇧</span></a></li>
+                        <li><a class="dropdown-item d-flex align-items-center justify-content-between {% if langue == 'fr' %}active{% endif %}" href="{% url 'core:changer_langue' %}?lang=fr&amp;next={{ request.get_full_path|urlencode }}">Français <span>🇫🇷</span></a></li>
+                        <li><a class="dropdown-item d-flex align-items-center justify-content-between {% if langue == 'en' %}active{% endif %}" href="{% url 'core:changer_langue' %}?lang=en&amp;next={{ request.get_full_path|urlencode }}">English <span>🇬🇧</span></a></li>
                     </ul>
                 </div>
 
@@ -367,7 +368,7 @@
 
         <!-- Footer -->
         <footer class="app-footer text-center py-3 mt-3">
-            <span>{% if current_atelier %}{{ current_atelier.nom }}{% else %}TailleurPro{% endif %}</span> &middot; <span>Tous droits réservés</span>
+            <span>{% if current_atelier %}{{ current_atelier.nom }}{% else %}TailleurPro{% endif %}</span> &middot; <span>{% tr "Tous droits réservés" %}</span>
         </footer>
     </div>
 
@@ -378,9 +379,6 @@
             document.getElementById('sidebarBackdrop').classList.toggle('show');
         }
 
-        function changeLanguage(lang) {
-            document.getElementById('current-lang').textContent = lang.toUpperCase();
-        }
     </script>
     {% block extra_js %}{% endblock %}
 </body>

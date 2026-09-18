@@ -2789,6 +2789,16 @@ def calendrier(request):
     })
 
 
+def changer_langue(request):
+    """Bascule la langue de l'interface (fr / en) pour la session."""
+    langue = request.GET.get('lang', 'fr')
+    request.session['langue'] = langue if langue in ('fr', 'en') else 'fr'
+    suite = request.GET.get('next') or '/'
+    if not suite.startswith('/'):
+        suite = '/'
+    return redirect(suite)
+
+
 def landing(request):
     """Racine du site : page publique avec les offres configurées en back-office."""
     if request.user.is_authenticated:

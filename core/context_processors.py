@@ -7,6 +7,7 @@ Configuration : voir TEMPLATES.OPTIONS.context_processors dans settings.py.
 from django.core.exceptions import ObjectDoesNotExist
 
 from .droits import FONCTION_PAR_VUE, droits_de
+from .traduction import traduire
 
 # Chaque page de l'application porte un entête standard : icône + titre
 # alignés, et la sidebar marque la section active. Tout est déduit de
@@ -119,12 +120,15 @@ def boutique_context(request):
         # interdits au rôle courant. Voir core/droits.py.
         'peut': droits_de(request.user),
     }
+    langue = request.session.get('langue', 'fr')
     section, titre, icone = _infos_page(request)
     resultat.update({
+        # Langue courante de l'interface (sélecteur de l'en-tête).
+        'langue': langue,
         # Section de la sidebar à marquer active.
         'section_active': section,
         # Entête standard de page : icône + titre sur la même ligne.
-        'titre_page': titre,
+        'titre_page': traduire(titre, langue),
         'icone_page': icone,
     })
     return resultat

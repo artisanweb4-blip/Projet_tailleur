@@ -10,6 +10,7 @@ urlpatterns = [
     # ==========================================
     path('', views.landing, name='accueil'),
     path('connexion/', views.connexion, name='connexion'),
+    path('langue/', views.changer_langue, name='changer_langue'),
     path('deconnexion/', views.deconnexion, name='deconnexion'),
     path('inscription/', views.inscription_saas, name='inscription_saas'),
 

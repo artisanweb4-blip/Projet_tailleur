@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load trad %}
 {% block title %}Tableau de bord{% endblock %}
 
 {% block extra_css %}
@@ -43,13 +44,10 @@
         display: flex; align-items: center; justify-content: center;
         color: #fff; font-size: 1.05rem; flex-shrink: 0;
     }
-    .ic-violet  { background: linear-gradient(135deg,#7c3aed,#6d28d9); }
-    .ic-green   { background: linear-gradient(135deg,#10b981,#059669); }
-    .ic-orange  { background: linear-gradient(135deg,#f59e0b,#ea580c); }
-    .ic-red     { background: linear-gradient(135deg,#f43f5e,#e11d48); }
-    .ic-purple  { background: linear-gradient(135deg,#a855f7,#9333ea); }
-    .ic-emerald { background: linear-gradient(135deg,#34d399,#10b981); }
-    .ic-blue    { background: linear-gradient(135deg,#38bdf8,#0ea5e9); }
+    /* Pastilles d'icônes : couleur standard de l'application sur toutes les cartes */
+    .ic-violet, .ic-green, .ic-orange, .ic-red, .ic-purple, .ic-emerald, .ic-blue {
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+    }
 
     /* ===== PANELS ===== */
     .panel {
@@ -158,7 +156,7 @@
     <!-- ===== HERO ===== -->
     <div class="hero-card mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
         <div>
-            <div class="fw-semibold mb-1" style="font-size:.9rem;">Bonjour 👋</div>
+            <div class="fw-semibold mb-1" style="font-size:.9rem;">{% tr "Bonjour" %} 👋</div>
             <div class="hero-sub">
                 {{ total_clients }} client{{ total_clients|pluralize }} ·
                 {{ nb_commandes }} commande{{ nb_commandes|pluralize }} ·
@@ -181,37 +179,37 @@
         <div class="col-6 col-xl-3">
             <div class="kpi-card">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="kpi-label">Chiffre d'affaires</span>
+                    <span class="kpi-label">{% tr "Chiffre d'affaires" %}</span>
                     <div class="kpi-icon ic-violet"><i class="bi bi-piggy-bank-fill"></i></div>
                 </div>
                 <div class="kpi-value">{{ chiffre_affaires|floatformat:0 }} {{ atelier.devise }}</div>
-                <div class="kpi-hint">Toutes commandes</div>
+                <div class="kpi-hint">{% tr "Toutes commandes" %}</div>
             </div>
         </div>
         <div class="col-6 col-xl-3">
             <div class="kpi-card">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="kpi-label">Encaissé</span>
+                    <span class="kpi-label">{% tr "Encaissé" %}</span>
                     <div class="kpi-icon ic-green"><i class="bi bi-check-lg"></i></div>
                 </div>
                 <div class="kpi-value">{{ total_encaisse|floatformat:0 }} {{ atelier.devise }}</div>
-                <div class="kpi-hint">{{ pct_encaisse }}&#37; du CA</div>
+                <div class="kpi-hint">{{ pct_encaisse }}&#37; {% tr "du CA" %}</div>
             </div>
         </div>
         <div class="col-6 col-xl-3">
             <div class="kpi-card">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="kpi-label">Reste à recouvrer</span>
+                    <span class="kpi-label">{% tr "Reste à recouvrer" %}</span>
                     <div class="kpi-icon ic-orange"><i class="bi bi-hourglass-split"></i></div>
                 </div>
                 <div class="kpi-value">{{ reste_a_recouvrer|floatformat:0 }} {{ atelier.devise }}</div>
-                <div class="kpi-hint">Créances clients</div>
+                <div class="kpi-hint">{% tr "Créances clients" %}</div>
             </div>
         </div>
         <div class="col-6 col-xl-3">
             <div class="kpi-card">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <span class="kpi-label">Résultat du mois</span>
+                    <span class="kpi-label">{% tr "Résultat du mois" %}</span>
                     <div class="kpi-icon ic-red"><i class="bi bi-graph-up-arrow"></i></div>
                 </div>
                 <div class="kpi-value sm {% if resultat_mois < 0 %}text-danger{% else %}text-success{% endif %}">
@@ -230,7 +228,7 @@
             <a href="{% url 'core:liste_clients' %}" class="text-decoration-none">
                 <div class="kpi-card">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="kpi-label">Clients</span>
+                        <span class="kpi-label">{% tr "Clients" %}</span>
                         <div class="kpi-icon ic-purple"><i class="bi bi-people-fill"></i></div>
                     </div>
                     <div class="kpi-value">{{ total_clients }}</div>
@@ -241,7 +239,7 @@
             <a href="{% url 'core:liste_commandes' %}?statut=EN_COURS" class="text-decoration-none">
                 <div class="kpi-card">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="kpi-label">En cours</span>
+                        <span class="kpi-label">{% tr "En cours" %}</span>
                         <div class="kpi-icon ic-orange"><i class="bi bi-scissors"></i></div>
                     </div>
                     <div class="kpi-value">{{ commandes_en_cours }}</div>
@@ -252,7 +250,7 @@
             <a href="{% url 'core:liste_commandes' %}?statut=LIVRE" class="text-decoration-none">
                 <div class="kpi-card">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="kpi-label">Livrées</span>
+                        <span class="kpi-label">{% tr "Livrées" %}</span>
                         <div class="kpi-icon ic-emerald"><i class="bi bi-box-seam-fill"></i></div>
                     </div>
                     <div class="kpi-value">{{ commandes_livrees }}</div>
@@ -263,7 +261,7 @@
             <a href="{% url 'core:calendrier' %}" class="text-decoration-none">
                 <div class="kpi-card">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="kpi-label">Livraisons 7 j</span>
+                        <span class="kpi-label">{% tr "Livraisons 7 j" %}</span>
                         <div class="kpi-icon ic-blue"><i class="bi bi-truck"></i></div>
                     </div>
                     <div class="kpi-value">{{ livraisons_semaine }}</div>
@@ -278,8 +276,8 @@
             <div class="panel">
                 <div class="panel-head">
                     <div>
-                        <p class="panel-title">Revenus vs Dépenses</p>
-                        <span class="panel-sub">6 derniers mois</span>
+                        <p class="panel-title">{% tr "Revenus vs Dépenses" %}</p>
+                        <span class="panel-sub">{% tr "6 derniers mois" %}</span>
                     </div>
                 </div>
 
@@ -317,8 +315,8 @@
             <div class="panel pb-3">
                 <div class="panel-head">
                     <div>
-                        <p class="panel-title">Répartition des commandes</p>
-                        <span class="panel-sub">Par statut</span>
+                        <p class="panel-title">{% tr "Répartition des commandes" %}</p>
+                        <span class="panel-sub">{% tr "Par statut" %}</span>
                     </div>
                 </div>
                 <div class="mt-2">
@@ -343,7 +341,7 @@
         <div class="col-12 col-lg-6">
             <div class="panel pb-2">
                 <div class="panel-head align-items-center">
-                    <p class="panel-title">Commandes récentes</p>
+                    <p class="panel-title">{% tr "Commandes récentes" %}</p>
                     <a href="{% url 'core:liste_commandes' %}" class="panel-link">Tout voir →</a>
                 </div>
                 {% for c in commandes_recentes %}
@@ -380,7 +378,7 @@
         <div class="col-12 col-lg-6">
             <div class="panel pb-2">
                 <div class="panel-head align-items-center">
-                    <p class="panel-title">Prochaines livraisons</p>
+                    <p class="panel-title">{% tr "Prochaines livraisons" %}</p>
                     <a href="{% url 'core:calendrier' %}" class="panel-link">Calendrier →</a>
                 </div>
                 {% for l in livraisons_proches %}
