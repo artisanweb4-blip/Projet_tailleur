@@ -84,3 +84,48 @@ class Facture(models.Model):
 
     def __str__(self):
         return f"Facture #{self.id} - {self.boutique.nom_boutique} ({self.montant} FCFA)"
+
+class PaiementAbonnement(models.Model):
+    """Encaissement manuel d'un abonnement, saisi depuis le back-office.
+
+    La plateforme n'a pas encore de passerelle de paiement en ligne :
+    le super-admin encaisse donc « à la main » (espèces, Orange Money,
+    Wave…) et le système trace l'opération, prolongeant l'abonnement
+    du nombre de mois couverts si la case est cochée.
+    """
+    MODES = [
+        ('ESPECES', 'Espèces'),
+        ('ORANGE_MONEY', 'Orange Money'),
+        ('WAVE', 'Wave'),
+        ('VIREMENT', 'Virement bancaire'),
+        ('CARTE', 'Carte bancaire'),
+        ('AUTRE', 'Autre'),
+    ]
+
+    atelier = models.ForeignKey(
+        'core.Atelier',
+        on_delete=models.CASCADE,
+        related_name='paiements_abonnement',
+    )
+    montant = models.DecimalField(max_digits=10, decimal_places=0)
+    mode = models.CharField(max_length=20, choices=MODES, default='ESPECES')
+    reference = models.CharField(
+        max_length=100, blank=True, default='',
+        help_text="N° de transaction Orange Money / Wave, chèque, etc.",
+    )
+    note = models.TextField(blank=True, default='')
+    mois_couverts = models.PositiveIntegerField(default=1)
+    prolonge = models.BooleanField(
+        default=True,
+        help_text="Prolonger automatiquement l'abonnement après encaissement.",
+    )
+    enregistre_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='paiements_abonnement_enregistres',
+    )
+    date_paiement = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Paiement #{self.id} — {self.atelier.nom} ({self.montant} FCFA, {self.get_mode_display()})"

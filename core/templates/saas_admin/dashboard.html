@@ -119,26 +119,28 @@
                 {% for boutique in boutiques %}
                     <tr>
                         <td class="py-3 px-4">
-                            <strong class="d-block text-dark">{{ boutique.nom_boutique }}</strong>
-                            <small class="text-muted">{{ boutique.slug }}.tailleurpro.com</small>
+                            <strong class="d-block text-dark">{{ boutique.nom }}</strong>
+                            <small class="text-muted">Créée le {{ boutique.date_creation|date:"d/m/Y" }} · {{ boutique.nb_membres }} membre{{ boutique.nb_membres|pluralize }}</small>
                         </td>
-                        <td class="py-3 px-4">{{ boutique.proprietaire.get_full_name|default:boutique.proprietaire.username }}</td>
+                        <td class="py-3 px-4">{% if boutique.proprietaire_user %}{{ boutique.proprietaire_user.get_full_name|default:boutique.proprietaire_user.username }}{% else %}—{% endif %}</td>
                         <td class="py-3 px-4 fw-bold text-secondary">
-                            {{ boutique.formule_abonnement.nom|default:"Aucune" }}
-                            {% if boutique.formule_abonnement %}
-                                <small class="d-block text-muted fw-normal">{{ boutique.formule_abonnement.prix }} F/mois</small>
+                            {{ boutique.abonnement.plan.nom|default:"Aucune" }}
+                            {% if boutique.abonnement.plan %}
+                                <small class="d-block text-muted fw-normal">{{ boutique.abonnement.plan.prix_mensuel|floatformat:0 }} F/mois</small>
                             {% endif %}
                         </td>
                         <td class="py-3 px-4">
                             {{ boutique.date_expiration_abonnement|date:"d/m/Y"|default:"-" }}
                         </td>
                         <td class="py-3 px-4">
-                            {% if boutique.statut == 'ACTIF' %}
-                                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 rounded-pill">Actif</span>
-                            {% elif boutique.statut == 'ESSAI' %}
-                                <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-1 rounded-pill">Essai</span>
+                            {% if not boutique.abonnement %}
+                                <span class="badge bg-secondary">Sans abonnement</span>
+                            {% elif boutique.abonnement.statut == 'SUSPENDU' %}
+                                <span class="badge bg-danger">Suspendu</span>
+                            {% elif boutique.abonnement.date_fin < today %}
+                                <span class="badge bg-warning text-dark">Expiré</span>
                             {% else %}
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1 rounded-pill">Suspendu</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 rounded-pill">Actif</span>
                             {% endif %}
                         </td>
                         <td class="py-3 px-4 text-center">

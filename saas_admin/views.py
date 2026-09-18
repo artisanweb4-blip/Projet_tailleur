@@ -1,16 +1,20 @@
 from datetime import date, timedelta
+from decimal import Decimal, InvalidOperation
 
 from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
+from django.utils.crypto import get_random_string
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, Sum, Count
 from django.shortcuts import get_object_or_404, redirect, render
 
-from core.models import Abonnement, PlanAbonnement
+from core.models import (
+    Abonnement, Atelier, PlanAbonnement, Profil,
+)
 
-from .models import Boutique, Facture, FormuleAbonnement
+from .models import Facture, FormuleAbonnement, PaiementAbonnement
 
 
 # --- DÉCORATEUR UNIQUE ET STRICT POUR LE SAAS ---
@@ -28,24 +32,21 @@ def superadmin_required(view_func):
 # ==========================================
 @superadmin_required
 def superadmin_dashboard(request):
-    total_boutiques = Boutique.objects.count()
-    boutiques_actives = Boutique.objects.filter(statut='ACTIF').count()
-    boutiques_essai = Boutique.objects.filter(statut='ESSAI').count()
-    boutiques_suspendues = Boutique.objects.filter(statut='SUSPENDU').count()
+    aujourdhui = date.today()
+    dans_7_jours = aujourdhui + timedelta(days=7)
 
-    # Revenu Mensuel Récurrent (MRR) des boutiques actives
-    mrr = Boutique.objects.filter(statut='ACTIF').aggregate(
-        total=Sum('formule_abonnement__prix')
-    )['total'] or 0
+    abonnements = Abonnement.objects.select_related('plan', 'atelier')
+    actifs = abonnements.filter(statut='ACTIF', date_fin__gte=aujourdhui)
+    total_boutiques = Atelier.objects.count()
+    boutiques_actives = actifs.count()
+    boutiques_essai = actifs.filter(plan__prix_mensuel=0).count()
+    boutiques_suspendues = abonnements.filter(statut='SUSPENDU').count()
 
-    # Abonnements arrivant à expiration dans les 7 prochains jours
-    dans_7_jours = date.today() + timedelta(days=7)
-    expirations_proches = Boutique.objects.filter(
-        statut='ACTIF',
-        date_expiration_abonnement__range=[date.today(), dans_7_jours]
-    ).count()
+    # Revenu Mensuel Récurrent (MRR) des abonnements actifs non expirés
+    mrr = actifs.aggregate(total=Sum('plan__prix_mensuel'))['total'] or 0
+    expirations_proches = actifs.filter(
+        date_fin__range=[aujourdhui, dans_7_jours]).count()
 
-    # Calcul du taux de conversion
     taux_conversion = 0
     if total_boutiques > 0:
         taux_conversion = round((boutiques_actives / total_boutiques) * 100, 1)
@@ -58,185 +59,284 @@ def superadmin_dashboard(request):
         'mrr': mrr,
         'expirations_proches': expirations_proches,
         'taux_conversion': taux_conversion,
-        'boutiques': Boutique.objects.select_related('formule_abonnement', 'proprietaire').all().order_by('-date_creation'),
+        'today': aujourdhui,
     }
+    boutiques = list(
+        Atelier.objects.select_related('abonnement__plan')
+        .annotate(nb_membres=Count('membres'))
+        .all().order_by('-date_creation'))
+    fondateurs = {
+        profil.atelier_id: profil.user
+        for profil in Profil.objects.filter(
+            atelier__in=[b.id for b in boutiques], est_fondateur=True,
+        ).select_related('user')
+    }
+    for boutique in boutiques:
+        boutique.proprietaire_user = fondateurs.get(boutique.id)
+    context['boutiques'] = boutiques
     return render(request, 'saas_admin/dashboard.html', context)
 
 
 # ==========================================
-# 2. GESTION DES BOUTIQUES
+# 2. GESTION DES BOUTIQUES (ateliers réels)
 # ==========================================
+# Le back-office pilote désormais les vraies boutiques du système :
+# core.Atelier (créés à l'inscription), leurs membres (Profil) et leur
+# abonnement (core.Abonnement). L'ancien modèle Boutique reste en base
+# mais n'est plus utilisé par ces écrans.
 @superadmin_required
 def superadmin_liste_boutiques(request):
-    search_query = request.GET.get('q', '').strip()
-    paginate_by = request.GET.get('paginate_by', 10)
-
-    boutiques_list = Boutique.objects.select_related('formule_abonnement', 'proprietaire').all().order_by('-date_creation')
-
-    if search_query:
-        boutiques_list = boutiques_list.filter(
-            Q(nom_boutique__icontains=search_query) |
-            Q(telephone__icontains=search_query)
-        )
-
-    try:
-        paginate_by = int(paginate_by)
-    except ValueError:
-        paginate_by = 10
-
-    paginator = Paginator(boutiques_list, paginate_by)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
-
-    formules = FormuleAbonnement.objects.all()
-
-    context = {
-        'page_obj': page_obj,
-        'formules': formules,
-        'search_query': search_query,
-        'paginate_by': paginate_by,
+    q = request.GET.get('q', '').strip()
+    boutiques = Atelier.objects.select_related('abonnement__plan').annotate(
+        nb_membres=Count('membres')).order_by('-date_creation')
+    if q:
+        boutiques = boutiques.filter(
+            Q(nom__icontains=q)
+            | Q(membres__user__username__icontains=q)
+            | Q(membres__user__first_name__icontains=q)
+        ).distinct()
+    boutiques = list(boutiques)
+    fondateurs = {
+        p.atelier_id: p.user
+        for p in Profil.objects.filter(
+            atelier__in=[b.id for b in boutiques], est_fondateur=True,
+        ).select_related('user')
     }
-    return render(request, 'saas_admin/liste_boutiques.html', context)
+    for boutique in boutiques:
+        boutique.proprietaire_user = fondateurs.get(boutique.id)
+    return render(request, 'saas_admin/liste_boutiques.html', {
+        'boutiques': boutiques,
+        'q': q,
+        'today': date.today(),
+        'plans': PlanAbonnement.objects.all().order_by('prix_mensuel'),
+    })
 
 
 @superadmin_required
 def ajouter_boutique(request):
+    """Crée une boutique complète : utilisateur propriétaire (ADMIN
+    fondateur), atelier et abonnement au plan choisi."""
     if request.method == 'POST':
-        nom_boutique = request.POST.get('nom_boutique')
-        email = request.POST.get('email')
-        telephone = request.POST.get('telephone')
-        formule_id = request.POST.get('formule_id')
-
-        nom_proprietaire = request.POST.get('nom_proprietaire')
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-
-        if User.objects.filter(username=username).exists():
-            messages.error(request, f"L'identifiant '{username}' est déjà utilisé. Veuillez en choisir un autre.")
+        nom = (request.POST.get('nom_atelier') or '').strip()
+        username = (request.POST.get('username') or '').strip()
+        password = request.POST.get('password') or ''
+        plan_id = request.POST.get('plan_id')
+        if not nom or not username or len(password) < 8:
+            messages.error(
+                request,
+                "Nom de boutique, identifiant et mot de passe (8 caractères "
+                "minimum) sont obligatoires.")
             return redirect('saas_admin:superadmin_liste_boutiques')
-
-        try:
-            with transaction.atomic():
-                first_name = nom_proprietaire.split(' ')[0] if nom_proprietaire else ''
-                last_name = ' '.join(nom_proprietaire.split(' ')[1:]) if nom_proprietaire and len(nom_proprietaire.split(' ')) > 1 else ''
-                
-                user = User.objects.create_user(
-                    username=username,
-                    email=email,
-                    password=password,
-                    first_name=first_name,
-                    last_name=last_name
-                )
-
-                formule = FormuleAbonnement.objects.filter(id=formule_id).first() if formule_id else None
-
-                Boutique.objects.create(
-                    nom_boutique=nom_boutique,
-                    email=email,
-                    telephone=telephone,
-                    proprietaire=user,
-                    formule_abonnement=formule,
-                    statut='ESSAI'
-                )
-
-                messages.success(request, f"La boutique '{nom_boutique}' et le compte propriétaire '{username}' ont été créés avec succès.")
-        
-        except Exception as e:
-            messages.error(request, f"Une erreur s'est produite lors de la création : {e}")
-
+        if User.objects.filter(username=username).exists():
+            messages.error(request, f"L'identifiant « {username} » existe déjà.")
+            return redirect('saas_admin:superadmin_liste_boutiques')
+        plan = get_object_or_404(PlanAbonnement, id=plan_id) if plan_id else None
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=username,
+                password=password,
+                first_name=request.POST.get('first_name', ''),
+                last_name=request.POST.get('last_name', ''),
+                email=request.POST.get('email', ''),
+            )
+            atelier = Atelier.objects.create(
+                nom=nom,
+                telephone=request.POST.get('telephone', ''),
+                email=request.POST.get('email', '') or None,
+                adresse=request.POST.get('adresse', ''),
+            )
+            Profil.objects.create(
+                user=user, atelier=atelier, role='ADMIN', est_fondateur=True)
+            jours = 14 if (plan and plan.prix_mensuel == 0) else 30
+            Abonnement.objects.create(
+                atelier=atelier, plan=plan, statut='ACTIF',
+                date_fin=date.today() + timedelta(days=jours))
+        messages.success(
+            request,
+            f"Boutique « {nom} » créée : compte propriétaire {username}, "
+            f"abonnement {plan.nom if plan else '—'} pour {jours} jours.")
     return redirect('saas_admin:superadmin_liste_boutiques')
 
 
 @superadmin_required
 def detail_boutique(request, boutique_id):
-    boutique = get_object_or_404(Boutique, id=boutique_id)
-    formules = FormuleAbonnement.objects.all()
-    factures = boutique.factures.all().order_by('-date_paiement')
-
-    context = {
-        'boutique': boutique,
-        'formules': formules,
-        'factures': factures,
-    }
-    return render(request, 'saas_admin/detail_boutique.html', context)
+    atelier = get_object_or_404(Atelier, id=boutique_id)
+    abonnement = getattr(atelier, 'abonnement', None)
+    fondateur = atelier.membres.filter(est_fondateur=True).select_related('user').first()
+    return render(request, 'saas_admin/detail_boutique.html', {
+        'boutique': atelier,
+        'fondateur': fondateur.user if fondateur else None,
+        'abonnement': abonnement,
+        'membres': atelier.membres.select_related('user').order_by('role', 'user__username'),
+        'paiements': atelier.paiements_abonnement.select_related('enregistre_par').order_by('-date_paiement'),
+        'plans': PlanAbonnement.objects.all().order_by('prix_mensuel'),
+        'nb_clients': atelier.clients.count(),
+        'nb_commandes': atelier.commandes.count(),
+        'nb_depenses': atelier.depenses.count(),
+        'today': date.today(),
+    })
 
 
 @superadmin_required
 def modifier_boutique(request, boutique_id):
-    boutique = get_object_or_404(Boutique, id=boutique_id)
+    atelier = get_object_or_404(Atelier, id=boutique_id)
     if request.method == 'POST':
-        boutique.nom_boutique = request.POST.get('nom_boutique')
-        boutique.slug = request.POST.get('slug')
-        boutique.email = request.POST.get('email')
-        boutique.telephone = request.POST.get('telephone')
-        boutique.save()
-        messages.success(request, "Informations de la boutique mises à jour avec succès.")
-    return redirect('saas_admin:detail_boutique', boutique_id=boutique.id)
+        atelier.nom = request.POST.get('nom') or atelier.nom
+        atelier.adresse = request.POST.get('adresse', '')
+        atelier.telephone = request.POST.get('telephone', '')
+        atelier.email = request.POST.get('email', '') or None
+        atelier.devise = request.POST.get('devise') or atelier.devise
+        atelier.est_actif = request.POST.get('est_actif') == 'on'
+        atelier.save()
+        messages.success(request, "Informations de la boutique mises à jour.")
+    return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
 
 
 @superadmin_required
 def changer_plan_boutique(request, boutique_id):
-    boutique = get_object_or_404(Boutique, id=boutique_id)
+    """Attribue (ou change) l'abonnement : nouveau plan, statut actif et
+    période de `mois` mois qui repart d'aujourd'hui."""
+    atelier = get_object_or_404(Atelier, id=boutique_id)
     if request.method == 'POST':
-        formule_id = request.POST.get('formule_id')
-        formule = get_object_or_404(FormuleAbonnement, id=formule_id)
-        boutique.formule_abonnement = formule
-        boutique.save()
-        messages.success(request, f"Plan mis à jour vers : {formule.nom}")
-    return redirect('saas_admin:detail_boutique', boutique_id=boutique.id)
+        plan = get_object_or_404(PlanAbonnement, id=request.POST.get('plan_id'))
+        try:
+            mois = max(1, int(request.POST.get('mois', 1)))
+        except ValueError:
+            mois = 1
+        abonnement, _ = Abonnement.objects.get_or_create(atelier=atelier)
+        abonnement.plan = plan
+        abonnement.statut = 'ACTIF'
+        abonnement.date_fin = date.today() + timedelta(days=30 * mois)
+        abonnement.save()
+        messages.success(
+            request,
+            f"Abonnement « {plan.nom} » attribué à {atelier.nom} "
+            f"jusqu'au {abonnement.date_fin:%d/%m/%Y}.")
+    return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
 
 
 @superadmin_required
 def suspendre_boutique(request, boutique_id):
-    boutique = get_object_or_404(Boutique, id=boutique_id)
+    atelier = get_object_or_404(Atelier, id=boutique_id)
     if request.method == 'POST':
-        boutique.statut = 'SUSPENDU'
-        boutique.save()
-        messages.warning(request, f"La boutique {boutique.nom_boutique} a été suspendue.")
-    return redirect('saas_admin:detail_boutique', boutique_id=boutique.id)
+        abonnement = getattr(atelier, 'abonnement', None)
+        if abonnement:
+            abonnement.statut = 'SUSPENDU'
+            abonnement.save()
+        atelier.est_actif = False
+        atelier.save()
+        messages.warning(request, f"La boutique {atelier.nom} est suspendue.")
+    return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
 
 
 @superadmin_required
 def reactiver_boutique(request, boutique_id):
-    boutique = get_object_or_404(Boutique, id=boutique_id)
+    atelier = get_object_or_404(Atelier, id=boutique_id)
     if request.method == 'POST':
-        boutique.statut = 'ACTIF'
-        boutique.save()
-        messages.success(request, f"La boutique {boutique.nom_boutique} est à nouveau active.")
-    return redirect('saas_admin:detail_boutique', boutique_id=boutique.id)
+        abonnement = getattr(atelier, 'abonnement', None)
+        if abonnement:
+            abonnement.statut = 'ACTIF'
+            abonnement.save()
+        atelier.est_actif = True
+        atelier.save()
+        messages.success(request, f"La boutique {atelier.nom} est réactivée.")
+    return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
 
 
 @superadmin_required
 def supprimer_boutique(request, boutique_id):
-    boutique = get_object_or_404(Boutique, id=boutique_id)
+    atelier = get_object_or_404(Atelier, id=boutique_id)
     if request.method == 'POST':
-        nom = boutique.nom_boutique
-        boutique.delete()
-        messages.error(request, f"La boutique {nom} a été supprimée définitivement.")
-        return redirect('saas_admin:superadmin_dashboard')
-    return redirect('saas_admin:detail_boutique', boutique_id=boutique.id)
+        nb = atelier.clients.count() + atelier.commandes.count() + atelier.depenses.count()
+        if nb:
+            messages.error(
+                request,
+                f"Suppression refusée : la boutique contient des données "
+                f"({nb} enregistrements clients/commandes/dépenses). "
+                f"Suspendez-la plutôt.")
+        else:
+            nom = atelier.nom
+            users = list(atelier.membres.values_list('user_id', flat=True))
+            atelier.delete()
+            # Les comptes devenus orphelins (plus aucun profil) partent aussi
+            User.objects.filter(id__in=users, profil__isnull=True).delete()
+            messages.success(request, f"Boutique « {nom} » supprimée.")
+            return redirect('saas_admin:superadmin_liste_boutiques')
+    return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
 
 
-# ==========================================
-# 3. ACTIONS DE SÉCURITÉ & IMPERSONNALISATION
-# ==========================================
 @superadmin_required
 def reinitialiser_pass_boutique(request, boutique_id):
-    boutique = get_object_or_404(Boutique, id=boutique_id)
+    """Réinitialise le mot de passe d'un membre : le nouveau mot de passe
+    temporaire est affiché au super-admin, à transmettre au propriétaire."""
+    atelier = get_object_or_404(Atelier, id=boutique_id)
     if request.method == 'POST':
-        # Logique d'envoi de mail ici
-        messages.info(request, "Un e-mail de réinitialisation a été envoyé au propriétaire.")
-    return redirect('saas_admin:detail_boutique', boutique_id=boutique.id)
+        user = get_object_or_404(User, id=request.POST.get('user_id'))
+        if not atelier.membres.filter(user=user).exists():
+            messages.error(request, "Cet utilisateur n'appartient pas à cette boutique.")
+        else:
+            temporaire = get_random_string(10)
+            user.set_password(temporaire)
+            user.save()
+            messages.success(
+                request,
+                f"Mot de passe de {user.username} réinitialisé. "
+                f"Temporaire : {temporaire} (à changer à la prochaine connexion).")
+    return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
 
 
 @superadmin_required
 def impersonner_boutique(request, boutique_id):
-    boutique = get_object_or_404(Boutique, id=boutique_id)
+    atelier = get_object_or_404(Atelier, id=boutique_id)
     messages.warning(
-        request, 
-        f"Accès refusé : La connexion directe à l'espace de la boutique '{boutique.nom_boutique}' est désactivée pour les Super Admins."
-    )
-    return redirect('saas_admin:detail_boutique', boutique_id=boutique.id)
+        request,
+        f"Accès refusé : la connexion directe à l'espace de la boutique "
+        f"'{atelier.nom}' est désactivée pour les Super Admins.")
+    return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
+
+
+@superadmin_required
+def enregistrer_paiement(request, boutique_id):
+    """Encaissement manuel d'un abonnement (espèces, Orange Money, Wave…).
+
+    Si « prolonger » est coché, l'abonnement gagne `mois_couverts` mois à
+    partir de sa date de fin actuelle (ou d'aujourd'hui si expiré)."""
+    atelier = get_object_or_404(Atelier, id=boutique_id)
+    if request.method == 'POST':
+        try:
+            montant = Decimal(str(request.POST.get('montant') or 0))
+            mois = max(1, int(request.POST.get('mois_couverts') or 1))
+        except (ValueError, InvalidOperation):
+            messages.error(request, "Montant ou nombre de mois invalide.")
+            return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
+        prolonge = request.POST.get('prolonger') == 'on'
+        PaiementAbonnement.objects.create(
+            atelier=atelier,
+            montant=montant,
+            mode=request.POST.get('mode') or 'ESPECES',
+            reference=request.POST.get('reference', ''),
+            note=request.POST.get('note', ''),
+            mois_couverts=mois,
+            prolonge=prolonge,
+            enregistre_par=request.user,
+        )
+        if prolonge:
+            abonnement, _ = Abonnement.objects.get_or_create(atelier=atelier)
+            base = max(abonnement.date_fin, date.today())
+            abonnement.date_fin = base + timedelta(days=30 * mois)
+            abonnement.statut = 'ACTIF'
+            abonnement.save()
+            messages.success(
+                request,
+                f"Paiement de {montant:,.0f} FCFA encaissé pour {atelier.nom} ; "
+                f"abonnement prolongé jusqu'au {abonnement.date_fin:%d/%m/%Y}."
+                .replace(',', ' '))
+        else:
+            messages.success(
+                request,
+                f"Paiement de {montant:,.0f} FCFA encaissé pour {atelier.nom} "
+                f"(sans prolongation).".replace(',', ' '))
+    return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
 
 
 # ==========================================

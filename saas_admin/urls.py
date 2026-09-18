@@ -20,6 +20,7 @@ urlpatterns = [
     path('boutiques/<int:boutique_id>/suspendre/', views.suspendre_boutique, name='suspendre_boutique'),
     path('boutiques/<int:boutique_id>/reactiver/', views.reactiver_boutique, name='reactiver_boutique'),
     path('boutiques/<int:boutique_id>/supprimer/', views.supprimer_boutique, name='supprimer_boutique'),
+    path('boutiques/<int:boutique_id>/paiement/', views.enregistrer_paiement, name='enregistrer_paiement'),
 
     # ==========================================
     # 3. ACTIONS DE SÉCURITÉ & IMPERSONNALISATION
