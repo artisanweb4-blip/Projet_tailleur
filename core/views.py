@@ -11,7 +11,7 @@ from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count, F, Q, Sum
-from django.http import HttpResponse, JsonResponse
+from django.http import FileResponse, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -22,6 +22,10 @@ from .models import (
     Paie, Paiement, PlanAbonnement, Profil,
 )
 from .decorators import droit_requis
+from .sauvegarde import (
+    chemin_sauvegarde, creer_sauvegarde, lister_sauvegardes,
+    restaurer_sauvegarde, supprimer_sauvegarde,
+)
 from .forms import (
     AccessoireForm, AtelierForm, AttributionLigneForm, CatalogueModeleForm,
     ClientForm, CommandeForm, DepenseForm, EmployeForm, InscriptionSaaSForm,
@@ -2337,7 +2341,71 @@ def parametres_view(request):
         'form_atelier': AtelierForm(instance=atelier),
         'form_user': UtilisateurCreationForm(),
         'devises': atelier.DEVISES,
+        'sauvegardes': lister_sauvegardes(atelier),
     })
+
+
+# ==========================================
+# SAUVEGARDE & RESTAURATION DES DONNÉES
+# (page Paramètres, onglet Sauvegarde — droit « parametres », ADMIN)
+# ==========================================
+@login_required
+@droit_requis('parametres')
+def sauvegarde_creer(request):
+    if request.method != 'POST':
+        return redirect('core:parametres')
+    atelier = get_user_atelier(request.user)
+    if atelier is None:
+        messages.error(request, "Aucun atelier associé à votre compte.")
+        return redirect('core:parametres')
+    nom = creer_sauvegarde(atelier)
+    messages.success(request, f"Sauvegarde créée : {nom}")
+    return redirect('core:parametres')
+
+
+@login_required
+@droit_requis('parametres')
+def sauvegarde_telecharger(request, nom):
+    atelier = get_user_atelier(request.user)
+    chemin = chemin_sauvegarde(atelier, nom) if atelier else None
+    if chemin is None:
+        messages.error(request, "Sauvegarde introuvable.")
+        return redirect('core:parametres')
+    return FileResponse(chemin.open('rb'), as_attachment=True, filename=nom)
+
+
+@login_required
+@droit_requis('parametres')
+def sauvegarde_supprimer(request):
+    if request.method != 'POST':
+        return redirect('core:parametres')
+    atelier = get_user_atelier(request.user)
+    if supprimer_sauvegarde(atelier, request.POST.get('nom', '')):
+        messages.success(request, "Sauvegarde supprimée.")
+    else:
+        messages.error(request, "Sauvegarde introuvable.")
+    return redirect('core:parametres')
+
+
+@login_required
+@droit_requis('parametres')
+def sauvegarde_restaurer(request):
+    if request.method != 'POST':
+        return redirect('core:parametres')
+    atelier = get_user_atelier(request.user)
+    fichier = request.FILES.get('fichier')
+    if fichier is None:
+        messages.error(request, "Choisissez un fichier de sauvegarde.")
+        return redirect('core:parametres')
+    if fichier.size > 20 * 1024 * 1024:
+        messages.error(request, "Fichier trop volumineux (20 Mo maximum).")
+        return redirect('core:parametres')
+    ok, message = restaurer_sauvegarde(atelier, fichier.read().decode('utf-8', errors='replace'))
+    if ok:
+        messages.success(request, message)
+    else:
+        messages.error(request, message)
+    return redirect('core:parametres')
 
 
 @login_required

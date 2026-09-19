@@ -21,6 +21,10 @@ urlpatterns = [
     path('profil/modifier/', views.modifier_profil, name='modifier_profil'),
     path('profil/mot-de-passe/', views.changer_mot_de_passe, name='changer_mot_de_passe'),
     path('parametres/', views.parametres_view, name='parametres'),
+    path('parametres/sauvegarde/creer/', views.sauvegarde_creer, name='sauvegarde_creer'),
+    path('parametres/sauvegarde/supprimer/', views.sauvegarde_supprimer, name='sauvegarde_supprimer'),
+    path('parametres/sauvegarde/restaurer/', views.sauvegarde_restaurer, name='sauvegarde_restaurer'),
+    path('parametres/sauvegarde/<str:nom>/telecharger/', views.sauvegarde_telecharger, name='sauvegarde_telecharger'),
 
     # ==========================================
     # 3. DASHBOARD

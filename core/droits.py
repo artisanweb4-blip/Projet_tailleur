@@ -74,6 +74,8 @@ VUES = {
     # Paramètres de l'atelier
     'parametres': [
         'parametres_view', 'souscrire_plan',
+        'sauvegarde_creer', 'sauvegarde_telecharger',
+        'sauvegarde_supprimer', 'sauvegarde_restaurer',
     ],
     # Créer / modifier des utilisateurs
     'utilisateurs': [

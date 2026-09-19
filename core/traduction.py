@@ -66,6 +66,26 @@ EN = {
     'Prochaines livraisons': 'Upcoming deliveries',
     'Bonjour': 'Hello',
     "Voici l'activité de": 'Here is the activity of',
+    # --- Sauvegarde (onglet Paramètres) ---
+    "Sauvegarde": "Backup",
+    "Copies & restauration": "Backups & restore",
+    "Sauvegarde des données": "Data backup",
+    "Copiez et restaurez les données de l'atelier (clients, commandes, paiements, stock, employés).": "Copy and restore shop data (clients, orders, payments, stock, employees).",
+    "Les photos et logos (fichiers média) ne sont pas inclus dans la sauvegarde.": "Photos and logos (media files) are not included in the backup.",
+    "Créer une sauvegarde": "Create a backup",
+    "Sauvegardes existantes": "Existing backups",
+    "Fichier": "File",
+    "Date": "Date",
+    "Taille": "Size",
+    "Actions": "Actions",
+    "Télécharger": "Download",
+    "Supprimer": "Delete",
+    "Aucune sauvegarde pour le moment.": "No backup yet.",
+    "Restaurer une sauvegarde": "Restore a backup",
+    "La restauration remplace les données actuelles de l'atelier par celles du fichier.": "Restoring replaces the shop's current data with the file's.",
+    "Je comprends que les données actuelles seront remplacées.": "I understand current data will be replaced.",
+    "Restaurer": "Restore",
+
 }
 
 

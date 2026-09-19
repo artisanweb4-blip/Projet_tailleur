@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load static %}
+{% load trad %}
 {% block title %}Paramètres — {{ atelier.nom }}{% endblock %}
 
 {% block extra_css %}
@@ -140,6 +141,14 @@
                         <span>
                             <span class="nav-titre d-block">Facturation</span>
                             <span class="nav-sub">Devise, logo, stock</span>
+                        </span>
+                    </button>
+                    <button class="list-group-item" data-bs-toggle="tab"
+                            data-bs-target="#tab-sauvegarde" type="button">
+                        <span class="nav-ic"><i class="bi bi-hdd-stack"></i></span>
+                        <span>
+                            <span class="nav-titre d-block">{% tr "Sauvegarde" %}</span>
+                            <span class="nav-sub">{% tr "Copies & restauration" %}</span>
                         </span>
                     </button>
                 </div>
@@ -441,6 +450,97 @@
                             </div>
                         </div>
                     </form>
+                </div>
+
+                <!-- ONGLET 4 : SAUVEGARDE DES DONNÉES -->
+                <div class="tab-pane fade" id="tab-sauvegarde" role="tabpanel">
+                    <div class="panel p-4">
+                        <h5 class="fw-bold mb-1">
+                            <i class="bi bi-hdd-stack me-2"></i>{% tr "Sauvegarde des données" %}
+                        </h5>
+                        <p class="text-muted small mb-4">
+                            {% tr "Copiez et restaurez les données de l'atelier (clients, commandes, paiements, stock, employés)." %}
+                            <br>{% tr "Les photos et logos (fichiers média) ne sont pas inclus dans la sauvegarde." %}
+                        </p>
+
+                        {% if est_admin %}
+                        <form method="POST" action="{% url 'core:sauvegarde_creer' %}" class="mb-4">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-primary shadow-sm">
+                                <i class="bi bi-database-add me-1"></i> {% tr "Créer une sauvegarde" %}
+                            </button>
+                        </form>
+                        {% endif %}
+
+                        <h6 class="fw-bold">{% tr "Sauvegardes existantes" %}</h6>
+                        {% if sauvegardes %}
+                        <div class="table-responsive">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>{% tr "Fichier" %}</th>
+                                        <th>{% tr "Date" %}</th>
+                                        <th>{% tr "Taille" %}</th>
+                                        <th class="text-end">{% tr "Actions" %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for s in sauvegardes %}
+                                    <tr>
+                                        <td class="fw-semibold small">{{ s.nom }}</td>
+                                        <td class="small">{{ s.date|date:"d/m/Y H:i" }}</td>
+                                        <td class="small">{{ s.taille|filesizeformat }}</td>
+                                        <td class="text-end text-nowrap">
+                                            <a class="btn btn-sm btn-light border"
+                                               href="{% url 'core:sauvegarde_telecharger' nom=s.nom %}">
+                                                <i class="bi bi-download me-1"></i>{% tr "Télécharger" %}
+                                            </a>
+                                            {% if est_admin %}
+                                            <form method="POST" class="d-inline"
+                                                  action="{% url 'core:sauvegarde_supprimer' %}"
+                                                  onsubmit="return confirm('Supprimer cette sauvegarde ?');">
+                                                {% csrf_token %}
+                                                <input type="hidden" name="nom" value="{{ s.nom }}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                                    <i class="bi bi-trash me-1"></i>{% tr "Supprimer" %}
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                        {% else %}
+                        <p class="text-muted small">{% tr "Aucune sauvegarde pour le moment." %}</p>
+                        {% endif %}
+
+                        {% if est_admin %}
+                        <hr class="my-4">
+                        <h6 class="fw-bold">{% tr "Restaurer une sauvegarde" %}</h6>
+                        <div class="alert alert-warning small border-0 shadow-sm">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            {% tr "La restauration remplace les données actuelles de l'atelier par celles du fichier." %}
+                        </div>
+                        <form method="POST" action="{% url 'core:sauvegarde_restaurer' %}"
+                              enctype="multipart/form-data">
+                            {% csrf_token %}
+                            <input type="file" name="fichier" accept=".json,application/json"
+                                   class="form-control mb-2" required>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" required
+                                       id="confirmeRestauration">
+                                <label class="form-check-label small" for="confirmeRestauration">
+                                    {% tr "Je comprends que les données actuelles seront remplacées." %}
+                                </label>
+                            </div>
+                            <button type="submit" class="btn btn-danger shadow-sm">
+                                <i class="bi bi-arrow-counterclockwise me-1"></i> {% tr "Restaurer" %}
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
                 </div>
 
             </div>
