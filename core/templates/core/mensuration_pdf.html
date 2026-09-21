@@ -93,28 +93,41 @@
         </tr>
     </table>
 
-    <!-- ===== TABLEAU DES MESURES ===== -->
-    {% if lignes_mesures %}
-    <table class="mesures">
+    <!-- ===== TABLEAU DES MESURES (2 colonnes imbriquées) ===== -->
+    {% if col_gauche or col_droite %}
+    <table width="100%" style="margin-top: 14px;">
         <tr>
-            <th width="29%">Mesure</th>
-            <th width="21%">Valeur</th>
-            <th width="29%">Mesure</th>
-            <th width="21%">Valeur</th>
+            <td width="50%" valign="top" style="padding-right: 5px;">
+                <table class="mesures" style="margin-top: 0;">
+                    <tr>
+                        <th width="62%">Mesure</th>
+                        <th width="38%">Valeur</th>
+                    </tr>
+                    {% for nom, valeur in col_gauche %}
+                    <tr class="{% cycle '' 'zebre' %}">
+                        <td>{{ nom }}</td>
+                        <td class="valeur">{{ valeur }} cm</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </td>
+            <td width="50%" valign="top" style="padding-left: 5px;">
+                {% if col_droite %}
+                <table class="mesures" style="margin-top: 0;">
+                    <tr>
+                        <th width="62%">Mesure</th>
+                        <th width="38%">Valeur</th>
+                    </tr>
+                    {% for nom, valeur in col_droite %}
+                    <tr class="{% cycle '' 'zebre' %}">
+                        <td>{{ nom }}</td>
+                        <td class="valeur">{{ valeur }} cm</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+                {% endif %}
+            </td>
         </tr>
-        {% for g_nom, g_val, d_nom, d_val in lignes_mesures %}
-        <tr class="{% cycle '' 'zebre' %}">
-            <td>{{ g_nom }}</td>
-            <td class="valeur">{{ g_val }} cm</td>
-            {% if d_nom %}
-                <td>{{ d_nom }}</td>
-                <td class="valeur">{{ d_val }} cm</td>
-            {% else %}
-                <td style="border: none;"></td>
-                <td style="border: none;"></td>
-            {% endif %}
-        </tr>
-        {% endfor %}
     </table>
     {% else %}
     <p style="margin-top: 14px; color: #64748b;">Aucune mesure enregistrée sur cette fiche.</p>

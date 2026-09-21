@@ -685,6 +685,21 @@ def detail_client(request, pk):
         'lignes__accessoires_ligne', 'paiements'
     ).order_by('-date_commande')
 
+    initiales = (
+        client.nom[:1] + (client.prenom[:1] if client.prenom else '')
+    ).upper() or '?'
+
+    fiches_json = [{
+        'id': m.id,
+        'beneficiaire': m.beneficiaire,
+        'lien_code': m.lien_parente,
+        'est_proche': not m.est_pour_client,
+        'genre': m.genre_mesure,
+        'libelle': m.libelle,
+        'donnees': m.donnees or {},
+        'url_edit': reverse('core:modifier_mensuration', args=[m.id]),
+    } for m in mensurations]
+
     return render(request, 'core/detail_client.html', {
         'client': client,
         'mensurations': mensurations,
@@ -692,6 +707,8 @@ def detail_client(request, pk):
         'commandes': commandes,
         'liens_parente': Mensuration.LIENS,
         'atelier': atelier,
+        'initiales_client': initiales,
+        'fiches_json': fiches_json,
     })
 
 
@@ -873,14 +890,11 @@ def mensuration_pdf(request, pk):
         except Exception:
             logo_uri = ''
 
-    # Mesures appariées sur 2 colonnes pour une feuille compacte
+    # Mesures réparties sur 2 colonnes pour une feuille compacte
     items = list((mensuration.donnees or {}).items())
     demi = (len(items) + 1) // 2
-    lignes_mesures = []
-    for i in range(demi):
-        g = items[i]
-        d = items[demi + i] if demi + i < len(items) else ('', '')
-        lignes_mesures.append((g[0], g[1], d[0], d[1]))
+    col_gauche = items[:demi]
+    col_droite = items[demi:]
 
     html = render_to_string('core/mensuration_pdf.html', {
         'mensuration': mensuration,
@@ -888,7 +902,8 @@ def mensuration_pdf(request, pk):
         'atelier': atelier,
         'date_edition': timezone.now(),
         'logo_uri': logo_uri,
-        'lignes_mesures': lignes_mesures,
+        'col_gauche': col_gauche,
+        'col_droite': col_droite,
     }, request=request)
 
     response = HttpResponse(content_type='application/pdf')

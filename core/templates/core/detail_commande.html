@@ -89,7 +89,7 @@
                 {% if commande.statut == 'EN_ATTENTE' %}
                     <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-3 py-1">En attente</span>
                 {% elif commande.statut == 'EN_COURS' %}
-                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-3 py-1">En cours</span>
+                    <span class="badge rounded-pill px-3 py-1" style="background:#e8efff;color:#2b59c3;border:1px solid #c7d7f8;">En cours</span>
                 {% elif commande.statut == 'PRET' %}
                     <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1">Prêt</span>
                 {% elif commande.statut == 'LIVRE' %}
