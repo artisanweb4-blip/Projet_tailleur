@@ -62,7 +62,7 @@
     }
     .panel-title { font-weight: 600; color: #111827; font-size: 1.02rem; margin: 0; }
     .panel-sub { color: #9ca3af; font-size: .82rem; }
-    .panel-link { color: #6d28d9; font-size: .85rem; text-decoration: none; font-weight: 500; }
+    .panel-link { color: var(--primary-color); font-size: .85rem; text-decoration: none; font-weight: 500; }
     .panel-link:hover { text-decoration: underline; }
 
     /* ===== CHART ===== */
@@ -76,8 +76,8 @@
         width: 34px; border-radius: 8px 8px 0 0; min-height: 2px;
         transition: height .4s ease;
     }
-    .bar-rev { background: linear-gradient(180deg,#8b5cf6,#6d28d9); }
-    .bar-dep { background: linear-gradient(180deg,#fb7185,#f43f5e); }
+    .bar-rev { background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
+    .bar-dep { background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
     .chart-label { color: #6b7280; font-size: .82rem; margin-top: .55rem; }
     .chart-legend {
         display: flex; gap: 1.5rem; padding: .5rem 1.35rem 1.2rem;
@@ -101,7 +101,7 @@
         width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
         display: flex; align-items: center; justify-content: center; font-size: 1rem;
     }
-    .ri-cmd { background: #ede9fe; color: #7c3aed; }
+    .ri-cmd { background: #e8efff; color: var(--primary-color); }
     .ri-vte { background: #f1f5f9; color: #64748b; }
     .row-main { flex: 1; min-width: 0; }
     .row-title { font-weight: 600; color: #111827; font-size: .93rem; }
@@ -126,7 +126,7 @@
     .date-box .d { font-weight: 700; font-size: 1rem; }
     .date-box .m { font-size: .62rem; letter-spacing: .5px; font-weight: 600; }
     .db-late { background: #fef2f2; color: #e11d48; }
-    .db-norm { background: #ede9fe; color: #6d28d9; }
+    .db-norm { background: #e8efff; color: var(--primary-color); }
 
     .empty-box { padding: 2.5rem 1rem; text-align: center; color: #9ca3af; }
 </style>
@@ -291,7 +291,7 @@
 
                 <div class="chart-legend">
                     <span class="panel-sub">
-                        <span class="legend-dot" style="background:#7c3aed;"></span>Revenus
+                        <span class="legend-dot" style="background:var(--primary-color);"></span>Revenus
                     </span>
                     <span class="panel-sub">
                         <span class="legend-dot" style="background:#f43f5e;"></span>Dépenses

@@ -17,10 +17,10 @@
         width:38px; height:38px; border-radius:10px; color:#fff; flex-shrink:0;
         display:flex; align-items:center; justify-content:center;
     }
-    .ic-v { background:linear-gradient(135deg,#7c3aed,#6d28d9); }
-    .ic-b { background:linear-gradient(135deg,#0ea5e9,#0284c7); }
-    .ic-o { background:linear-gradient(135deg,#f59e0b,#ea580c); }
-    .ic-r { background:linear-gradient(135deg,#f43f5e,#e11d48); }
+    .ic-v { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
+    .ic-b { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
+    .ic-o { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
+    .ic-r { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
 
     /* ===== CALENDRIER ===== */
     .cal-card { background:#fff; border:1px solid #eef0f6; border-radius:16px; overflow:hidden; }
@@ -43,7 +43,7 @@
     .cal-cell:nth-child(7n) { border-right:none; }
     .cal-cell.vide { background:#fcfcfe; }
     .cal-cell.passe { background:#fbfbfd; }
-    .cal-cell.today { background:#f5f3ff; box-shadow:inset 0 0 0 2px #7c3aed; }
+    .cal-cell.today { background:#f5f3ff; box-shadow:inset 0 0 0 2px var(--primary-color); }
     .cal-cell.alerte { background:#fffafa; }
 
     .cal-num {
@@ -51,7 +51,7 @@
         width:24px; height:24px; border-radius:7px;
         display:flex; align-items:center; justify-content:center; margin-bottom:.25rem;
     }
-    .cal-cell.today .cal-num { background:#6d28d9; color:#fff; }
+    .cal-cell.today .cal-num { background:var(--primary-color); color:#fff; }
     .cal-cell.passe .cal-num { color:#cbd5e1; }
 
     .evt {
@@ -255,7 +255,7 @@
                 </div>
                 {% for e in prochaines %}
                 <a href="{% url 'core:detail_commande' e.obj.pk %}" class="l-row">
-                    <div class="date-box" style="background:#ede9fe; color:#6d28d9;">
+                    <div class="date-box" style="background:#e8efff; color:var(--primary-color);">
                         <span class="d">{{ e.date|date:"d" }}</span>
                         <span class="m">{{ e.date|date:"M"|upper }}</span>
                     </div>

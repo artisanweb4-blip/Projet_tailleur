@@ -45,7 +45,7 @@ MOIS_COURT = [
 ]
 
 PALETTE_AVATAR = [
-    ('#ede9fe', '#6d28d9'), ('#e0f2fe', '#0284c7'),
+    ('#e8efff', '#2b59c3'), ('#dbeafe', '#1d4ed8'),
     ('#ecfdf5', '#059669'), ('#fff7ed', '#ea580c'),
     ('#fdf2f8', '#db2777'), ('#eef2ff', '#4f46e5'),
 ]
@@ -462,8 +462,8 @@ def dashboard(request):
 
     # ---------- Répartition par statut ----------
     COULEURS_STATUT = {
-        'EN_ATTENTE': '#6366f1', 'EN_COURS': '#f59e0b',
-        'PRET': '#10b981', 'LIVRE': '#38bdf8', 'ANNULE': '#ef4444',
+        'EN_ATTENTE': '#64748b', 'EN_COURS': '#f59e0b',
+        'PRET': '#10b981', 'LIVRE': '#2563eb', 'ANNULE': '#ef4444',
     }
     total_stat = max(nb_commandes, 1)
     repartition = []
@@ -2592,7 +2592,7 @@ def liste_depenses(request):
 
     # ---------- Répartition par catégorie ----------
     COULEURS_CAT = {
-        'ACHAT_MATERIEL': '#7c3aed',
+        'ACHAT_MATERIEL': '#2b59c3',
         'SALAIRE':        '#0284c7',
         'LOYER':          '#ea580c',
         'FACTURES':       '#d97706',

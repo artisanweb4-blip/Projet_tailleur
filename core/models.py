@@ -91,7 +91,7 @@ class Profil(models.Model):
     }
 
     COULEURS_ROLES = {
-        'ADMIN': ('#f5f3ff', '#6d28d9', '#ddd6fe'),
+        'ADMIN': ('#e8efff', '#2b59c3', '#c7d7f8'),
         'GESTIONNAIRE': ('#eff6ff', '#0284c7', '#bae6fd'),
         'COMPTABLE': ('#ecfdf5', '#059669', '#a7f3d0'),
     }

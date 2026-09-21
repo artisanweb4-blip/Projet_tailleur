@@ -35,10 +35,10 @@
     .kpi-d .hint { color:#9ca3af; font-size:.73rem; }
     .kpi-ic { width:38px; height:38px; border-radius:10px; color:#fff; flex-shrink:0;
               display:flex; align-items:center; justify-content:center; }
-    .ic-v { background:linear-gradient(135deg,#7c3aed,#6d28d9); }
-    .ic-g { background:linear-gradient(135deg,#10b981,#059669); }
-    .ic-o { background:linear-gradient(135deg,#f59e0b,#ea580c); }
-    .ic-b { background:linear-gradient(135deg,#0ea5e9,#0284c7); }
+    .ic-v { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
+    .ic-g { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
+    .ic-o { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
+    .ic-b { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
 
     /* ===== PANELS ===== */
     .panel { background:#fff; border:1px solid #eef0f6; border-radius:16px; }
@@ -78,7 +78,7 @@
     .empty-d { padding:2.5rem 1rem; text-align:center; color:#9ca3af; }
     .nav-tabs .nav-link { color:#6b7280; font-weight:600; border:none;
                           border-bottom:2px solid transparent; }
-    .nav-tabs .nav-link.active { color:#6d28d9; border-bottom-color:#6d28d9; background:none; }
+    .nav-tabs .nav-link.active { color:var(--primary-color); border-bottom-color:var(--primary-color); background:none; }
 </style>
 {% endblock %}
 
@@ -218,7 +218,7 @@
                         {% for t in travaux %}
                         <a href="{% url 'core:detail_commande' t.l.commande.pk %}" class="t-row">
                             <div class="date-box"
-                                 style="{% if t.retard %}background:#fef2f2; color:#e11d48;{% else %}background:#ede9fe; color:#6d28d9;{% endif %}">
+                                 style="{% if t.retard %}background:#fef2f2; color:#e11d48;{% else %}background:#e8efff; color:var(--primary-color);{% endif %}">
                                 <span class="d">{{ t.l.commande.date_livraison_prevue|date:"d" }}</span>
                                 <span class="m">{{ t.l.commande.date_livraison_prevue|date:"M"|upper }}</span>
                             </div>

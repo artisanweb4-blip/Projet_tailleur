@@ -77,7 +77,7 @@
     .cmd-row:hover { background: #fafbff; }
     .avatar-c {
         width: 40px; height: 40px; border-radius: 11px; flex-shrink: 0;
-        background: #ede9fe; color: #6d28d9;
+        background: #e8efff; color: var(--primary-color);
         display: flex; align-items: center; justify-content: center;
         font-weight: 700; font-size: .82rem;
     }
@@ -88,7 +88,7 @@
     .pay-track { height: 5px; background: #eef0f6; border-radius: 4px; overflow: hidden; max-width: 140px; }
     .pay-fill { height: 100%; border-radius: 4px; }
     .prog-track { height: 4px; background: #eef0f6; border-radius: 3px; overflow: hidden; max-width: 120px; }
-    .prog-fill { height: 100%; border-radius: 3px; background: #7c3aed; }
+    .prog-fill { height: 100%; border-radius: 3px; background: var(--primary-color); }
     .pill {
         display: inline-block; padding: .15rem .55rem; border-radius: 999px;
         font-size: .74rem; font-weight: 600; white-space: nowrap;
@@ -100,6 +100,7 @@
     .p-ann  { background:#fef2f2; color:#e11d48; border:1px solid #fecdd3; }
     .p-late { background:#fef2f2; color:#e11d48; border:1px solid #fecdd3; }
     .p-warn { background:#fffbeb; color:#d97706; border:1px solid #fde68a; }
+    .vue-btn.active { background: var(--primary-color) !important; color: #fff !important; border-color: var(--primary-color) !important; }
 </style>
 {% endblock %}
 
@@ -119,6 +120,15 @@
             <a href="{% url 'core:liste_ventes_directes' %}" class="btn btn-outline-primary">
                 <i class="bi bi-bag-check-fill me-1"></i> Ventes directes
             </a>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Affichage">
+                <button type="button" class="btn btn-outline-secondary vue-btn active" data-vue="grille" title="Vue cartes">
+                    <i class="bi bi-grid-3x3-gap-fill"></i>
+                </button>
+                <button type="button" class="btn btn-outline-secondary vue-btn" data-vue="tableau" title="Vue tableau">
+                    <i class="bi bi-list-ul"></i>
+                </button>
+            </div>
+
             <button type="button" class="btn btn-primary"
                 data-bs-toggle="modal" data-bs-target="#modalNouvelleCommande">
                 <i class="bi bi-plus-lg me-1"></i> Nouvelle commande
@@ -254,6 +264,7 @@
     <!-- Liste -->
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body p-0">
+            <div class="conteneur-grille">
             {% for r in rows %}
             <div class="cmd-row p-3">
                 <div class="row g-3 align-items-center">
@@ -368,6 +379,40 @@
                 Aucune commande ne correspond à ces critères.
             </div>
             {% endfor %}
+            </div>
+            <div class="conteneur-tableau d-none">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light"><tr>
+                            <th class="ps-3">Commande</th><th>Client</th><th>Couturier</th>
+                            <th>Livraison</th><th>Statut</th><th>Total</th>
+                            <th class="text-end pe-3">Actions</th>
+                        </tr></thead>
+                        <tbody>
+                        {% for r in rows %}
+                            <tr>
+                                <td class="ps-3 fw-semibold small">{{ r.c.code }}</td>
+                                <td>{{ r.c.client.nom }} {% if r.c.client.prenom %}{{ r.c.client.prenom }}{% endif %}
+                                    <div class="cmd-meta">{{ r.c.client.telephone }}</div></td>
+                                <td class="small">{{ r.nom_employes|default:"—" }}</td>
+                                <td class="small">{% if r.c.est_en_retard %}<span class="pill p-late"><i class="bi bi-clock"></i> {{ r.c.date_livraison_prevue|date:"d/m/Y" }}</span>{% else %}{{ r.c.date_livraison_prevue|date:"d/m/Y" }}{% endif %}</td>
+                                <td>{% if r.c.statut == 'EN_ATTENTE' %}<span class="pill p-att">En attente</span>{% elif r.c.statut == 'EN_COURS' %}<span class="pill p-enc">En cours</span>{% elif r.c.statut == 'PRET' %}<span class="pill p-pret">Prêt</span>{% elif r.c.statut == 'LIVRE' %}<span class="pill p-liv">Livré</span>{% elif r.c.statut == 'ANNULE' %}<span class="pill p-ann">Annulé</span>{% endif %}</td>
+                                <td class="fw-bold">{{ r.c.prix_net|floatformat:0 }} {{ atelier.devise }}
+                                    <div class="cmd-meta">{% if r.c.est_soldee %}Soldée{% else %}Reste {{ r.c.reste_a_payer|floatformat:0 }}{% endif %}</div></td>
+                                <td class="text-end pe-3">
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="{% url 'core:detail_commande' r.c.pk %}" class="btn btn-light border" title="Détail"><i class="bi bi-eye"></i></a>
+                                        <a href="{% url 'core:fiche_atelier_pdf' r.c.pk %}" class="btn btn-light border text-primary" title="Fiche atelier"><i class="bi bi-rulers"></i></a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% empty %}
+                            <tr><td colspan="7" class="text-center text-muted py-5">Aucune commande ne correspond à ces critères.</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
         {% if is_paginated %}
@@ -1208,6 +1253,23 @@
     });
 
   creerLigne();
+})();
+</script>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+    var CLE = "vue_commandes";
+    function appliquer(vue) {
+        document.querySelectorAll('.conteneur-tableau').forEach(function (el) { el.classList.toggle('d-none', vue !== 'tableau'); });
+        document.querySelectorAll('.conteneur-grille').forEach(function (el) { el.classList.toggle('d-none', vue !== 'grille'); });
+        document.querySelectorAll('.vue-btn').forEach(function (b) { b.classList.toggle('active', b.dataset.vue === vue); });
+        try { localStorage.setItem(CLE, vue); } catch (e) {}
+    }
+    document.querySelectorAll('.vue-btn').forEach(function (b) { b.addEventListener('click', function () { appliquer(b.dataset.vue); }); });
+    var v = 'grille';
+    try { v = localStorage.getItem(CLE) || 'grille'; } catch (e) {}
+    appliquer(v);
 })();
 </script>
 {% endblock %}

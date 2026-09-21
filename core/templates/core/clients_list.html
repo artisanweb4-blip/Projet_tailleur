@@ -17,10 +17,10 @@
         width:40px; height:40px; border-radius:11px; color:#fff; flex-shrink:0;
         display:flex; align-items:center; justify-content:center;
     }
-    .ic-viol { background:linear-gradient(135deg,#7c3aed,#6d28d9); }
-    .ic-blue { background:linear-gradient(135deg,#0ea5e9,#0284c7); }
-    .ic-grn  { background:linear-gradient(135deg,#10b981,#059669); }
-    .ic-org  { background:linear-gradient(135deg,#f59e0b,#ea580c); }
+    .ic-viol { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
+    .ic-blue { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
+    .ic-grn  { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
+    .ic-org  { background:linear-gradient(135deg, var(--primary-color), var(--accent-color)); }
 
     /* ===== CARTE CLIENT ===== */
     .client-card {
@@ -74,7 +74,7 @@
     .tbl-card tbody tr:hover { background:#fafbff; }
 
     .empty-c { padding:4rem 1rem; text-align:center; color:#9ca3af; }
-    .vue-btn.active { background:#6d28d9 !important; color:#fff !important; border-color:#6d28d9 !important; }
+    .vue-btn.active { background:var(--primary-color) !important; color:#fff !important; border-color:var(--primary-color) !important; }
 </style>
 {% endblock %}
 
