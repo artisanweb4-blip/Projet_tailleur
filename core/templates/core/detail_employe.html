@@ -3,7 +3,7 @@
 
 {% block extra_css %}
 <style>
-    .de-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
+    .de-wrap { background: transparent; }
 
     /* ===== EN-TÊTE PROFIL ===== */
     .profil-card {
@@ -478,7 +478,7 @@
             <form method="POST" action="{% url 'core:modifier_employe' emp.pk %}"
                   enctype="multipart/form-data" id="formEditEmploye">
                 {% csrf_token %}
-                <div class="modal-header bg-dark text-white">
+                <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title fw-bold">
                         <i class="bi bi-pencil-square me-2"></i>Modifier {{ emp.nom_complet }}
                     </h5>
@@ -601,7 +601,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-success fw-semibold">
+                    <button type="submit" class="btn btn-primary fw-semibold">
                         <i class="bi bi-check-circle me-1"></i>Mettre à jour
                     </button>
                 </div>
@@ -669,7 +669,7 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-success fw-semibold">
+                    <button type="submit" class="btn btn-primary fw-semibold">
                         <i class="bi bi-check2-circle me-1"></i>Valider le paiement
                     </button>
                 </div>

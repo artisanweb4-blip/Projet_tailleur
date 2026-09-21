@@ -942,6 +942,14 @@ def liste_modeles(request):
     })
 
 
+def _redir_modeles(tab=None):
+    """Redirige vers le catalogue en activant l'onglet voulu (cou/pap/acc)."""
+    url = reverse('core:liste_modeles')
+    if tab:
+        url = url + '?tab=' + tab
+    return redirect(url)
+
+
 @login_required
 @droit_requis('catalogue')
 def ajouter_accessoire(request):
@@ -966,7 +974,7 @@ def ajouter_accessoire(request):
             messages.success(request, f"Accessoire « {acc.nom} » ajouté.")
         else:
             messages.error(request, "Veuillez corriger les erreurs.")
-    return redirect('core:liste_modeles')
+    return _redir_modeles('acc')
 
 
 @login_required
@@ -994,7 +1002,7 @@ def modifier_accessoire(request, pk):
             messages.success(request, f"Accessoire « {acc.nom} » mis à jour.")
         else:
             messages.error(request, "Erreur lors de la modification.")
-    return redirect('core:liste_modeles')
+    return _redir_modeles('acc')
 
 
 @login_required
@@ -1005,13 +1013,14 @@ def supprimer_accessoire(request, pk):
     if request.method == 'POST':
         acc.delete()
         messages.success(request, "Accessoire supprimé.")
-    return redirect('core:liste_modeles')
+    return _redir_modeles('acc')
 
 
 @login_required
 @droit_requis('catalogue')
 def ajouter_modele(request):
     atelier = get_user_atelier(request.user)
+    tab = None
     if request.method == 'POST':
         form = CatalogueModeleForm(request.POST, request.FILES)
         if form.is_valid():
@@ -1030,9 +1039,11 @@ def ajouter_modele(request):
                     commentaire="Stock initial à la création",
                 )
             messages.success(request, f"Modèle « {modele.nom} » ajouté avec succès.")
+            tab = 'pap' if modele.est_pap else 'cou'
         else:
             messages.error(request, "Veuillez corriger les erreurs du formulaire.")
-    return redirect('core:liste_modeles')
+            tab = 'pap' if request.POST.get('type_modele') == 'PRET_A_PORTER' else 'cou'
+    return _redir_modeles(tab)
 
 
 @login_required
@@ -1040,6 +1051,7 @@ def ajouter_modele(request):
 def modifier_modele(request, pk):
     atelier = get_user_atelier(request.user)
     modele = get_object_or_404(CatalogueModele, pk=pk, atelier=atelier)
+    tab = 'pap' if modele.est_pap else 'cou'
     if request.method == 'POST':
         stock_avant = modele.stock_pret_a_porter
         form = CatalogueModeleForm(request.POST, request.FILES, instance=modele)
@@ -1060,7 +1072,7 @@ def modifier_modele(request, pk):
             messages.success(request, "Modèle mis à jour.")
         else:
             messages.error(request, "Erreur lors de la modification du modèle.")
-    return redirect('core:liste_modeles')
+    return _redir_modeles(tab)
 
 
 @login_required
@@ -1068,10 +1080,11 @@ def modifier_modele(request, pk):
 def supprimer_modele(request, pk):
     atelier = get_user_atelier(request.user)
     modele = get_object_or_404(CatalogueModele, pk=pk, atelier=atelier)
+    tab = 'pap' if modele.est_pap else 'cou'
     if request.method == 'POST':
         modele.delete()
         messages.success(request, "Modèle supprimé.")
-    return redirect('core:liste_modeles')
+    return _redir_modeles(tab)
 
 
 # ==========================================
@@ -2124,9 +2137,10 @@ def ajuster_stock(request):
     atelier = get_user_atelier(request.user)
 
     if request.method != 'POST':
-        return redirect('core:liste_modeles')
+        return _redir_modeles()
 
     genre = request.POST.get('genre')            # 'PAP' ou 'ACC'
+    tab = {'PAP': 'pap', 'ACC': 'acc'}.get(genre)
     obj_id = _to_int(request.POST.get('article_id'), 0)
     quantite = _to_int(request.POST.get('quantite'), 0)
     type_mvt = request.POST.get('type_mouvement', 'REAPPRO')
@@ -2134,13 +2148,13 @@ def ajuster_stock(request):
 
     if genre not in ('PAP', 'ACC') or not obj_id or quantite == 0:
         messages.error(request, "Paramètres d'ajustement invalides.")
-        return redirect('core:liste_modeles')
+        return _redir_modeles(tab)
 
     obj = _modele_pour_genre(genre).objects.filter(
         pk=obj_id, atelier=atelier).first()
     if not obj:
         messages.error(request, "Article introuvable.")
-        return redirect('core:liste_modeles')
+        return _redir_modeles(tab)
 
     sens = 1 if quantite > 0 else -1
     qte_abs = abs(quantite)
@@ -2151,7 +2165,7 @@ def ajuster_stock(request):
             f"Impossible de retirer {qte_abs} : stock actuel "
             f"{_stock_actuel(obj, genre)}."
         )
-        return redirect('core:liste_modeles')
+        return _redir_modeles(tab)
 
     with transaction.atomic():
         _appliquer_stock(
@@ -2166,7 +2180,7 @@ def ajuster_stock(request):
         f"Stock de « {obj.nom} » ajusté : "
         f"{_stock_actuel(obj, genre)} unité(s) disponible(s)."
     )
-    return redirect('core:liste_modeles')
+    return _redir_modeles(tab)
 
 
 # ==========================================
