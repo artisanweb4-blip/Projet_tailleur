@@ -855,11 +855,40 @@ def mensuration_pdf(request, pk):
     atelier = get_user_atelier(request.user)
     mensuration = get_object_or_404(Mensuration, pk=pk, atelier=atelier)
 
+    # Logo de la boutique en data-URI (xhtml2pdf ne charge pas les URL)
+    logo_uri = ''
+    if atelier.logo:
+        import base64
+        import os as _os
+        try:
+            ext = _os.path.splitext(atelier.logo.name)[1].lower()
+            if ext == '.png':
+                mime = 'image/png'
+            elif ext == '.gif':
+                mime = 'image/gif'
+            else:
+                mime = 'image/jpeg'
+            with atelier.logo.open('rb') as f:
+                logo_uri = 'data:' + mime + ';base64,' + base64.b64encode(f.read()).decode('ascii')
+        except Exception:
+            logo_uri = ''
+
+    # Mesures appariées sur 2 colonnes pour une feuille compacte
+    items = list((mensuration.donnees or {}).items())
+    demi = (len(items) + 1) // 2
+    lignes_mesures = []
+    for i in range(demi):
+        g = items[i]
+        d = items[demi + i] if demi + i < len(items) else ('', '')
+        lignes_mesures.append((g[0], g[1], d[0], d[1]))
+
     html = render_to_string('core/mensuration_pdf.html', {
         'mensuration': mensuration,
         'client': mensuration.client,
         'atelier': atelier,
         'date_edition': timezone.now(),
+        'logo_uri': logo_uri,
+        'lignes_mesures': lignes_mesures,
     }, request=request)
 
     response = HttpResponse(content_type='application/pdf')
@@ -884,10 +913,14 @@ def api_mensurations_client(request, client_pk):
         'libelle_complet': m.libelle_complet,
         'nom_personne': m.nom_personne,
         'lien': m.get_lien_parente_display(),
+        'lien_code': m.lien_parente,
         'est_proche': not m.est_pour_client,
         'genre': m.genre_mesure,
         'nb_mesures': m.nb_mesures,
         'date_prise': m.date_prise.strftime('%d/%m/%Y') if m.date_prise else '',
+        'beneficiaire': m.beneficiaire,
+        'donnees': m.donnees or {},
+        'url_edit': reverse('core:modifier_mensuration', args=[m.id]),
     } for m in client.mensurations.all()]
 
     return JsonResponse({'mensurations': mensurations})

@@ -183,9 +183,10 @@
                           <a href="{% url 'core:mensuration_pdf' m.id %}" class="btn btn-light text-dark" title="PDF">
                             <i class="bi bi-file-earmark-pdf"></i>
                           </a>
-                          <a href="{% url 'core:modifier_mensuration' m.id %}" class="btn btn-light text-dark" title="Modifier">
+                          <button type="button" class="btn btn-light text-dark btn-edit-mensuration" title="Modifier"
+                                  data-bs-toggle="modal" data-bs-target="#mensurationModal" data-edit-id="{{ m.id }}">
                             <i class="bi bi-pencil"></i>
-                          </a>
+                          </button>
                           <form method="post" action="{% url 'core:supprimer_mensuration' m.id %}"
                                 class="d-inline" onsubmit="return confirm('Supprimer cette fiche de mensurations ?');">
                             {% csrf_token %}
@@ -286,14 +287,14 @@
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content border-0 shadow position-relative">
 
-      <div class="modal-header border-bottom py-3">
+      <div class="modal-header bg-primary text-white border-0 py-3">
         <div>
-          <h5 class="modal-title fw-bold text-dark mb-0">
-            <i class="bi bi-rulers me-2 text-primary"></i>Ajouter des mensurations
+          <h5 class="modal-title fw-bold text-white mb-0">
+            <i class="bi bi-rulers me-2"></i><span id="texteTitreModal">Ajouter des mensurations</span>
           </h5>
-          <small class="text-muted" id="sousTitreModal">Pour {{ client.nom }}</small>
+          <small class="text-white-50" id="sousTitreModal">Pour {{ client.nom }}</small>
         </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
 
       <form method="post" action="{% url 'core:ajouter_mensuration' client.id %}" id="formMensuration">
@@ -344,7 +345,7 @@
                 <div class="row g-3 mt-1">
                   <div class="col-md-7">
                     <label class="form-label small fw-medium">Libellé de la fiche</label>
-                    <input type="text" name="libelle" class="form-control"
+                    <input type="text" name="libelle" id="inputLibelle" class="form-control"
                            placeholder="Ex: Boubou de mariage, Costume…">
                   </div>
                   <div class="col-md-5">
@@ -567,6 +568,8 @@ document.addEventListener('DOMContentLoaded', function () {
   const totalMesures     = document.getElementById('totalMesures');
   const btnScrollTop     = document.getElementById('btnScrollTop');
   const form             = document.getElementById('formMensuration');
+  const texteTitreModal  = document.getElementById('texteTitreModal');
+  const inputLibelle     = document.getElementById('inputLibelle');
   const NOM_CLIENT       = "{{ client.nom }}{% if client.prenom %} {{ client.prenom }}{% endif %}";
 
   // --- Hauteur du body adaptée à l'écran ---
@@ -617,13 +620,78 @@ document.addEventListener('DOMContentLoaded', function () {
   inputBeneficiaire.addEventListener('input', majSousTitre);
   selectLien.addEventListener('change', majSousTitre);
 
+  // --- Édition : chargement des données via l'API ---
+  const API_MENS  = "{% url 'core:api_mensurations_client' client.id %}";
+  const AJOUT_URL = form.action;
+  let cacheMens = null;
+  function chargerMensurations() {
+    if (cacheMens) return Promise.resolve(cacheMens);
+    return fetch(API_MENS, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) { cacheMens = d.mensurations || []; return cacheMens; })
+      .catch(function () { return []; });
+  }
+  function viderLignes() {
+    modal.querySelectorAll('.dynamic-row').forEach(function (r) { r.remove(); });
+  }
+  function lignesParDefaut() {
+    modal.querySelectorAll('.dynamic-section').forEach(function (section) {
+      const nb = parseInt(section.dataset.rows || '3', 10);
+      for (let i = 0; i < nb; i++) section.appendChild(creerLigne());
+    });
+  }
+  function reinitialiserModal() {
+    form.action = AJOUT_URL;
+    texteTitreModal.textContent = 'Ajouter des mensurations';
+    form.reset();
+    pourClient.checked = true;
+    btnHomme.checked = true;
+    viderLignes();
+    lignesParDefaut();
+    toggleSections();
+    toggleProche();
+    majCompteurs();
+  }
+
   modal.addEventListener('show.bs.modal', function (event) {
     const trigger = event.relatedTarget;
-    const pour = trigger ? trigger.dataset.pour : 'client';
-    if (pour === 'proche') pourProche.checked = true;
-    else pourClient.checked = true;
-    toggleProche();
+    const editId = trigger ? trigger.dataset.editId : null;
+    if (!editId) {
+      const pour = trigger ? trigger.dataset.pour : 'client';
+      if (pour === 'proche') pourProche.checked = true;
+      else pourClient.checked = true;
+      toggleProche();
+      return;
+    }
+    // Mode modification : même formulaire, pré-rempli
+    texteTitreModal.textContent = 'Modifier les mensurations';
+    chargerMensurations().then(function (liste) {
+      const m = liste.find(function (x) { return String(x.id) === String(editId); });
+      if (!m) return;
+      form.action = m.url_edit;
+      if (m.est_proche) pourProche.checked = true; else pourClient.checked = true;
+      toggleProche();
+      inputBeneficiaire.value = m.beneficiaire || '';
+      if (m.lien_code) selectLien.value = m.lien_code;
+      if (m.genre === 'femme') btnFemme.checked = true; else btnHomme.checked = true;
+      toggleSections();
+      inputLibelle.value = m.libelle || '';
+      majSousTitre();
+      viderLignes();
+      const sec = modal.querySelector('#secBase .dynamic-section');
+      const entrees = Object.entries(m.donnees || {});
+      entrees.forEach(function (e) {
+        const ligne = creerLigne();
+        ligne.querySelector('input[name="champ_nom[]"]').value = e[0];
+        ligne.querySelector('input[name="champ_valeur[]"]').value = e[1];
+        sec.appendChild(ligne);
+      });
+      if (!entrees.length) lignesParDefaut();
+      majCompteurs();
+    });
   });
+
+  modal.addEventListener('hidden.bs.modal', reinitialiserModal);
 
   modal.addEventListener('shown.bs.modal', function () {
     ajusterHauteur();

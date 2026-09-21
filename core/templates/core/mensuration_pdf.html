@@ -3,40 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <style>
-        @page { size: A4; margin: 2cm; }
-        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #1e293b; }
-        h1 { font-size: 18px; margin-bottom: 4px; }
-        .sous-titre { color: #64748b; margin-bottom: 20px; font-size: 11px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #cbd5e1; padding: 6px 10px; text-align: left; }
-        th { background-color: #f1f5f9; }
-        .footer { margin-top: 30px; font-size: 9px; color: #94a3b8; }
+        @page { size: A4; margin: 1.6cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 10px; color: #1e293b; }
+
+        .nom-atelier { font-size: 16px; font-weight: bold; color: #2b59c3; }
+        .coordonnees { font-size: 8.5px; color: #64748b; line-height: 1.5; }
+        .logo { max-height: 64px; max-width: 150px; }
+
+        .bandeau { background-color: #2b59c3; color: #ffffff; font-size: 13px;
+                   font-weight: bold; text-align: center; padding: 7px 0; letter-spacing: 1px; }
+        .sous-bandeau { text-align: center; font-size: 10px; color: #475569; padding: 5px 0 12px 0; }
+
+        .bloc-titre { font-size: 9px; font-weight: bold; color: #2b59c3;
+                      text-transform: uppercase; letter-spacing: 0.5px;
+                      border-bottom: 1px solid #dbe3f0; padding-bottom: 3px; }
+        .info { font-size: 9.5px; line-height: 1.8; }
+        .info .libelle { color: #64748b; }
+
+        table.mesures { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        table.mesures th { background-color: #2b59c3; color: #ffffff; font-size: 9.5px;
+                           padding: 6px 10px; text-align: left; }
+        table.mesures td { border: 1px solid #dbe3f0; padding: 5px 10px; font-size: 10px; }
+        .valeur { font-weight: bold; color: #1e293b; }
+        .zebre { background-color: #f4f7fd; }
+
+        .cadre-signature { border: 1px solid #cbd5e1; height: 72px; width: 230px; }
+        .libelle-sig { font-size: 8.5px; color: #64748b; padding-top: 4px; }
+
+        .pied { margin-top: 26px; font-size: 8px; color: #94a3b8; text-align: center;
+                border-top: 1px solid #e2e8f0; padding-top: 6px; }
     </style>
 </head>
 <body>
-    <h1>{{ mensuration.libelle }}</h1>
-    <p class="sous-titre">
-        Client : {{ mensuration.client.nom }} {{ mensuration.client.prenom }}<br/>
-        Date de prise : {{ mensuration.date_prise|date:"d/m/Y" }}
-    </p>
 
-    {% if mensuration.donnees %}
-    <table>
+    <!-- ===== EN-TÊTE : LOGO + BOUTIQUE ===== -->
+    <table width="100%">
         <tr>
-            <th>Champ</th>
-            <th>Valeur</th>
+            <td width="40%" valign="middle">
+                {% if logo_uri %}<img src="{{ logo_uri }}" class="logo" />{% endif %}
+            </td>
+            <td width="60%" valign="middle" align="right">
+                <span class="nom-atelier">{{ atelier.nom }}</span><br/>
+                <span class="coordonnees">
+                    {% if atelier.adresse %}{{ atelier.adresse|linebreaksbr }}<br/>{% endif %}
+                    {% if atelier.telephone %}Tél : {{ atelier.telephone }}{% if atelier.email %} &nbsp;·&nbsp; {% endif %}{% endif %}
+                    {% if atelier.email %}{{ atelier.email }}{% endif %}
+                </span>
+            </td>
         </tr>
-        {% for nom, valeur in mensuration.donnees.items %}
+    </table>
+
+    <!-- ===== BANDEAU TITRE ===== -->
+    <table width="100%" style="margin-top: 14px;">
         <tr>
-            <td>{{ nom }}</td>
-            <td>{{ valeur }} cm</td>
+            <td class="bandeau">FICHE DE MENSURATIONS</td>
+        </tr>
+    </table>
+    <div class="sous-bandeau">
+        {{ mensuration.libelle }} &nbsp;·&nbsp;
+        Mesures {{ mensuration.genre_mesure|capfirst }} &nbsp;·&nbsp;
+        Fiche n° {{ mensuration.id }}
+    </div>
+
+    <!-- ===== INFORMATIONS CLIENT / PERSONNE MESURÉE ===== -->
+    <table width="100%">
+        <tr>
+            <td width="50%" valign="top" style="padding-right: 12px;">
+                <div class="bloc-titre">Client</div>
+                <div class="info">
+                    <span class="libelle">Nom :</span> <b>{{ client.nom }}{% if client.prenom %} {{ client.prenom }}{% endif %}</b><br/>
+                    <span class="libelle">Téléphone :</span> {{ client.telephone|default:"—" }}<br/>
+                    {% if client.email %}<span class="libelle">Email :</span> {{ client.email }}<br/>{% endif %}
+                    {% if client.adresse %}<span class="libelle">Adresse :</span> {{ client.adresse|linebreaksbr }}{% endif %}
+                </div>
+            </td>
+            <td width="50%" valign="top" style="padding-left: 12px;">
+                <div class="bloc-titre">Personne mesurée</div>
+                <div class="info">
+                    {% if mensuration.beneficiaire %}
+                        <b>{{ mensuration.beneficiaire }}</b><br/>
+                        <span class="libelle">Lien avec le client :</span> {{ mensuration.get_lien_parente_display }}<br/>
+                    {% else %}
+                        <b>Le client lui-même</b><br/>
+                    {% endif %}
+                    <span class="libelle">Date de prise :</span> {{ mensuration.date_prise|date:"d/m/Y" }}<br/>
+                    <span class="libelle">Nombre de mesures :</span> {{ mensuration.nb_mesures }}
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- ===== TABLEAU DES MESURES ===== -->
+    {% if lignes_mesures %}
+    <table class="mesures">
+        <tr>
+            <th width="29%">Mesure</th>
+            <th width="21%">Valeur</th>
+            <th width="29%">Mesure</th>
+            <th width="21%">Valeur</th>
+        </tr>
+        {% for g_nom, g_val, d_nom, d_val in lignes_mesures %}
+        <tr class="{% cycle '' 'zebre' %}">
+            <td>{{ g_nom }}</td>
+            <td class="valeur">{{ g_val }} cm</td>
+            {% if d_nom %}
+                <td>{{ d_nom }}</td>
+                <td class="valeur">{{ d_val }} cm</td>
+            {% else %}
+                <td style="border: none;"></td>
+                <td style="border: none;"></td>
+            {% endif %}
         </tr>
         {% endfor %}
     </table>
     {% else %}
-    <p>Aucune mesure enregistrée sur cette fiche.</p>
+    <p style="margin-top: 14px; color: #64748b;">Aucune mesure enregistrée sur cette fiche.</p>
     {% endif %}
 
-    <p class="footer">Document généré automatiquement — TailleurPro</p>
+    <!-- ===== SIGNATURE ===== -->
+    <table width="100%" style="margin-top: 30px;">
+        <tr>
+            <td width="55%"></td>
+            <td width="45%" align="right">
+                <div class="cadre-signature"></div>
+                <div class="libelle-sig">Cachet et signature de l'atelier</div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- ===== PIED DE PAGE ===== -->
+    <div class="pied">
+        {{ atelier.nom }} — document généré le {{ date_edition|date:"d/m/Y à H:i" }} avec TailleurPro
+    </div>
+
 </body>
 </html>
