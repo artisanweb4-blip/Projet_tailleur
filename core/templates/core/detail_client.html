@@ -612,8 +612,13 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
   function majSousTitre() {
+    if (!pourProche.checked) {
+      sousTitre.textContent = 'Pour ' + NOM_CLIENT;
+      return;
+    }
     const nom = inputBeneficiaire.value.trim();
-    const lien = selectLien.options[selectLien.selectedIndex].text;
+    const opt = selectLien.options[selectLien.selectedIndex];
+    const lien = opt ? opt.text : '';
     sousTitre.textContent = nom ? `Pour ${nom} (${lien})` : `Pour un proche (${lien})`;
   }
   pourClient.addEventListener('change', toggleProche);
@@ -672,7 +677,8 @@ document.addEventListener('DOMContentLoaded', function () {
       if (m.est_proche) pourProche.checked = true; else pourClient.checked = true;
       toggleProche();
       inputBeneficiaire.value = m.beneficiaire || '';
-      if (m.lien_code) selectLien.value = m.lien_code;
+      if (m.lien_code && m.lien_code !== 'MOI') selectLien.value = m.lien_code;
+      if (selectLien.selectedIndex < 0) selectLien.selectedIndex = 0;
       if (m.genre === 'femme') btnFemme.checked = true; else btnHomme.checked = true;
       toggleSections();
       inputLibelle.value = m.libelle || '';
