@@ -96,6 +96,10 @@ EN = {
     "Pour réactiver la boutique avec toutes ses anciennes données, contactez le gestionnaire de la plateforme avant cette date : un nouvel abonnement peut être activé à tout moment pendant la période de conservation.": "To reactivate the shop with all its old data, contact the platform manager before this date: a new subscription can be activated at any time during the retention period.",
     "Se déconnecter": "Sign out",
 
+    # --- Marque & sidebar (0019) ---
+    "Gestion d'ateliers de couture": "Tailoring shop management",
+    "Boutique": "Shop",
+
 }
 
 

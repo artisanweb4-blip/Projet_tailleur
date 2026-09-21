@@ -100,6 +100,47 @@
         .top-navbar .dropdown-toggle,
         .top-navbar .nav-link { color: #334155; }
 
+        /* Icônes de navigation : fond bleu standard, icône blanche, partout */
+        .sidebar .nav-pills .nav-link i.bi {
+            width: 32px; height: 32px; border-radius: 9px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: #fff; display: inline-flex; align-items: center; justify-content: center;
+            font-size: .95rem; margin-right: .4rem; flex-shrink: 0;
+        }
+        .top-navbar .btn i.bi {
+            width: 30px; height: 30px; border-radius: 9px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: #fff; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .top-navbar .btn-outline-secondary { border: none; background: transparent; }
+        .top-navbar .topbar-cloche {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            border: none; color: #fff;
+        }
+        .top-navbar .topbar-cloche i.bi { background: none; width: auto; height: auto; }
+
+        /* Messages de confirmation : petite fenêtre modale, disparaît en 2 s */
+        #toastZone {
+            position: fixed; top: 84px; left: 50%; transform: translateX(-50%);
+            z-index: 1090; display: flex; flex-direction: column; gap: 8px;
+            align-items: center; pointer-events: none;
+        }
+        .toast-card {
+            display: flex; align-items: center; gap: 10px;
+            background: #fff; border-radius: 12px; padding: 10px 16px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
+            border: 1px solid #e2e8f0; font-size: .9rem; font-weight: 500;
+            color: #1e293b; max-width: 420px;
+            animation: toast-in .25s ease-out;
+        }
+        .toast-card i { font-size: 1.1rem; }
+        .toast-success i { color: #059669; }
+        .toast-error i { color: #dc2626; }
+        .toast-warning i { color: #d97706; }
+        .toast-info i { color: var(--accent-color); }
+        .toast-hide { opacity: 0; transform: translateY(-6px); transition: all .35s; }
+        @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
         /* Entête standard de chaque page : icône + titre alignés */
         .entete-page { margin-top: .25rem; }
         .entete-page .entete-icone {
@@ -179,6 +220,23 @@
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    {% if messages %}
+    <!-- Messages de confirmation : petite fenêtre modale auto-2 s (toutes pages) -->
+    <div id="toastZone" aria-live="polite">
+        {% for message in messages %}
+        <div class="toast-card toast-{{ message.tags|default:'info' }}">
+            <i class="bi {% if message.tags == 'error' %}bi-x-octagon-fill{% elif message.tags == 'success' %}bi-check-circle-fill{% elif message.tags == 'warning' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %}"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    <script>
+        setTimeout(function () {
+            var z = document.getElementById('toastZone');
+            if (z) { z.classList.add('toast-hide'); setTimeout(function () { z.remove(); }, 350); }
+        }, 2000);
+    </script>
+    {% endif %}
 
     <!-- Overlay mobile -->
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
@@ -190,15 +248,15 @@
             <!-- Header de la Sidebar (Nom dynamique de l'atelier) -->
             <div class="px-4 py-3 d-flex align-items-center justify-content-between border-bottom flex-shrink-0" style="height: 64px;">
                 <div class="d-flex align-items-center gap-2 overflow-hidden">
-                    <div class="bg-primary text-white rounded-3 p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
+                    <div class="text-white rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px; background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); box-shadow: 0 4px 10px rgba(43, 89, 195, .35);">
                         <i class="bi bi-scissors fs-5"></i>
                     </div>
                     <div class="text-truncate">
-                        <h6 class="fw-bold text-dark m-0 text-truncate">
-                            {{ current_atelier.nom|default:"TailleurPro" }}
+                        <h6 class="fw-bold text-dark m-0 text-truncate" style="letter-spacing: .3px; font-size: 1.05rem;">
+                            TailleurPro
                         </h6>
-                        <small class="badge bg-indigo text-primary p-0 fw-semibold" style="font-size: 10px;">
-                            {% if current_atelier %}{{ current_atelier.devise|default:"Gestion Atelier" }}{% else %}Gestion Atelier{% endif %}
+                        <small class="text-muted d-block text-truncate" style="font-size: 10.5px;">
+                            {% tr "Gestion d'ateliers de couture" %}
                         </small>
                     </div>
                 </div>
@@ -281,6 +339,14 @@
             </ul>
         </div>
 
+        <!-- Boutique courante (nom seul, sans devise) -->
+        {% if current_atelier %}
+        <div class="px-4 py-2 border-top flex-shrink-0">
+            <small class="text-muted d-block" style="font-size: 10.5px; letter-spacing: .4px; text-transform: uppercase;">{% tr "Boutique" %}</small>
+            <div class="fw-semibold small text-dark text-truncate">{{ current_atelier.nom }}</div>
+        </div>
+        {% endif %}
+
         <!-- Profil Utilisateur Bas de Sidebar avec Déconnexion -->
         <div class="p-3 border-top bg-light flex-shrink-0">
             <div class="d-flex align-items-center justify-content-between">
@@ -324,7 +390,7 @@
             <div class="d-flex align-items-center gap-3">
                 <!-- Selecteur de langue -->
                 <div class="dropdown">
-                    <button class="btn btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border: 1px solid var(--sidebar-border); border-radius: 10px; padding: 6px 12px; font-weight: 500; color: #334155; background: #fff;">
+                    <button class="btn btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border: none; border-radius: 10px; padding: 4px 6px; font-weight: 500; color: #334155; background: transparent;">
                         <i class="bi bi-globe"></i>
                         <span id="current-lang">{{ langue|upper }}</span>
                     </button>
@@ -336,8 +402,8 @@
 
                 <!-- Notifications Dropdown -->
                 <div class="dropdown">
-                    <button class="btn btn-sm btn-light border position-relative rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" type="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-bell text-dark"></i>
+                    <button class="btn btn-sm position-relative rounded-circle p-2 d-flex align-items-center justify-content-center topbar-cloche" style="width: 38px; height: 38px;" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-bell"></i>
                         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
                             <span class="visually-hidden">Nouvelles notifications</span>
                         </span>
@@ -376,7 +442,7 @@
 
         <!-- Footer -->
         <footer class="app-footer text-center py-3 mt-3">
-            <span>{% if current_atelier %}{{ current_atelier.nom }}{% else %}TailleurPro{% endif %}</span> &middot; <span>{% tr "Tous droits réservés" %}</span>
+            <span class="fw-semibold">TailleurPro</span> &middot; <span>© 2026 {% tr "Tous droits réservés" %}</span>
         </footer>
     </div>
 

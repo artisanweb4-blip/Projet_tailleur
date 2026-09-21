@@ -19,7 +19,7 @@
     .nav-ic {
         width:36px; height:36px; border-radius:10px; flex-shrink:0;
         display:flex; align-items:center; justify-content:center;
-        background:#ede9fe; color:#cbcacf; font-size:1rem;
+        background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); color:#fff; font-size:1rem;
     }
     .nav-titre { font-weight:600; font-size:.92rem; color:#111827; }
     .nav-sub { color:#9ca3af; font-size:.74rem; }
@@ -93,17 +93,6 @@
         </button>
         {% endif %}
     </div>
-
-    {% if messages %}
-    <div id="messagesZone">
-        {% for message in messages %}
-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm rounded-3">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
 
     {% if not est_admin %}
     <div class="alert alert-info border-0 shadow-sm">
@@ -801,12 +790,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    /* ===== Auto-masquage des messages ===== */
-    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
-        setTimeout(function () {
-            bootstrap.Alert.getOrCreateInstance(el).close();
-        }, 4000);
-    });
+    
 });
 </script>
 {% endblock %}
