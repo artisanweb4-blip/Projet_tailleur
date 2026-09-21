@@ -22,6 +22,7 @@ from .models import (
     Paie, Paiement, PlanAbonnement, Profil,
 )
 from .decorators import droit_requis
+from .expiration import infos_expiration
 from .sauvegarde import (
     chemin_sauvegarde, creer_sauvegarde, lister_sauvegardes,
     restaurer_sauvegarde, supprimer_sauvegarde,
@@ -2854,6 +2855,16 @@ def calendrier(request):
         'retards': sorted(en_retard, key=lambda i: i['date']),
         'employes': Employe.objects.filter(atelier=atelier, statut='ACTIF'),
         'employe_filter': employe_filter,
+    })
+
+
+def abonnement_bloque(request):
+    """Page d'information des boutiques bloquées (abonnement expiré)."""
+    atelier = get_user_atelier(request.user)
+    infos = infos_expiration(atelier) if atelier else None
+    return render(request, 'core/abonnement_bloque.html', {
+        'atelier': atelier,
+        'infos': infos,
     })
 
 

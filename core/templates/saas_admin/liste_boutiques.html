@@ -31,26 +31,91 @@
     {% endfor %}
 {% endif %}
 
-<div class="card shadow-sm">
+<!-- ===== KPI ===== -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center justify-content-center rounded-3" style="width:44px;height:44px;background:linear-gradient(135deg,#2b59c3,#2563eb);">
+                    <i class="bi bi-shop text-white"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Boutiques</div>
+                    <div class="fs-4 fw-bold lh-1">{{ kpi.total }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center justify-content-center rounded-3" style="width:44px;height:44px;background:linear-gradient(135deg,#10b981,#059669);">
+                    <i class="bi bi-check-circle text-white"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Fonctionnelles</div>
+                    <div class="fs-4 fw-bold lh-1">{{ kpi.actives }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center justify-content-center rounded-3" style="width:44px;height:44px;background:linear-gradient(135deg,#f59e0b,#ea580c);">
+                    <i class="bi bi-clock-history text-white"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Expirées (conservation)</div>
+                    <div class="fs-4 fw-bold lh-1">{{ kpi.expirees }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-xl-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body d-flex align-items-center gap-3">
+                <div class="d-flex align-items-center justify-content-center rounded-3" style="width:44px;height:44px;background:linear-gradient(135deg,#f43f5e,#e11d48);">
+                    <i class="bi bi-trash3 text-white"></i>
+                </div>
+                <div>
+                    <div class="text-muted small">Supprimables</div>
+                    <div class="fs-4 fw-bold lh-1">{{ kpi.supprimables }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== TABLEAU ===== -->
+<div class="card border-0 shadow-sm">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
                 <tr>
-                    <th>Boutique</th>
+                    <th class="ps-3">Boutique</th>
                     <th>Propriétaire</th>
                     <th class="text-center">Membres</th>
-                    <th>Abonnement</th>
+                    <th>Formule</th>
                     <th>Statut</th>
-                    <th>Expiration</th>
-                    <th class="text-end">Actions</th>
+                    <th>Échéance</th>
+                    <th class="text-end pe-3">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 {% for boutique in boutiques %}
                 <tr>
-                    <td>
-                        <div class="fw-semibold">{{ boutique.nom }}</div>
-                        <small class="text-muted">Créée le {{ boutique.date_creation|date:"d/m/Y" }}</small>
+                    <td class="ps-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="d-flex align-items-center justify-content-center rounded-3 fw-bold text-white"
+                                 style="width:36px;height:36px;background:linear-gradient(135deg,#2b59c3,#2563eb);font-size:.85rem;">
+                                {{ boutique.nom|slice:":1" }}
+                            </div>
+                            <div>
+                                <div class="fw-semibold">{{ boutique.nom }}</div>
+                                <small class="text-muted">Créée le {{ boutique.date_creation|date:"d/m/Y" }}</small>
+                            </div>
+                        </div>
                     </td>
                     <td>
                         {% if boutique.proprietaire_user %}
@@ -61,23 +126,57 @@
                         {% endif %}
                     </td>
                     <td class="text-center"><span class="badge bg-light text-dark border">{{ boutique.nb_membres }}</span></td>
-                    <td>{{ boutique.abonnement.plan.nom|default:"Aucun plan" }}</td>
+                    <td class="small">{{ boutique.abonnement.plan.nom|default:"Aucun plan" }}</td>
                     <td>
-                        {% if not boutique.abonnement %}
-                            <span class="badge bg-secondary">Sans abonnement</span>
-                        {% elif boutique.abonnement.statut == 'SUSPENDU' %}
-                            <span class="badge bg-danger">Suspendu</span>
-                        {% elif boutique.abonnement.date_fin < today %}
-                            <span class="badge bg-warning text-dark">Expiré</span>
+                        {% if boutique.infos_exp.fonctionnelle %}
+                            <span class="badge bg-success">Fonctionnelle</span>
+                        {% elif boutique.infos_exp.supprimable %}
+                            <span class="badge bg-danger">Supprimable</span>
+                            <small class="text-muted d-block">délai de 3 mois écoulé</small>
+                        {% elif boutique.infos_exp.statut == 'SUSPENDU' %}
+                            <span class="badge bg-secondary">Suspendue</span>
                         {% else %}
-                            <span class="badge bg-success">Actif</span>
+                            <span class="badge bg-warning text-dark">Expirée</span>
+                            <small class="text-muted d-block">données conservées</small>
                         {% endif %}
                     </td>
-                    <td>{{ boutique.abonnement.date_fin|date:"d/m/Y"|default:"—" }}</td>
-                    <td class="text-end">
+                    <td class="small">
+                        {% if boutique.infos_exp.date_fin %}
+                            Fin : {{ boutique.infos_exp.date_fin|date:"d/m/Y" }}<br>
+                        {% endif %}
+                        {% if not boutique.infos_exp.fonctionnelle %}
+                            {% if boutique.infos_exp.supprimable %}
+                                <span class="text-danger">Conservation échue le {{ boutique.infos_exp.echeance|date:"d/m/Y" }}</span>
+                            {% else %}
+                                Conservation jusqu'au {{ boutique.infos_exp.echeance|date:"d/m/Y" }}
+                                <span class="badge bg-light text-dark border">J-{{ boutique.infos_exp.jours_restants }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-3 text-nowrap">
                         <a href="{% url 'saas_admin:detail_boutique' boutique.id %}" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-eye me-1"></i>Gérer
                         </a>
+                        {% if not boutique.infos_exp.fonctionnelle %}
+                        <form method="POST" class="d-inline" action="{% url 'saas_admin:reactiver_boutique' boutique.id %}"
+                              onsubmit="return confirm('Activer un nouvel abonnement de 30 jours pour cette boutique ?');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-outline-success"
+                                    title="La boutique redevient fonctionnelle avec ses anciennes données">
+                                <i class="bi bi-arrow-repeat me-1"></i>Réactiver
+                            </button>
+                        </form>
+                        {% endif %}
+                        <form method="POST" class="d-inline" action="{% url 'saas_admin:supprimer_boutique' boutique.id %}"
+                              onsubmit="return confirm('SUPPRIMER TOTALEMENT cette boutique et toutes ses données ? Action irréversible.');">
+                            {% csrf_token %}
+                            <input type="hidden" name="confirmation" value="SUPPRIMER">
+                            <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    {% if not boutique.infos_exp.supprimable %}disabled
+                                    title="Suppression possible seulement après le délai de conservation de 3 mois ({{ boutique.infos_exp.echeance|date:'d/m/Y' }})"{% endif %}>
+                                <i class="bi bi-trash me-1"></i>Supprimer
+                            </button>
+                        </form>
                     </td>
                 </tr>
                 {% empty %}
@@ -91,6 +190,14 @@
             </tbody>
         </table>
     </div>
+</div>
+
+<div class="alert alert-light border small mt-3 mb-0">
+    <i class="bi bi-shield-exclamation me-1 text-warning"></i>
+    Règle des 3 mois : une boutique expirée est bloquée mais ses données sont conservées
+    90 jours. Pendant ce délai, « Réactiver » active un nouvel abonnement de 30 jours et la
+    boutique reprend avec toutes ses anciennes données. Passé ce délai, la boutique devient
+    « Supprimable » : la suppression efface alors totalement la boutique et ses données.
 </div>
 {% endblock %}
 

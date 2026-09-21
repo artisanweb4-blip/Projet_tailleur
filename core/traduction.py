@@ -86,6 +86,16 @@ EN = {
     "Je comprends que les données actuelles seront remplacées.": "I understand current data will be replaced.",
     "Restaurer": "Restore",
 
+    # --- Page abonnement expiré ---
+    "Boutique suspendue": "Shop suspended",
+    "Aucun abonnement n'est actif pour cette boutique.": "No subscription is active for this shop.",
+    "L'abonnement de cette boutique a expiré le": "The subscription of this shop expired on",
+    "Vos données sont conservées en sécurité jusqu'au": "Your data is safely kept until",
+    "encore": "another",
+    "jours": "days",
+    "Pour réactiver la boutique avec toutes ses anciennes données, contactez le gestionnaire de la plateforme avant cette date : un nouvel abonnement peut être activé à tout moment pendant la période de conservation.": "To reactivate the shop with all its old data, contact the platform manager before this date: a new subscription can be activated at any time during the retention period.",
+    "Se déconnecter": "Sign out",
+
 }
 
 

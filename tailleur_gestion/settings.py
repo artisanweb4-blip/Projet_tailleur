@@ -100,6 +100,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.middleware.TenantMiddleware',
+    'core.middleware.AbonnementExpireMiddleware',
 ]
 
 ROOT_URLCONF = 'tailleur_gestion.urls'

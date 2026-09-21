@@ -10,6 +10,7 @@ from core.validators import generer_mot_de_passe_temporaire
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, Sum, Count
+from core.expiration import infos_expiration
 from core.sauvegarde import (
     chemin_sauvegarde_systeme, creer_sauvegarde_systeme,
     lister_sauvegardes_systeme, supprimer_sauvegarde_systeme,
@@ -109,13 +110,22 @@ def superadmin_liste_boutiques(request):
             atelier__in=[b.id for b in boutiques], est_fondateur=True,
         ).select_related('user')
     }
+    kpi = {'total': len(boutiques), 'actives': 0, 'expirees': 0, 'supprimables': 0}
     for boutique in boutiques:
         boutique.proprietaire_user = fondateurs.get(boutique.id)
+        boutique.infos_exp = infos_expiration(boutique)
+        if boutique.infos_exp['fonctionnelle']:
+            kpi['actives'] += 1
+        elif boutique.infos_exp['supprimable']:
+            kpi['supprimables'] += 1
+        else:
+            kpi['expirees'] += 1
     return render(request, 'saas_admin/liste_boutiques.html', {
         'boutiques': boutiques,
         'q': q,
         'today': date.today(),
         'plans': PlanAbonnement.objects.all().order_by('prix_mensuel'),
+        'kpi': kpi,
     })
 
 
@@ -242,13 +252,25 @@ def suspendre_boutique(request, boutique_id):
 def reactiver_boutique(request, boutique_id):
     atelier = get_object_or_404(Atelier, id=boutique_id)
     if request.method == 'POST':
+        aujourdhui = date.today()
         abonnement = getattr(atelier, 'abonnement', None)
-        if abonnement:
+        if abonnement is None:
+            jusquau = aujourdhui + timedelta(days=30)
+            Abonnement.objects.create(
+                atelier=atelier, plan=None, statut='ACTIF', date_fin=jusquau)
+        else:
+            base = max(abonnement.date_fin, aujourdhui)
+            abonnement.date_fin = base + timedelta(days=30)
             abonnement.statut = 'ACTIF'
             abonnement.save()
+            jusquau = abonnement.date_fin
         atelier.est_actif = True
         atelier.save()
-        messages.success(request, f"La boutique {atelier.nom} est réactivée.")
+        messages.success(
+            request,
+            f"Nouvel abonnement activé : la boutique {atelier.nom} est "
+            f"fonctionnelle jusqu'au {jusquau:%d/%m/%Y} avec toutes ses "
+            f"anciennes données.")
     return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
 
 
@@ -256,21 +278,27 @@ def reactiver_boutique(request, boutique_id):
 def supprimer_boutique(request, boutique_id):
     atelier = get_object_or_404(Atelier, id=boutique_id)
     if request.method == 'POST':
-        nb = atelier.clients.count() + atelier.commandes.count() + atelier.depenses.count()
-        if nb:
+        infos = infos_expiration(atelier)
+        if not infos['supprimable']:
             messages.error(
                 request,
-                f"Suppression refusée : la boutique contient des données "
-                f"({nb} enregistrements clients/commandes/dépenses). "
-                f"Suspendez-la plutôt.")
-        else:
-            nom = atelier.nom
-            users = list(atelier.membres.values_list('user_id', flat=True))
-            atelier.delete()
-            # Les comptes devenus orphelins (plus aucun profil) partent aussi
-            User.objects.filter(id__in=users, profil__isnull=True).delete()
-            messages.success(request, f"Boutique « {nom} » supprimée.")
-            return redirect('saas_admin:superadmin_liste_boutiques')
+                f"Suppression refusée : les données de {atelier.nom} sont "
+                f"conservées jusqu'au {infos['echeance']:%d/%m/%Y} (3 mois "
+                f"sans abonnement). Activez un abonnement pour la "
+                f"réactiver, ou revenez après cette date.")
+            return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
+        if request.POST.get('confirmation') != 'SUPPRIMER':
+            messages.error(request, "Confirmation requise : tapez SUPPRIMER.")
+            return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
+        nom = atelier.nom
+        users = list(atelier.membres.values_list('user_id', flat=True))
+        atelier.delete()
+        User.objects.filter(id__in=users, profil__isnull=True).delete()
+        messages.success(
+            request,
+            f"Boutique « {nom} » supprimée totalement (données comprises) "
+            f"après la fin du délai de conservation.")
+        return redirect('saas_admin:superadmin_liste_boutiques')
     return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
 
 

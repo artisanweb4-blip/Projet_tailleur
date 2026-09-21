@@ -50,3 +50,34 @@ class TenantMiddleware:
             _thread_locals.atelier = None
 
         return response
+
+
+class AbonnementExpireMiddleware:
+    """
+    Bloque l'accès des boutiques non fonctionnelles (abonnement expiré,
+    suspendu ou absent) : toutes les routes renvoient vers la page
+    d'information, sauf celles nécessaires pour lire l'information,
+    changer de langue ou se déconnecter. Les données restent intactes.
+    """
+    EXEMPTS = (
+        '/abonnement-bloque',
+        '/langue/',
+        '/deconnexion/',
+        '/static/',
+        '/media/',
+    )
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, 'user', None)
+        atelier = getattr(request, 'atelier', None)
+        if (user is not None and user.is_authenticated
+                and not user.is_superuser and atelier is not None):
+            from .expiration import infos_expiration
+            if not infos_expiration(atelier)['fonctionnelle']:
+                if not request.path.startswith(self.EXEMPTS):
+                    from django.shortcuts import redirect
+                    return redirect('core:abonnement_bloque')
+        return self.get_response(request)
