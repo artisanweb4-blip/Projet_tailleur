@@ -187,13 +187,13 @@
                                   data-bs-toggle="modal" data-bs-target="#mensurationModal" data-edit-id="{{ m.id }}">
                             <i class="bi bi-pencil"></i>
                           </button>
-                          <form method="post" action="{% url 'core:supprimer_mensuration' m.id %}"
-                                class="d-inline-flex" onsubmit="return confirm('Supprimer cette fiche de mensurations ?');">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-sm btn-light text-danger" title="Supprimer">
-                              <i class="bi bi-trash"></i>
-                            </button>
-                          </form>
+                          <button type="button" class="btn btn-sm btn-light text-danger btn-suppr-mensuration"
+                                  title="Supprimer" data-bs-toggle="modal"
+                                  data-bs-target="#supprimerMensurationModal"
+                                  data-suppr-url="{% url 'core:supprimer_mensuration' m.id %}"
+                                  data-suppr-nom="{{ m.libelle }} — {{ m.nom_personne }}">
+                            <i class="bi bi-trash"></i>
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -218,7 +218,8 @@
           <h6 class="card-title mb-0 fw-bold text-dark">
             <i class="bi bi-bag-check me-2 text-primary"></i>Commandes
           </h6>
-          <a href="{% url 'core:liste_commandes' %}" class="btn btn-sm btn-primary rounded-pill px-3">
+          <a href="{% url 'core:liste_commandes' %}?nouvelle=1&client={{ client.id }}"
+             class="btn btn-sm btn-primary rounded-pill px-3">
             <i class="bi bi-plus-lg me-1"></i> Nouvelle commande
           </a>
         </div>
@@ -281,6 +282,34 @@
   </div>
 </div>
 
+
+<!-- ===== MODAL : Confirmation suppression mensuration ===== -->
+<div class="modal fade" id="supprimerMensurationModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white py-2">
+        <h6 class="modal-title fw-bold">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmer la suppression
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="formSupprMensuration">
+        {% csrf_token %}
+        <div class="modal-body py-3">
+          Supprimer définitivement la fiche de mensurations
+          <strong id="nomMensurationSuppr"></strong> ?
+          <div class="text-muted small mt-2">Cette action est irréversible.</div>
+        </div>
+        <div class="modal-footer border-0 py-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-sm btn-danger px-3">
+            <i class="bi bi-trash me-1"></i>Supprimer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <!-- ===== MODAL : Ajouter des mensurations ===== -->
 <div class="modal fade" id="mensurationModal" tabindex="-1" data-bs-backdrop="static">
@@ -698,6 +727,17 @@ document.addEventListener('DOMContentLoaded', function () {
   });
 
   modal.addEventListener('hidden.bs.modal', reinitialiserModal);
+
+  // --- Confirmation de suppression (petite modale) ---
+  const modalSupprMens = document.getElementById('supprimerMensurationModal');
+  const formSupprMens  = document.getElementById('formSupprMensuration');
+  const nomSupprMens   = document.getElementById('nomMensurationSuppr');
+  modalSupprMens.addEventListener('show.bs.modal', function (event) {
+    const trigger = event.relatedTarget;
+    if (!trigger) return;
+    formSupprMens.action = trigger.dataset.supprUrl || '';
+    nomSupprMens.textContent = trigger.dataset.supprNom || '';
+  });
 
   modal.addEventListener('shown.bs.modal', function () {
     ajusterHauteur();

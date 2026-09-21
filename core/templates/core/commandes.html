@@ -871,6 +871,23 @@
       });
     });
 
+  // --- Ouverture directe depuis la fiche client (?nouvelle=1&client=ID) ---
+  (function () {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('nouvelle') !== '1') return;
+    const cid = params.get('client');
+    if (cid) {
+      const c = clients.find(function (x) { return String(x.id) === String(cid); });
+      if (c) {
+        clientIdInput.value = c.id;
+        clientSearch.value = nomComplet(c) + ' — ' + (c.telephone || '');
+        clientSearch.classList.add('combo-chosen');
+      }
+    }
+    bootstrap.Modal.getOrCreateInstance(
+      document.getElementById('modalNouvelleCommande')).show();
+  })();
+
   function remplirSelect(select, items, labelFn, prixKey) {
     const first = select.querySelector('option');
     select.innerHTML = '';
