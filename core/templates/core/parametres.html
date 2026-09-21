@@ -460,7 +460,7 @@
                         </h5>
                         <p class="text-muted small mb-4">
                             {% tr "Copiez et restaurez les données de l'atelier (clients, commandes, paiements, stock, employés)." %}
-                            <br>{% tr "Les photos et logos (fichiers média) ne sont pas inclus dans la sauvegarde." %}
+                            <br>{% tr "Les photos et logos (fichiers média) ne sont pas inclus. Le fichier téléchargé est un classeur Excel (.xlsx) lisible ; la restauration accepte ce .xlsx." %}
                         </p>
 
                         {% if est_admin %}
@@ -526,7 +526,7 @@
                         <form method="POST" action="{% url 'core:sauvegarde_restaurer' %}"
                               enctype="multipart/form-data">
                             {% csrf_token %}
-                            <input type="file" name="fichier" accept=".json,application/json"
+                            <input type="file" name="fichier" accept=".xlsx,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                                    class="form-control mb-2" required>
                             <div class="form-check mb-3">
                                 <input class="form-check-input" type="checkbox" required

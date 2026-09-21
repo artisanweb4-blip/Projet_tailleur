@@ -45,4 +45,7 @@ urlpatterns = [
     path('utilisateurs/<int:user_id>/supprimer/', views.supprimer_utilisateur, name='supprimer_utilisateur'),
     path('utilisateurs/<int:user_id>/changer-statut/', views.changer_statut_utilisateur, name='changer_statut_utilisateur'),
     path('parametres/', views.superadmin_parametres, name='superadmin_parametres'),
+    path('sauvegardes/', views.sauvegardes_systeme, name='sauvegardes_systeme'),
+    path('sauvegardes/supprimer/', views.sauvegarde_systeme_supprimer, name='sauvegarde_systeme_supprimer'),
+    path('sauvegardes/<str:nom>/telecharger/', views.sauvegarde_systeme_telecharger, name='sauvegarde_systeme_telecharger'),
 ]

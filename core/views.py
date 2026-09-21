@@ -2400,7 +2400,7 @@ def sauvegarde_restaurer(request):
     if fichier.size > 20 * 1024 * 1024:
         messages.error(request, "Fichier trop volumineux (20 Mo maximum).")
         return redirect('core:parametres')
-    ok, message = restaurer_sauvegarde(atelier, fichier.read().decode('utf-8', errors='replace'))
+    ok, message = restaurer_sauvegarde(atelier, fichier.read(), fichier.name)
     if ok:
         messages.success(request, message)
     else:

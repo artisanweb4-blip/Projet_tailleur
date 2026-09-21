@@ -103,6 +103,9 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="{% url 'saas_admin:sauvegardes_systeme' %}" class="nav-link {% block nav_sauvegardes %}{% endblock %}">
+                        <i class="bi bi-hdd-stack me-2"></i>Sauvegardes
+                    </a>
                     <a href="{% url 'saas_admin:superadmin_liste_utilisateurs' %}" class="nav-link {% block nav_utilisateurs %}{% endblock %}">
                         <i class="bi bi-people"></i> Utilisateurs
                     </a>

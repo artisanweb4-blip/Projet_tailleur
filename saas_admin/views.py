@@ -10,6 +10,11 @@ from core.validators import generer_mot_de_passe_temporaire
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, Sum, Count
+from core.sauvegarde import (
+    chemin_sauvegarde_systeme, creer_sauvegarde_systeme,
+    lister_sauvegardes_systeme, supprimer_sauvegarde_systeme,
+)
+from django.http import FileResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from core.models import (
@@ -536,3 +541,35 @@ def superadmin_parametres(request):
         'active_tab': 'parametres',
     }
     return render(request, 'saas_admin/parametres.html', context)
+
+# ==========================================
+# SAUVEGARDES SYSTÈME (super-admin)
+# ==========================================
+@superadmin_required
+def sauvegardes_systeme(request):
+    if request.method == 'POST':
+        nom = creer_sauvegarde_systeme()
+        messages.success(request, f"Sauvegarde système créée : {nom}")
+        return redirect('saas_admin:sauvegardes_systeme')
+    return render(request, 'saas_admin/sauvegardes_systeme.html', {
+        'sauvegardes': lister_sauvegardes_systeme(),
+    })
+
+
+@superadmin_required
+def sauvegarde_systeme_telecharger(request, nom):
+    chemin = chemin_sauvegarde_systeme(nom)
+    if chemin is None:
+        messages.error(request, "Sauvegarde système introuvable.")
+        return redirect('saas_admin:sauvegardes_systeme')
+    return FileResponse(chemin.open('rb'), as_attachment=True, filename=nom)
+
+
+@superadmin_required
+def sauvegarde_systeme_supprimer(request):
+    if request.method == 'POST':
+        if supprimer_sauvegarde_systeme(request.POST.get('nom', '')):
+            messages.success(request, "Sauvegarde système supprimée.")
+        else:
+            messages.error(request, "Sauvegarde système introuvable.")
+    return redirect('saas_admin:sauvegardes_systeme')

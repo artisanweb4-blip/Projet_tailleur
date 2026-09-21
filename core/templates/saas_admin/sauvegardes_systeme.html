@@ -1,0 +1,90 @@
+{% extends "saas_admin/base_superadmin.html" %}
+
+{% block title %}Sauvegardes système - Super Admin TailleurPro{% endblock %}
+{% block nav_sauvegardes %}active{% endblock %}
+
+{% block top_navbar %}
+<div class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-3">
+    <div>
+        <h4 class="fw-bold mb-0">Sauvegardes système</h4>
+        <small class="text-muted">Archives Excel de toutes les données de la plateforme</small>
+    </div>
+    <form method="POST" class="d-inline">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-primary btn-sm fw-semibold">
+            <i class="bi bi-database-add me-1"></i> Créer une sauvegarde système
+        </button>
+    </form>
+</div>
+{% endblock %}
+
+{% block content %}
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        {% if sauvegardes %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Fichier</th>
+                        <th>Date</th>
+                        <th>Taille</th>
+                        <th class="text-end pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in sauvegardes %}
+                    <tr>
+                        <td class="ps-3">
+                            <i class="bi bi-file-earmark-excel text-success me-2"></i>
+                            <span class="fw-semibold small">{{ s.nom }}</span>
+                        </td>
+                        <td class="small">{{ s.date|date:"d/m/Y H:i" }}</td>
+                        <td class="small">{{ s.taille|filesizeformat }}</td>
+                        <td class="text-end pe-3 text-nowrap">
+                            <a class="btn btn-sm btn-outline-primary"
+                               href="{% url 'saas_admin:sauvegarde_systeme_telecharger' nom=s.nom %}">
+                                <i class="bi bi-download me-1"></i>Télécharger
+                            </a>
+                            <form method="POST" class="d-inline"
+                                  action="{% url 'saas_admin:sauvegarde_systeme_supprimer' %}"
+                                  onsubmit="return confirm('Supprimer définitivement cette sauvegarde système ?');">
+                                {% csrf_token %}
+                                <input type="hidden" name="nom" value="{{ s.nom }}">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash me-1"></i>Supprimer
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="bi bi-hdd-stack d-block mb-2" style="font-size: 2.2rem; color: #cbd5e1;"></i>
+            <p class="text-muted mb-0">Aucune sauvegarde système pour le moment.</p>
+            <p class="text-muted small">Créez-en une : toutes les boutiques, abonnements, comptes et données métier seront archivés dans un classeur Excel.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="alert alert-info border-0 shadow-sm mt-3 small mb-0">
+    <i class="bi bi-info-circle me-1"></i>
+    Contenu du classeur : une feuille par modèle métier (toutes boutiques confondues),
+    plus les feuilles Ateliers, Abonnements, Formules, Profils et Comptes.
+    Archive destinée au super-admin : elle ne sert pas à restaurer une boutique
+    individuellement (chaque propriétaire restaure la sienne depuis Paramètres &gt; Sauvegarde).
+</div>
+{% endblock %}
