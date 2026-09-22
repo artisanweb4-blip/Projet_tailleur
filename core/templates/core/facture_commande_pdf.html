@@ -99,13 +99,21 @@
             <th width="18%">P.U.</th>
             <th width="18%">Total</th>
         </tr>
-        {% for lib, qte, pu, tot in lignes_detail %}
+        {% for lib, qte, pu, tot, accs in lignes_detail %}
         <tr class="{% cycle '' 'zebre' %}">
             <td>{{ lib }}</td>
             <td>{{ qte }}</td>
             <td class="text-end">{{ pu|floatformat:0 }}</td>
             <td class="text-end">{{ tot|floatformat:0 }}</td>
         </tr>
+        {% for anom, aqte, apu, atot in accs %}
+        <tr class="zebre">
+            <td style="padding-left: 22px;">&#8627; Accessoire : {{ anom }}</td>
+            <td>{{ aqte }}</td>
+            <td class="text-end">{{ apu|floatformat:0 }}</td>
+            <td class="text-end">{{ atot|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
         {% endfor %}
         {% if commande.remise_type and commande.remise_valeur %}
         <tr>

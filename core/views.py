@@ -1132,6 +1132,7 @@ def _extraire_lignes_post(post_data, files_data=None):
         prefix = f'ligne_{i}_'
         lignes.append({
             'index': i,
+            'id': post_data.get(f'{prefix}id', ''),
             'type_ligne': post_data.get(f'{prefix}type', 'COUTURE'),
             'modele_id': post_data.get(f'{prefix}modele_id', ''),
             'description': post_data.get(f'{prefix}description', ''),
@@ -1226,6 +1227,74 @@ def _sync_lignes_couture(request, commande, atelier):
     for data in lignes_data:
         _creer_ligne_couture(atelier, commande, data, ordre, request.FILES)
         ordre += 1
+    return commande.lignes.count()
+
+
+def _sync_lignes_commande(request, commande, atelier):
+    """Synchronisation complète des lignes de couture (modale de modification) :
+    les lignes envoyées avec un id existant sont mises à jour, les autres sont
+    créées, celles absentes du formulaire sont supprimées."""
+    lignes_data = _extraire_lignes_post(request.POST, request.FILES)
+    existantes = {l.pk: l for l in commande.lignes.all()}
+    gardees = set()
+    ordre = 1
+    for data in lignes_data:
+        lid = _to_int(data.get('id'), 0)
+        ligne = existantes.get(lid) if lid else None
+        if ligne is None:
+            _creer_ligne_couture(atelier, commande, data, ordre, request.FILES)
+            ordre += 1
+            continue
+        gardees.add(ligne.pk)
+        ligne.ordre = ordre
+        ligne.prix_unitaire = _to_decimal(data.get('prix_unitaire'))
+        ligne.quantite = _to_int(data.get('quantite'), 1)
+        ligne.description = data.get('description', '')
+        ligne.remise_type = data.get('remise_type') or None
+        ligne.remise_valeur = _to_decimal(data.get('remise_valeur'))
+        if data.get('modele_id'):
+            ligne.modele = CatalogueModele.objects.filter(
+                pk=data['modele_id'], atelier=atelier).first()
+        if data.get('employe_id'):
+            ligne.employe = Employe.objects.filter(
+                pk=data['employe_id'], atelier=atelier).first()
+        if data.get('mensuration_id'):
+            ligne.mensuration = Mensuration.objects.filter(
+                pk=data['mensuration_id'], atelier=atelier).first()
+        if data.get('client_secondaire_id'):
+            ligne.client_secondaire = Client.objects.filter(
+                pk=data['client_secondaire_id'], atelier=atelier).first()
+        idx = data.get('index', ordre)
+        if request.FILES:
+            for cle, champ in (
+                (f'ligne_{idx}_photo_tissu', 'photo_tissu'),
+                (f'ligne_{idx}_photo_modele_custom', 'photo_modele_custom'),
+            ):
+                if cle in request.FILES:
+                    setattr(ligne, champ, request.FILES[cle])
+        ligne.save()
+        ligne.accessoires_ligne.all().delete()
+        for acc_id, qte, prix in zip(
+            data.get('accessoires_ids', []),
+            data.get('accessoires_qtes', []),
+            data.get('accessoires_prix', []),
+        ):
+            if not acc_id:
+                continue
+            acc = Accessoire.objects.filter(pk=acc_id, atelier=atelier).first()
+            if not acc:
+                continue
+            LigneAccessoire.objects.create(
+                atelier=atelier,
+                ligne=ligne,
+                accessoire=acc,
+                quantite=_to_int(qte, 1),
+                prix_unitaire=_to_decimal(prix, str(acc.prix_unitaire)),
+            )
+        ordre += 1
+    for pk, ligne in existantes.items():
+        if pk not in gardees:
+            ligne.delete()
     return commande.lignes.count()
 
 
@@ -1496,10 +1565,35 @@ def detail_commande(request, pk):
         'reste_int': int(commande.reste_a_payer),
         'prix_net_int': int(commande.prix_net),
         'atelier': atelier,
-        'clients_json': json.dumps(clients_data, default=str),
-        'catalogue_json': json.dumps(catalogue, default=str),
-        'accessoires_json': json.dumps(accessoires_data, default=str),
-        'employes_json': _employes_json(atelier),
+        **_ctx_formulaire_commande(atelier),
+        'commande_edit': {
+            'id': commande.pk,
+            'code': commande.code,
+            'date_livraison': commande.date_livraison_prevue.strftime('%Y-%m-%d')
+            if commande.date_livraison_prevue else '',
+            'statut': commande.statut,
+            'employe_id': commande.employe_attribue_id or '',
+            'notes': commande.notes or '',
+            'remise_type': commande.remise_type or '',
+            'remise_valeur': float(commande.remise_valeur)
+            if commande.remise_valeur else 0,
+            'url_edit': reverse('core:modifier_commande', args=[commande.pk]),
+            'lignes': [{
+                'id': l.pk,
+                'modele_id': l.modele_id or '',
+                'description': l.description or '',
+                'prix_unitaire': float(l.prix_unitaire) if l.prix_unitaire else 0,
+                'quantite': l.quantite,
+                'employe_id': l.employe_id or '',
+                'remise_type': l.remise_type or '',
+                'remise_valeur': float(l.remise_valeur) if l.remise_valeur else 0,
+                'accessoires': [{
+                    'id': la.accessoire_id,
+                    'qte': la.quantite,
+                    'prix': float(la.prix_unitaire) if la.prix_unitaire else 0,
+                } for la in l.accessoires_ligne.all()],
+            } for l in commande.lignes.all()],
+        },
     })
 
 
@@ -1533,7 +1627,7 @@ def modifier_commande(request, pk):
                 type_ligne='COUTURE', employe__isnull=True
             ).update(employe_id=commande.employe_attribue_id)
 
-        _sync_lignes_couture(request, commande, atelier)
+        _sync_lignes_commande(request, commande, atelier)
 
     messages.success(request, f"Commande {commande.code} mise à jour.")
     return redirect('core:detail_commande', pk=commande.pk)
@@ -2248,12 +2342,18 @@ def _logo_data_uri(atelier):
 
 
 def _lignes_detail(lignes):
-    """Libellé / qté / PU / total de chaque ligne de commande."""
+    """Libellé / qté / PU / total + accessoires de chaque ligne."""
     detail = []
     for l in lignes:
         lib = l.modele.nom if l.modele else (l.description or 'Confection sur mesure')
         tot = (l.prix_unitaire or 0) * l.quantite
-        detail.append((lib, l.quantite, l.prix_unitaire, tot))
+        accs = [(
+            la.accessoire.nom,
+            la.quantite,
+            la.prix_unitaire,
+            (la.prix_unitaire or 0) * la.quantite,
+        ) for la in l.accessoires_ligne.select_related('accessoire').all()]
+        detail.append((lib, l.quantite, l.prix_unitaire, tot, accs))
     return detail
 
 

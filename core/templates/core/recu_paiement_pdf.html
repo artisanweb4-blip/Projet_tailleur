@@ -20,9 +20,7 @@
         .info { font-size: 9.5px; line-height: 1.8; }
         .info .libelle { color: #64748b; }
 
-        .montant-box { background-color: #e8efff; border: 1px solid #c7d7f8;
-                       padding: 10px 14px; text-align: center; margin-top: 12px; }
-        .montant-label { font-size: 9px; color: #2b59c3; text-transform: uppercase;
+                .montant-label { font-size: 9px; color: #2b59c3; text-transform: uppercase;
                          letter-spacing: 0.5px; }
         .montant { font-size: 20px; font-weight: bold; color: #2b59c3; }
 
@@ -71,14 +69,6 @@
         {% if paiement %}Reçu n° {{ paiement.id }} du {{ paiement.date_paiement|date:"d/m/Y" }}{% endif %}
     </div>
 
-    <!-- ===== MONTANT ENCAISSÉ ===== -->
-    {% if paiement %}
-    <div class="montant-box">
-        <div class="montant-label">Montant reçu ({% if paiement.mode_paiement %}{{ paiement.get_mode_paiement_display }}{% endif %})</div>
-        <div class="montant">{{ paiement.montant|floatformat:0 }} {{ atelier.devise }}</div>
-    </div>
-    {% endif %}
-
     <!-- ===== CLIENT / COMMANDE ===== -->
     <table width="100%" style="margin-top: 14px;">
         <tr>
@@ -109,13 +99,21 @@
             <th width="18%">P.U.</th>
             <th width="18%">Total</th>
         </tr>
-        {% for lib, qte, pu, tot in lignes_detail %}
+        {% for lib, qte, pu, tot, accs in lignes_detail %}
         <tr class="{% cycle '' 'zebre' %}">
             <td>{{ lib }}</td>
             <td>{{ qte }}</td>
             <td class="text-end">{{ pu|floatformat:0 }}</td>
             <td class="text-end">{{ tot|floatformat:0 }}</td>
         </tr>
+        {% for anom, aqte, apu, atot in accs %}
+        <tr class="zebre">
+            <td style="padding-left: 22px;">&#8627; Accessoire : {{ anom }}</td>
+            <td>{{ aqte }}</td>
+            <td class="text-end">{{ apu|floatformat:0 }}</td>
+            <td class="text-end">{{ atot|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
         {% endfor %}
         <tr>
             <td colspan="3" class="text-end total-lib">Total net</td>

@@ -76,7 +76,7 @@
 
       <div class="modal-header bg-primary text-white">
         <h5 class="modal-title fw-bold">
-          <i class="bi bi-plus-circle me-2"></i>Nouvelle Commande &mdash; Couture sur mesure
+          <i class="bi bi-plus-circle me-2"></i><span id="titreModalCommande">Nouvelle Commande &mdash; Couture sur mesure</span>
         </h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
@@ -249,6 +249,7 @@
     </div>
     <div class="card-body">
 
+      <input type="hidden" name="ligne___N___id" class="input-ligne-id" value="">
       <div class="row g-3 mb-3">
         <div class="col-md-5">
           <label class="form-label fw-semibold">Modèle du catalogue</label>
@@ -422,6 +423,8 @@
   const infoEmpGlobal  = document.getElementById('info_charge_globale');
 
   let nextId = 0;
+  const ACTION_AJOUT = form.action;
+  const TITRE_AJOUT  = document.getElementById('titreModalCommande').textContent;
 
   const fmt = n => (Math.round(n * 100) / 100).toLocaleString('fr-FR');
   const nomComplet = c => (c.nom + ' ' + (c.prenom || '')).trim();
@@ -494,15 +497,59 @@
       });
     });
 
-  // --- Pré-sélection du client depuis le bouton déclencheur (fiche client) ---
+  // --- Déclencheur : pré-sélection client + mode édition éventuel ---
   document.getElementById('modalNouvelleCommande')
     .addEventListener('show.bs.modal', function (event) {
       const t = event.relatedTarget;
-      if (!t || !t.dataset || !t.dataset.clientId) return;
-      clientIdInput.value = t.dataset.clientId;
-      clientSearch.value = (t.dataset.clientNom || '') +
-        (t.dataset.clientTel ? ' — ' + t.dataset.clientTel : '');
-      clientSearch.classList.add('combo-chosen');
+      if (!t || !t.dataset) return;
+      if (t.dataset.clientId) {
+        clientIdInput.value = t.dataset.clientId;
+        clientSearch.value = (t.dataset.clientNom || '') +
+          (t.dataset.clientTel ? ' — ' + t.dataset.clientTel : '');
+        clientSearch.classList.add('combo-chosen');
+      }
+      const editId = t.dataset.editCommande;
+      const src = document.getElementById('commande-edit-data');
+      if (!editId || !src) return;
+      let data = null;
+      try { data = JSON.parse(src.textContent || 'null'); } catch (e) { data = null; }
+      if (!data || String(data.id) !== String(editId)) return;
+
+      // Mode modification : même formulaire que l'ajout, pré-rempli
+      document.getElementById('titreModalCommande').textContent =
+        'Modifier la commande ' + data.code;
+      form.action = data.url_edit;
+      const dateIn = form.querySelector('[name="date_livraison_prevue"]');
+      if (dateIn) dateIn.value = data.date_livraison || '';
+      const statSel = form.querySelector('[name="statut"]');
+      if (statSel && data.statut) statSel.value = data.statut;
+      if (data.employe_id) selEmpGlobal.value = String(data.employe_id);
+      const notesIn = form.querySelector('[name="notes"]');
+      if (notesIn) notesIn.value = data.notes || '';
+      const rtSel = document.getElementById('remise_type_global');
+      if (rtSel) {
+        rtSel.value = data.remise_type || '';
+        rtSel.dispatchEvent(new Event('change'));
+      }
+      const rvIn = document.getElementById('remise_valeur_global');
+      if (rvIn) rvIn.value = data.remise_valeur || 0;
+
+      // L'acompte ne se saisit qu'à la création
+      const accIn = document.getElementById('id_acompte');
+      if (accIn) {
+        const colAcc = accIn.closest('.col-md-4');
+        if (colAcc) {
+          colAcc.classList.add('d-none');
+          if (colAcc.nextElementSibling) colAcc.nextElementSibling.classList.add('d-none');
+        }
+      }
+
+      // Lignes existantes pré-remplies (et possibilité d'en ajouter)
+      conteneur.innerHTML = '';
+      nextId = 0;
+      (data.lignes || []).forEach(creerLigneAvec);
+      recalculerTotal();
+      majCompteurs();
     });
 
   // --- Ouverture directe depuis la fiche client (?nouvelle=1&client=ID) ---
@@ -650,6 +697,42 @@
       ic.classList.add('d-none');
       msg.classList.add('d-none');
     }
+  }
+
+  function creerLigneAvec(d) {
+    creerLigne();
+    const n = nextId;
+    const el = conteneur.querySelector('[data-ligne="' + n + '"]');
+    if (!el) return null;
+    el.querySelector('.input-ligne-id').value = d.id || '';
+    if (d.modele_id) {
+      el.querySelector('.select-modele-ligne').value = String(d.modele_id);
+    }
+    el.querySelector('.input-prix-ligne').value = d.prix_unitaire || 0;
+    el.querySelector('.input-qte-ligne').value = d.quantite || 1;
+    if (d.description) {
+      el.querySelector('[name="ligne_' + n + '_description"]').value = d.description;
+    }
+    if (d.employe_id) {
+      const s2 = el.querySelector('.select-employe-ligne');
+      s2.value = String(d.employe_id);
+      s2.dataset.manuel = '1';
+      afficherCharge(s2, el.querySelector('.info-charge-ligne'));
+    }
+    if (d.remise_type) {
+      el.querySelector('.select-remise-ligne').value = d.remise_type;
+      el.querySelector('.input-remise-ligne').value = d.remise_valeur || 0;
+    }
+    (d.accessoires || []).forEach(function (a) {
+      ajouterAcc(el.querySelector('.conteneur-acc-ligne'), n, el);
+      const rows = el.querySelectorAll('.acc-ligne-row');
+      const r = rows[rows.length - 1];
+      if (!r) return;
+      r.querySelector('.select-acc-item').value = String(a.id);
+      r.querySelector('[name="ligne_' + n + '_acc_qtes[]"]').value = a.qte;
+      r.querySelector('[name="ligne_' + n + '_acc_prix[]"]').value = a.prix;
+    });
+    return el;
   }
 
   function bindLigne(card, n) {
@@ -892,11 +975,23 @@
   // ============ RESET ============
   document.getElementById('modalNouvelleCommande')
     .addEventListener('hidden.bs.modal', function () {
+      form.action = ACTION_AJOUT;
+      document.getElementById('titreModalCommande').textContent = TITRE_AJOUT;
       form.reset();
+      document.getElementById('remise_type_global')
+        .dispatchEvent(new Event('change'));
       clientIdInput.value = '';
       clientSearch.value = '';
       clientSearch.classList.remove('combo-chosen');
       infoEmpGlobal.textContent = '';
+      const accIn2 = document.getElementById('id_acompte');
+      if (accIn2) {
+        const colAcc2 = accIn2.closest('.col-md-4');
+        if (colAcc2) {
+          colAcc2.classList.remove('d-none');
+          if (colAcc2.nextElementSibling) colAcc2.nextElementSibling.classList.remove('d-none');
+        }
+      }
       conteneur.innerHTML = '';
       nextId = 0;
       creerLigne();
