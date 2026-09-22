@@ -51,6 +51,20 @@
 
     .empty-e { padding:4rem 1rem; text-align:center; color:#9ca3af;
                background:#fff; border:1px solid #eef0f6; border-radius:14px; }
+
+    /* Sections repliables du modal d'ajout employé */
+    #modalAjoutEmploye .sect { border:1px solid #eef0f6; border-radius:12px;
+                               margin-bottom:1rem; overflow:hidden; background:#fff; }
+    #modalAjoutEmploye .sect-head {
+        display:flex; align-items:center; justify-content:space-between; gap:.5rem;
+        padding:.7rem .95rem; background:#f5f7ff; font-weight:600; font-size:.9rem;
+        color:#111827; cursor:pointer; user-select:none;
+    }
+    #modalAjoutEmploye .sect-head:hover { background:#e8efff; }
+    #modalAjoutEmploye .sect-head .chev { transition:transform .2s; color:var(--primary-color); }
+    #modalAjoutEmploye .sect.collapsed .sect-head .chev { transform:rotate(-90deg); }
+    #modalAjoutEmploye .sect-body { padding:1rem .95rem; border-top:1px solid #eef0f6; }
+    #modalAjoutEmploye .sect.collapsed .sect-body { display:none; }
 </style>
 {% endblock %}
 

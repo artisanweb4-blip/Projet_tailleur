@@ -96,7 +96,7 @@
                     data-bs-toggle="modal" data-bs-target="#modalEditEmploye">
                 <i class="bi bi-pencil me-1"></i>Modifier
             </button>
-            <button type="button" class="btn btn-sm btn-success"
+            <button type="button" class="btn btn-sm btn-primary"
                     data-bs-toggle="modal" data-bs-target="#modalPaie">
                 <i class="bi bi-cash-coin me-1"></i>Enregistrer une paie
             </button>
@@ -456,13 +456,12 @@
                     La suppression retire l'employé du registre. Les coutures liées
                     resteront mais sans couturier assigné.
                 </p>
-                <form method="post" action="{% url 'core:supprimer_employe' emp.pk %}"
-                      onsubmit="return confirm('Supprimer définitivement {{ emp.nom_complet }} ?');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-sm btn-outline-danger w-100">
-                        <i class="bi bi-trash me-1"></i>Supprimer cet employé
-                    </button>
-                </form>
+                <button type="button" class="btn btn-sm btn-outline-danger w-100"
+                        data-bs-toggle="modal" data-bs-target="#supprimerEmployeModal"
+                        data-suppr-url="{% url 'core:supprimer_employe' emp.pk %}"
+                        data-suppr-nom="{{ emp.nom_complet }}">
+                    <i class="bi bi-trash me-1"></i>Supprimer cet employé
+                </button>
             </div>
 
         </div>
@@ -616,8 +615,8 @@
         <div class="modal-content border-0 shadow">
             <form method="POST" action="{% url 'core:creer_paie' emp.pk %}">
                 {% csrf_token %}
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title fw-bold">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold text-white">
                         <i class="bi bi-cash-coin me-2"></i>Enregistrer une paie
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -678,6 +677,37 @@
     </div>
 </div>
 
+<!-- Petite modale de confirmation : suppression de l'employé -->
+<div class="modal fade" id="supprimerEmployeModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-danger text-white py-2">
+                <h6 class="modal-title fw-bold text-white">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmer la suppression
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" id="formSupprEmploye">
+                {% csrf_token %}
+                <div class="modal-body py-3">
+                    Supprimer définitivement l'employé <strong id="nomEmployeSuppr"></strong> ?
+                    <div class="text-muted small mt-2">
+                        Cette action est irréversible. Les coutures liées resteront mais sans
+                        couturier assigné. Impossible tant que l'employé a des coutures en cours.
+                    </div>
+                </div>
+                <div class="modal-footer border-0 py-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary px-3"
+                            data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-sm btn-danger px-3">
+                        <i class="bi bi-trash me-1"></i>Supprimer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 document.addEventListener('DOMContentLoaded', function () {
 
@@ -696,6 +726,17 @@ document.addEventListener('DOMContentLoaded', function () {
         r.addEventListener('change', majRemuEdit);
     });
     majRemuEdit();
+
+    /* Confirmation suppression employé (petite modale) */
+    const modalSupprEmp = document.getElementById('supprimerEmployeModal');
+    if (modalSupprEmp) {
+        modalSupprEmp.addEventListener('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget;
+            if (!trigger) return;
+            document.getElementById('formSupprEmploye').action = trigger.dataset.supprUrl || '';
+            document.getElementById('nomEmployeSuppr').textContent = trigger.dataset.supprNom || '';
+        });
+    }
 
     /* Période de paie : mois en cours par défaut */
     const modalPaie = document.getElementById('modalPaie');

@@ -91,14 +91,14 @@
       </div>
     </div>
 
-    <div class="d-flex gap-2">
-      <a href="{% url 'core:liste_clients' %}" class="btn btn-outline-secondary">
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="{% url 'core:liste_clients' %}" class="btn btn-light border">
         <i class="bi bi-arrow-left me-1"></i> Retour
       </a>
-      <button type="button" class="btn btn-outline-dark" data-bs-toggle="modal" data-bs-target="#modifierClientModal">
+      <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modifierClientModal">
         <i class="bi bi-pencil me-1"></i> Modifier
       </button>
-      <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#supprimerClientModal">
+      <button type="button" class="btn btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#supprimerClientModal">
         <i class="bi bi-trash me-1"></i> Supprimer
       </button>
     </div>
