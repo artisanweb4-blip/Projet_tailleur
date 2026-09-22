@@ -709,6 +709,7 @@ def detail_client(request, pk):
         'atelier': atelier,
         'initiales_client': initiales,
         'fiches_json': fiches_json,
+        **_ctx_formulaire_commande(atelier),
     })
 
 
@@ -1247,6 +1248,32 @@ def _sync_lignes_couture(request, commande, atelier):
 # ==========================================
 # 6bis. COMMANDES — VUES
 # ==========================================
+def _ctx_formulaire_commande(atelier):
+    """Contexte JSON + form du formulaire de commande (modale réutilisable)."""
+    clients_data = list(
+        Client.objects.filter(atelier=atelier).values(
+            'id', 'nom', 'prenom', 'telephone'
+        ).order_by('nom', 'prenom')
+    )
+    catalogue = list(
+        CatalogueModele.objects.filter(
+            atelier=atelier, type_modele='COUTURE'
+        ).values('id', 'nom', 'prix_base', 'type_modele')
+    )
+    accessoires_data = list(
+        Accessoire.objects.filter(atelier=atelier).values(
+            'id', 'nom', 'prix_unitaire', 'unite', 'stock_disponible'
+        )
+    )
+    return {
+        'form_commande': CommandeForm(atelier=atelier),
+        'clients_json': json.dumps(clients_data, default=str),
+        'catalogue_json': json.dumps(catalogue, default=str),
+        'accessoires_json': json.dumps(accessoires_data, default=str),
+        'employes_json': _employes_json(atelier),
+    }
+
+
 @login_required
 @droit_requis('commandes_voir')
 def liste_commandes(request):
@@ -1338,21 +1365,6 @@ def liste_commandes(request):
             'pct_avancement': c.pct_avancement,
         })
 
-    clients_data = list(
-        Client.objects.filter(atelier=atelier).values(
-            'id', 'nom', 'prenom', 'telephone'
-        ).order_by('nom', 'prenom')
-    )
-    catalogue = list(
-        CatalogueModele.objects.filter(
-            atelier=atelier, type_modele='COUTURE'
-        ).values('id', 'nom', 'prix_base', 'type_modele')
-    )
-    accessoires_data = list(
-        Accessoire.objects.filter(atelier=atelier).values(
-            'id', 'nom', 'prix_unitaire', 'unite', 'stock_disponible'
-        )
-    )
 
     return render(request, 'core/commandes.html', {
         'rows': rows,
@@ -1372,12 +1384,8 @@ def liste_commandes(request):
         'total_reste': total_reste,
         'nb_en_retard': nb_en_retard,
         'nb_non_attribuees': nb_non_attribuees,
-        'form_commande': CommandeForm(atelier=atelier),
         'atelier': atelier,
-        'clients_json': json.dumps(clients_data, default=str),
-        'catalogue_json': json.dumps(catalogue, default=str),
-        'accessoires_json': json.dumps(accessoires_data, default=str),
-        'employes_json': _employes_json(atelier),
+        **_ctx_formulaire_commande(atelier),
     })
 
 

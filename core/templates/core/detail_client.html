@@ -218,10 +218,15 @@
           <h6 class="card-title mb-0 fw-bold text-dark">
             <i class="bi bi-bag-check me-2 text-primary"></i>Commandes
           </h6>
-          <a href="{% url 'core:liste_commandes' %}?nouvelle=1&client={{ client.id }}"
-             class="btn btn-sm btn-primary rounded-pill px-3">
+          {% if peut.commandes_creer %}
+          <button type="button" class="btn btn-sm btn-primary rounded-pill px-3"
+                  data-bs-toggle="modal" data-bs-target="#modalNouvelleCommande"
+                  data-client-id="{{ client.id }}"
+                  data-client-nom="{{ client.nom }}{% if client.prenom %} {{ client.prenom }}{% endif %}"
+                  data-client-tel="{{ client.telephone|default:'' }}">
             <i class="bi bi-plus-lg me-1"></i> Nouvelle commande
-          </a>
+          </button>
+          {% endif %}
         </div>
         <div class="card-body p-0">
           {% if commandes %}
@@ -835,4 +840,6 @@ document.addEventListener('DOMContentLoaded', function () {
   majCompteurs();
 });
 </script>
+{% if peut.commandes_creer %}{% include "core/partials/formulaire_commande.html" %}{% endif %}
+
 {% endblock %}
