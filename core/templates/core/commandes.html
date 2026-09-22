@@ -295,8 +295,12 @@
                                 <li><a class="dropdown-item" href="{% url 'core:facture_commande_pdf' r.c.pk %}">
                                     <i class="bi bi-file-earmark-pdf me-2"></i>Facture (PDF)</a></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="{% url 'core:supprimer_commande' r.c.pk %}">
-                                    <i class="bi bi-trash me-2"></i>Supprimer</a></li>
+                                <li><button type="button" class="dropdown-item text-danger"
+                                        data-bs-toggle="modal" data-bs-target="#supprimerCommandeModal"
+                                        data-suppr-url="{% url 'core:supprimer_commande' r.c.pk %}"
+                                        data-suppr-nom="{{ r.c.code }} — {{ r.c.client.nom }}"
+                                        data-suppr-montant="{{ r.c.prix_total|floatformat:0 }} {{ atelier.devise }}">
+                                    <i class="bi bi-trash me-2"></i>Supprimer</button></li>
                             </ul>
                         </div>
                     </div>
@@ -377,6 +381,37 @@
      MODAL NOUVELLE COMMANDE
      ============================================================ -->
 {% include "core/partials/formulaire_commande.html" %}
+<!-- Petite modale de confirmation : suppression d'une commande -->
+<div class="modal fade" id="supprimerCommandeModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow">
+      <div class="modal-header bg-danger text-white py-2">
+        <h6 class="modal-title fw-bold text-white">
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmer la suppression
+        </h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" id="formSupprCommande">
+        {% csrf_token %}
+        <div class="modal-body py-3">
+          Supprimer définitivement la commande <strong id="nomCommandeSuppr"></strong> ?
+          <div class="mt-2 small">Montant : <strong id="montantCommandeSuppr"></strong></div>
+          <div class="text-muted small mt-2">
+            Cette action est irréversible. Si la commande avait décrémenté le stock,
+            celui-ci sera restitué automatiquement.
+          </div>
+        </div>
+        <div class="modal-footer border-0 py-2">
+          <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Annuler</button>
+          <button type="submit" class="btn btn-sm btn-danger px-3">
+            <i class="bi bi-trash me-1"></i>Supprimer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 {% block extra_js %}
 <script>
@@ -393,5 +428,17 @@
     try { v = localStorage.getItem(CLE) || 'grille'; } catch (e) {}
     appliquer(v);
 })();
+  // --- Confirmation de suppression d'une commande (petite modale) ---
+  const modalSupprCmd = document.getElementById('supprimerCommandeModal');
+  const formSupprCmd  = document.getElementById('formSupprCommande');
+  const nomSupprCmd   = document.getElementById('nomCommandeSuppr');
+  const mntSupprCmd   = document.getElementById('montantCommandeSuppr');
+  modalSupprCmd.addEventListener('show.bs.modal', function (event) {
+    const trigger = event.relatedTarget;
+    if (!trigger) return;
+    formSupprCmd.action   = trigger.dataset.supprUrl || '';
+    nomSupprCmd.textContent = trigger.dataset.supprNom || '';
+    mntSupprCmd.textContent = trigger.dataset.supprMontant || '';
+  });
 </script>
 {% endblock %}
