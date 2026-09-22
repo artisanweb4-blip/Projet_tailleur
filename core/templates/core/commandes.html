@@ -43,10 +43,10 @@
             <p class="text-muted small mb-0">Coutures sur mesure de l'atelier.</p>
         </div>
         <div class="d-flex gap-2">
-            <a href="{% url 'core:plan_charge' %}" class="btn btn-outline-secondary">
+            <a href="{% url 'core:plan_charge' %}" class="btn btn-primary">
                 <i class="bi bi-people me-1"></i> Plan de charge
             </a>
-            <a href="{% url 'core:liste_ventes_directes' %}" class="btn btn-outline-primary">
+            <a href="{% url 'core:liste_ventes_directes' %}" class="btn btn-primary">
                 <i class="bi bi-bag-check-fill me-1"></i> Ventes directes
             </a>
             <div class="btn-group btn-group-sm" role="group" aria-label="Affichage">
@@ -272,14 +272,14 @@
                     <div class="col-5 col-lg-2 text-end">
                         <div class="btn-group btn-group-sm">
                             <a href="{% url 'core:detail_commande' r.c.pk %}"
-                               class="btn btn-primary" title="Détail">
+                               class="btn btn-light text-dark" title="Détail">
                                 <i class="bi bi-eye"></i>
                             </a>
                             <a href="{% url 'core:fiche_atelier_pdf' r.c.pk %}"
-                               class="btn btn-primary" title="Fiche atelier">
+                               class="btn btn-light text-dark" title="Fiche atelier">
                                 <i class="bi bi-rulers"></i>
                             </a>
-                            <button type="button" class="btn btn-primary dropdown-toggle"
+                            <button type="button" class="btn btn-light text-dark dropdown-toggle"
                                     data-bs-toggle="dropdown" aria-expanded="false"></button>
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><a class="dropdown-item" href="{% url 'core:fiche_atelier_pdf' r.c.pk %}">
@@ -331,8 +331,8 @@
                                     <div class="cmd-meta">{% if r.c.est_soldee %}Soldée{% else %}Reste {{ r.c.reste_a_payer|floatformat:0 }}{% endif %}</div></td>
                                 <td class="text-end pe-3">
                                     <div class="btn-group btn-group-sm">
-                                        <a href="{% url 'core:detail_commande' r.c.pk %}" class="btn btn-primary" title="Détail"><i class="bi bi-eye"></i></a>
-                                        <a href="{% url 'core:fiche_atelier_pdf' r.c.pk %}" class="btn btn-primary" title="Fiche atelier"><i class="bi bi-rulers"></i></a>
+                                        <a href="{% url 'core:detail_commande' r.c.pk %}" class="btn btn-light text-dark" title="Détail"><i class="bi bi-eye"></i></a>
+                                        <a href="{% url 'core:fiche_atelier_pdf' r.c.pk %}" class="btn btn-light text-dark" title="Fiche atelier"><i class="bi bi-rulers"></i></a>
                                     </div>
                                 </td>
                             </tr>
