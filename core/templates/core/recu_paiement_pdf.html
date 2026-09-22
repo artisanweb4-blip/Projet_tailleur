@@ -1,172 +1,158 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <style>
-    body { font-family: Arial, sans-serif; font-size: 13px; color: #333; }
-    .container { max-width: 680px; margin: 0 auto; padding: 20px; }
-    .header { background-color: #0d6efd; color: white;
-              padding: 15px 20px; border-radius: 6px 6px 0 0; }
-    .header h5 { margin: 0; font-size: 16px; }
-    .header small { font-size: 12px; }
-    .body { border: 1px solid #dee2e6; border-top: none;
-            padding: 20px; border-radius: 0 0 6px 6px; }
-    .info-left { float: left; width: 50%; }
-    .info-right { float: right; width: 50%; text-align: right; }
-    .clearfix { clear: both; }
-    p { margin: 2px 0; font-size: 12px; }
-    .label { color: #6c757d; font-size: 11px; }
-    .value { font-weight: bold; }
-    hr { border: none; border-top: 1px solid #dee2e6; margin: 15px 0; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-    table th { background-color: #f8f9fa; padding: 8px 10px;
-               text-align: left; font-size: 12px; border: 1px solid #dee2e6; }
-    table td { padding: 8px 10px; font-size: 12px; border: 1px solid #dee2e6; }
-    .text-end { text-align: right; }
-    .row-remise td { background-color: #fff3cd; }
-    .row-net td { background-color: #f8f9fa; font-weight: bold; }
-    .row-acompte td { background-color: #d1e7dd; }
-    .row-reste td { background-color: #f8d7da; font-weight: bold; }
-    .alert-info-box { background-color: #cff4fc; border: 1px solid #b6effb;
-                      padding: 8px 12px; border-radius: 4px;
-                      font-size: 12px; margin-bottom: 15px; }
-    .badge-code { background-color: #ffffff; color: #0d6efd;
-                  padding: 4px 10px; border-radius: 4px;
-                  font-size: 13px; font-weight: bold; float: right; }
-    .sig-left { float: left; width: 45%; text-align: center; }
-    .sig-right { float: right; width: 45%; text-align: center; }
-    .sig-label { font-size: 11px; color: #6c757d; margin-bottom: 5px; }
-    .sig-line { border-top: 1px solid #aaa; margin-top: 40px; }
-  </style>
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A4; margin: 1.6cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 10px; color: #1e293b; }
+
+        .nom-atelier { font-size: 16px; font-weight: bold; color: #2b59c3; }
+        .coordonnees { font-size: 8.5px; color: #64748b; line-height: 1.5; }
+        .logo { max-height: 64px; max-width: 150px; }
+
+        .bandeau { background-color: #2b59c3; color: #ffffff; font-size: 13px;
+                   font-weight: bold; text-align: center; padding: 7px 0; letter-spacing: 1px; }
+        .sous-bandeau { text-align: center; font-size: 10px; color: #475569; padding: 5px 0 12px 0; }
+
+        .bloc-titre { font-size: 9px; font-weight: bold; color: #2b59c3;
+                      text-transform: uppercase; letter-spacing: 0.5px;
+                      border-bottom: 1px solid #dbe3f0; padding-bottom: 3px; }
+        .info { font-size: 9.5px; line-height: 1.8; }
+        .info .libelle { color: #64748b; }
+
+        .montant-box { background-color: #e8efff; border: 1px solid #c7d7f8;
+                       padding: 10px 14px; text-align: center; margin-top: 12px; }
+        .montant-label { font-size: 9px; color: #2b59c3; text-transform: uppercase;
+                         letter-spacing: 0.5px; }
+        .montant { font-size: 20px; font-weight: bold; color: #2b59c3; }
+
+        table.mesures { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        table.mesures th { background-color: #2b59c3; color: #ffffff; font-size: 9.5px;
+                           padding: 6px 10px; text-align: left; }
+        table.mesures td { border: 1px solid #dbe3f0; padding: 5px 10px; font-size: 10px; }
+        .zebre { background-color: #f4f7fd; }
+        .text-end { text-align: right; }
+        .total-lib { font-weight: bold; }
+        .total-val { font-weight: bold; color: #2b59c3; }
+        .reste-val { font-weight: bold; color: #dc2626; }
+
+        .cadre-signature { border: 1px solid #cbd5e1; height: 64px; }
+        .libelle-sig { font-size: 8.5px; color: #64748b; padding-top: 4px; text-align: center; }
+
+        .pied { margin-top: 22px; font-size: 8px; color: #94a3b8; text-align: center;
+                border-top: 1px solid #e2e8f0; padding-top: 6px; }
+    </style>
 </head>
 <body>
 
-<div class="container">
-
-  <!-- En-tête -->
-  <div class="header">
-    <span class="badge-code">{{ commande.code }}</span>
-    <h5>Recu d'acompte</h5>
-    <small>{{ atelier.nom }}</small>
-    <div class="clearfix"></div>
-  </div>
-
-  <div class="body">
-
-    <!-- Infos atelier / date -->
-    <div style="margin-bottom:15px;">
-      <div class="info-left">
-        <p class="value">{{ atelier.nom }}</p>
-        {% if atelier.telephone %}<p>{{ atelier.telephone }}</p>{% endif %}
-        {% if atelier.adresse %}<p>{{ atelier.adresse }}</p>{% endif %}
-      </div>
-      <div class="info-right">
-        <p class="label">Date de commande</p>
-        <p class="value">{{ commande.date_commande|date:"d/m/Y" }}</p>
-      </div>
-      <div class="clearfix"></div>
-    </div>
-
-    <hr>
-
-    <!-- Client -->
-    <div style="margin-bottom:15px;">
-      <p class="label">Client</p>
-      <p class="value">{{ commande.client }}</p>
-      <p>{{ commande.client.telephone }}</p>
-    </div>
-
-    <!-- Tableau détail -->
-    <table>
-      <thead>
+    <!-- ===== EN-TÊTE BOUTIQUE ===== -->
+    <table width="100%">
         <tr>
-          <th>Designation</th>
-          <th class="text-end">Montant</th>
+            <td width="40%" valign="middle">
+                {% if logo_uri %}<img src="{{ logo_uri }}" class="logo" />{% endif %}
+            </td>
+            <td width="60%" valign="middle" align="right">
+                <span class="nom-atelier">{{ atelier.nom }}</span><br/>
+                <span class="coordonnees">
+                    {% if atelier.adresse %}{{ atelier.adresse|linebreaksbr }}<br/>{% endif %}
+                    {% if atelier.telephone %}Tél : {{ atelier.telephone }}{% if atelier.email %} &nbsp;·&nbsp; {% endif %}{% endif %}
+                    {% if atelier.email %}{{ atelier.email }}{% endif %}
+                </span>
+            </td>
         </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>
-            {% if commande.modele %}
-              <strong>{{ commande.modele.nom }}</strong><br>
-            {% else %}
-              <strong>Confection sur mesure</strong><br>
-            {% endif %}
-            <span style="color:#6c757d;">
-              {{ commande.description_vetement|truncatechars:80 }}
-            </span>
-          </td>
-          <td class="text-end">
-            {{ commande.prix_total|floatformat:0 }} {{ atelier.devise }}
-          </td>
-        </tr>
-        {% if commande.remise_type and commande.remise_valeur %}
-        <tr class="row-remise">
-          <td>
-            Remise
-            {% if commande.remise_type == 'POURCENTAGE' %}
-              ({{ commande.remise_valeur }}%)
-            {% else %}
-              (montant fixe)
-            {% endif %}
-          </td>
-          <td class="text-end" style="color:#dc3545;">
-            - {{ commande.remise_valeur|floatformat:0 }} {{ atelier.devise }}
-          </td>
-        </tr>
-        {% endif %}
-      </tbody>
-      <tfoot>
-        <tr class="row-net">
-          <td>Prix net</td>
-          <td class="text-end">
-            {{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}
-          </td>
-        </tr>
-        <tr class="row-acompte">
-          <td>
-            Acompte recu
-            {% if paiement %}({{ paiement.get_mode_paiement_display }}){% endif %}
-          </td>
-          <td class="text-end">
-            {% if paiement %}
-              {{ paiement.montant|floatformat:0 }}
-            {% else %}
-              0
-            {% endif %}
-            {{ atelier.devise }}
-          </td>
-        </tr>
-        <tr class="row-reste">
-          <td>Reste a payer</td>
-          <td class="text-end">
-            {{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}
-          </td>
-        </tr>
-      </tfoot>
     </table>
 
-    <!-- Date livraison -->
-    <div class="alert-info-box">
-      Date de livraison prevue :
-      <strong>{{ commande.date_livraison_prevue|date:"d/m/Y" }}</strong>
+    <!-- ===== BANDEAU TITRE ===== -->
+    <table width="100%" style="margin-top: 14px;">
+        <tr><td class="bandeau">REÇU D'ACOMPTE</td></tr>
+    </table>
+    <div class="sous-bandeau">
+        Commande {{ commande.code }} &nbsp;·&nbsp;
+        {% if paiement %}Reçu n° {{ paiement.id }} du {{ paiement.date_paiement|date:"d/m/Y" }}{% endif %}
     </div>
 
-    <!-- Signatures -->
-    <div style="margin-top:40px;">
-      <div class="sig-left">
-        <p class="sig-label">Signature du client</p>
-        <div class="sig-line"></div>
-      </div>
-      <div class="sig-right">
-        <p class="sig-label">Cachet / Signature atelier</p>
-        <div class="sig-line"></div>
-      </div>
-      <div class="clearfix"></div>
+    <!-- ===== MONTANT ENCAISSÉ ===== -->
+    {% if paiement %}
+    <div class="montant-box">
+        <div class="montant-label">Montant reçu ({% if paiement.mode_paiement %}{{ paiement.get_mode_paiement_display }}{% endif %})</div>
+        <div class="montant">{{ paiement.montant|floatformat:0 }} {{ atelier.devise }}</div>
     </div>
+    {% endif %}
 
-  </div>
-</div>
+    <!-- ===== CLIENT / COMMANDE ===== -->
+    <table width="100%" style="margin-top: 14px;">
+        <tr>
+            <td width="50%" valign="top" style="padding-right: 12px;">
+                <div class="bloc-titre">Client</div>
+                <div class="info">
+                    <span class="libelle">Nom :</span> <b>{{ commande.client.nom }}{% if commande.client.prenom %} {{ commande.client.prenom }}{% endif %}</b><br/>
+                    <span class="libelle">Téléphone :</span> {{ commande.client.telephone|default:"—" }}<br/>
+                    {% if commande.client.adresse %}<span class="libelle">Adresse :</span> {{ commande.client.adresse|linebreaksbr }}{% endif %}
+                </div>
+            </td>
+            <td width="50%" valign="top" style="padding-left: 12px;">
+                <div class="bloc-titre">Commande</div>
+                <div class="info">
+                    <span class="libelle">Code :</span> <b>{{ commande.code }}</b><br/>
+                    <span class="libelle">Passée le :</span> {{ commande.date_creation|date:"d/m/Y" }}<br/>
+                    <span class="libelle">Livraison prévue :</span> {{ commande.date_livraison_prevue|date:"d/m/Y" }}
+                </div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- ===== DÉTAIL DE LA COMMANDE ===== -->
+    <table class="mesures">
+        <tr>
+            <th width="52%">Article</th>
+            <th width="12%">Qté</th>
+            <th width="18%">P.U.</th>
+            <th width="18%">Total</th>
+        </tr>
+        {% for lib, qte, pu, tot in lignes_detail %}
+        <tr class="{% cycle '' 'zebre' %}">
+            <td>{{ lib }}</td>
+            <td>{{ qte }}</td>
+            <td class="text-end">{{ pu|floatformat:0 }}</td>
+            <td class="text-end">{{ tot|floatformat:0 }}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+            <td colspan="3" class="text-end total-lib">Total net</td>
+            <td class="text-end total-val">{{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}</td>
+        </tr>
+        {% if paiement %}
+        <tr>
+            <td colspan="3" class="text-end total-lib">Acompte versé</td>
+            <td class="text-end total-val">- {{ paiement.montant|floatformat:0 }} {{ atelier.devise }}</td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td colspan="3" class="text-end total-lib">Reste à payer</td>
+            <td class="text-end reste-val">{{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}</td>
+        </tr>
+    </table>
+
+    <!-- ===== SIGNATURES ===== -->
+    <table width="100%" style="margin-top: 26px;">
+        <tr>
+            <td width="45%" valign="top">
+                <div class="cadre-signature"></div>
+                <div class="libelle-sig">Signature du client</div>
+            </td>
+            <td width="10%"></td>
+            <td width="45%" valign="top">
+                <div class="cadre-signature"></div>
+                <div class="libelle-sig">Cachet et signature de l'atelier</div>
+            </td>
+        </tr>
+    </table>
+
+    <!-- ===== PIED DE PAGE ===== -->
+    <div class="pied">
+        {{ atelier.nom }} — reçu généré le {{ date_edition|date:"d/m/Y à H:i" }} avec TailleurPro ·
+        Ce reçu atteste d'un acompte sur la commande {{ commande.code }}.
+    </div>
 
 </body>
 </html>

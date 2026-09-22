@@ -1,216 +1,160 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <style>
-    body { font-family: Arial, sans-serif; font-size: 13px; color: #333; }
-    .container { max-width: 680px; margin: 0 auto; padding: 20px; }
-    .header-soldee { background-color: #198754; color: white;
-                     padding: 15px 20px; border-radius: 6px 6px 0 0; }
-    .header-partielle { background-color: #ffc107; color: #333;
-                        padding: 15px 20px; border-radius: 6px 6px 0 0; }
-    .header h5 { margin: 0; font-size: 16px; }
-    .header small { font-size: 12px; }
-    .body { border: 1px solid #dee2e6; border-top: none;
-            padding: 20px; border-radius: 0 0 6px 6px; }
-    .info-left { float: left; width: 50%; }
-    .info-right { float: right; width: 50%; text-align: right; }
-    .clearfix { clear: both; }
-    p { margin: 2px 0; font-size: 12px; }
-    .label { color: #6c757d; font-size: 11px; }
-    .value { font-weight: bold; }
-    hr { border: none; border-top: 1px solid #dee2e6; margin: 15px 0; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-    table th { background-color: #f8f9fa; padding: 8px 10px;
-               text-align: left; font-size: 12px; border: 1px solid #dee2e6; }
-    table td { padding: 8px 10px; font-size: 12px; border: 1px solid #dee2e6; }
-    .text-end { text-align: right; }
-    .row-remise td { background-color: #fff3cd; }
-    .row-net td { background-color: #f8f9fa; font-weight: bold; }
-    .row-encaisse td { background-color: #d1e7dd; font-weight: bold; }
-    .row-soldee td { background-color: #d1e7dd; font-weight: bold; }
-    .row-due td { background-color: #f8d7da; font-weight: bold; }
-    .badge-code { padding: 4px 10px; border-radius: 4px;
-                  font-size: 13px; font-weight: bold; float: right; }
-    .sig-left { float: left; width: 45%; text-align: center; }
-    .sig-right { float: right; width: 45%; text-align: center; }
-    .sig-label { font-size: 11px; color: #6c757d; margin-bottom: 5px; }
-    .sig-line { border-top: 1px solid #aaa; margin-top: 40px; }
-    h6 { font-size: 13px; font-weight: bold; margin-bottom: 8px; margin-top: 15px; }
-  </style>
+    <meta charset="UTF-8">
+    <style>
+        @page { size: A4; margin: 1.6cm; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 10px; color: #1e293b; }
+
+        .nom-atelier { font-size: 16px; font-weight: bold; color: #2b59c3; }
+        .coordonnees { font-size: 8.5px; color: #64748b; line-height: 1.5; }
+        .logo { max-height: 64px; max-width: 150px; }
+
+        .bandeau { background-color: #2b59c3; color: #ffffff; font-size: 14px;
+                   font-weight: bold; text-align: center; padding: 8px 0; letter-spacing: 2px; }
+        .sous-bandeau { text-align: center; font-size: 10px; color: #475569; padding: 5px 0 12px 0; }
+
+        .bloc-titre { font-size: 9px; font-weight: bold; color: #2b59c3;
+                      text-transform: uppercase; letter-spacing: 0.5px;
+                      border-bottom: 1px solid #dbe3f0; padding-bottom: 3px; }
+        .info { font-size: 9.5px; line-height: 1.8; }
+        .info .libelle { color: #64748b; }
+
+        table.mesures { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        table.mesures th { background-color: #2b59c3; color: #ffffff; font-size: 9.5px;
+                           padding: 6px 10px; text-align: left; }
+        table.mesures td { border: 1px solid #dbe3f0; padding: 5px 10px; font-size: 10px; }
+        .zebre { background-color: #f4f7fd; }
+        .text-end { text-align: right; }
+        .total-lib { font-weight: bold; }
+        .total-val { font-weight: bold; color: #2b59c3; }
+        .reste-val { font-weight: bold; color: #dc2626; }
+        .solde-val { font-weight: bold; color: #059669; }
+
+        .cadre-signature { border: 1px solid #cbd5e1; height: 64px; }
+        .libelle-sig { font-size: 8.5px; color: #64748b; padding-top: 4px; text-align: center; }
+
+        .pied { margin-top: 22px; font-size: 8px; color: #94a3b8; text-align: center;
+                border-top: 1px solid #e2e8f0; padding-top: 6px; }
+    </style>
 </head>
 <body>
 
-<div class="container">
-
-  <!-- En-tête -->
-  {% if commande.est_soldee %}
-  <div class="header-soldee">
-  {% else %}
-  <div class="header-partielle">
-  {% endif %}
-    {% if commande.est_soldee %}
-<span class="badge-code" style="background:#fff; color:#198754;">
-  {{ commande.code }}
-</span>
-{% else %}
-<span class="badge-code" style="background:#fff; color:#856404;">
-  {{ commande.code }}
-</span>
-{% endif %}
-
-    <h5>
-      {% if commande.est_soldee %}
-        Facture Soldee
-      {% else %}
-        Facture (Solde restant)
-      {% endif %}
-    </h5>
-    <small>{{ atelier.nom }}</small>
-    <div class="clearfix"></div>
-  </div>
-
-  <div class="body">
-
-    <!-- Infos atelier / date -->
-    <div style="margin-bottom:15px;">
-      <div class="info-left">
-        <p class="value">{{ atelier.nom }}</p>
-        {% if atelier.telephone %}<p>{{ atelier.telephone }}</p>{% endif %}
-        {% if atelier.adresse %}<p>{{ atelier.adresse }}</p>{% endif %}
-      </div>
-      <div class="info-right">
-        <p class="label">Date de livraison</p>
-        <p class="value">
-          {% if commande.date_livraison_effective %}
-            {{ commande.date_livraison_effective|date:"d/m/Y" }}
-          {% else %}
-            {{ commande.date_livraison_prevue|date:"d/m/Y" }}
-          {% endif %}
-        </p>
-      </div>
-      <div class="clearfix"></div>
-    </div>
-
-    <hr>
-
-    <!-- Client -->
-    <div style="margin-bottom:15px;">
-      <p class="label">Facture a</p>
-      <p class="value">{{ commande.client }}</p>
-      <p>{{ commande.client.telephone }}</p>
-    </div>
-
-    <!-- Détail commande -->
-    <table>
-      <thead>
+    <!-- ===== EN-TÊTE BOUTIQUE ===== -->
+    <table width="100%">
         <tr>
-          <th>Designation</th>
-          <th class="text-end">Montant</th>
+            <td width="40%" valign="middle">
+                {% if logo_uri %}<img src="{{ logo_uri }}" class="logo" />{% endif %}
+            </td>
+            <td width="60%" valign="middle" align="right">
+                <span class="nom-atelier">{{ atelier.nom }}</span><br/>
+                <span class="coordonnees">
+                    {% if atelier.adresse %}{{ atelier.adresse|linebreaksbr }}<br/>{% endif %}
+                    {% if atelier.telephone %}Tél : {{ atelier.telephone }}{% if atelier.email %} &nbsp;·&nbsp; {% endif %}{% endif %}
+                    {% if atelier.email %}{{ atelier.email }}{% endif %}
+                </span>
+            </td>
         </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>
-            {% if commande.modele %}
-              <strong>{{ commande.modele.nom }}</strong><br>
-            {% else %}
-              <strong>Confection sur mesure</strong><br>
-            {% endif %}
-            <span style="color:#6c757d;">
-              {{ commande.description_vetement|truncatechars:80 }}
-            </span>
-          </td>
-          <td class="text-end">
-            {{ commande.prix_total|floatformat:0 }} {{ atelier.devise }}
-          </td>
-        </tr>
-        {% if commande.remise_type and commande.remise_valeur %}
-        <tr class="row-remise">
-          <td>
-            Remise
-            {% if commande.remise_type == 'POURCENTAGE' %}
-              ({{ commande.remise_valeur }}%)
-            {% else %}
-              (montant fixe)
-            {% endif %}
-          </td>
-          <td class="text-end" style="color:#dc3545;">
-            - {{ commande.remise_valeur|floatformat:0 }} {{ atelier.devise }}
-          </td>
-        </tr>
-        {% endif %}
-      </tbody>
-      <tfoot>
-        <tr class="row-net">
-          <td>Prix net</td>
-          <td class="text-end">
-            {{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}
-          </td>
-        </tr>
-      </tfoot>
     </table>
 
-    <!-- Historique des paiements -->
-    <h6>Historique des paiements</h6>
-    <table>
-      <thead>
+    <!-- ===== BANDEAU TITRE ===== -->
+    <table width="100%" style="margin-top: 14px;">
+        <tr><td class="bandeau">FACTURE</td></tr>
+    </table>
+    <div class="sous-bandeau">
+        Facture n° {{ commande.code }} &nbsp;·&nbsp;
+        éditée le {{ date_edition|date:"d/m/Y" }} &nbsp;·&nbsp;
+        {% if commande.est_soldee %}Soldée{% else %}Solde restant{% endif %}
+    </div>
+
+    <!-- ===== CLIENT / COMMANDE ===== -->
+    <table width="100%">
         <tr>
-          <th>Date</th>
-          <th>Mode</th>
-          <th class="text-end">Montant</th>
+            <td width="50%" valign="top" style="padding-right: 12px;">
+                <div class="bloc-titre">Facturé à</div>
+                <div class="info">
+                    <b>{{ commande.client.nom }}{% if commande.client.prenom %} {{ commande.client.prenom }}{% endif %}</b><br/>
+                    <span class="libelle">Téléphone :</span> {{ commande.client.telephone|default:"—" }}<br/>
+                    {% if commande.client.email %}<span class="libelle">Email :</span> {{ commande.client.email }}<br/>{% endif %}
+                    {% if commande.client.adresse %}<span class="libelle">Adresse :</span> {{ commande.client.adresse|linebreaksbr }}{% endif %}
+                </div>
+            </td>
+            <td width="50%" valign="top" style="padding-left: 12px;">
+                <div class="bloc-titre">Commande</div>
+                <div class="info">
+                    <span class="libelle">Code :</span> <b>{{ commande.code }}</b><br/>
+                    <span class="libelle">Passée le :</span> {{ commande.date_creation|date:"d/m/Y" }}<br/>
+                    <span class="libelle">Livraison prévue :</span> {{ commande.date_livraison_prevue|date:"d/m/Y" }}<br/>
+                    <span class="libelle">Statut :</span> {{ commande.get_statut_display }}
+                </div>
+            </td>
         </tr>
-      </thead>
-      <tbody>
-        {% for p in paiements %}
+    </table>
+
+    <!-- ===== LIGNES DE LA FACTURE ===== -->
+    <table class="mesures">
         <tr>
-          <td>{{ p.date_paiement|date:"d/m/Y" }}</td>
-          <td>{{ p.get_mode_paiement_display }}</td>
-          <td class="text-end">
-            {{ p.montant|floatformat:0 }} {{ atelier.devise }}
-          </td>
+            <th width="52%">Désignation</th>
+            <th width="12%">Qté</th>
+            <th width="18%">P.U.</th>
+            <th width="18%">Total</th>
         </tr>
-        {% empty %}
-        <tr>
-          <td colspan="3" style="text-align:center; color:#6c757d;">
-            Aucun paiement enregistre
-          </td>
+        {% for lib, qte, pu, tot in lignes_detail %}
+        <tr class="{% cycle '' 'zebre' %}">
+            <td>{{ lib }}</td>
+            <td>{{ qte }}</td>
+            <td class="text-end">{{ pu|floatformat:0 }}</td>
+            <td class="text-end">{{ tot|floatformat:0 }}</td>
         </tr>
         {% endfor %}
-      </tbody>
-      <tfoot>
-        <tr class="row-encaisse">
-          <td colspan="2">Total encaisse</td>
-          <td class="text-end">
-            {{ commande.montant_paye|floatformat:0 }} {{ atelier.devise }}
-          </td>
+        {% if commande.remise_type and commande.remise_valeur %}
+        <tr>
+            <td colspan="3" class="text-end total-lib">
+                Remise {% if commande.remise_type == 'POURCENTAGE' %}({{ commande.remise_valeur }}%){% endif %}
+            </td>
+            <td class="text-end">- {{ commande.remise_valeur|floatformat:0 }}{% if commande.remise_type == 'POURCENTAGE' %} %{% else %} {{ atelier.devise }}{% endif %}</td>
         </tr>
-        <tr {% if commande.est_soldee %}class="row-soldee"{% else %}class="row-due"{% endif %}>
-          <td colspan="2">
-            {% if commande.est_soldee %}Soldee{% else %}Reste a payer{% endif %}
-          </td>
-          <td class="text-end">
-            {{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}
-          </td>
+        {% endif %}
+        <tr>
+            <td colspan="3" class="text-end total-lib">Total net</td>
+            <td class="text-end total-val">{{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}</td>
         </tr>
-      </tfoot>
+        {% for p in paiements %}
+        <tr>
+            <td colspan="3" class="text-end">Payé le {{ p.date_paiement|date:"d/m/Y" }} ({{ p.get_mode_paiement_display }})</td>
+            <td class="text-end">- {{ p.montant|floatformat:0 }} {{ atelier.devise }}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+            <td colspan="3" class="text-end total-lib">
+                {% if commande.est_soldee %}Statut{% else %}Reste à payer{% endif %}
+            </td>
+            <td class="text-end {% if commande.est_soldee %}solde-val{% else %}reste-val{% endif %}">
+                {% if commande.est_soldee %}SOLDÉE{% else %}{{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}{% endif %}
+            </td>
+        </tr>
     </table>
 
-    <!-- Signatures -->
-    <div style="margin-top:40px;">
-      <div class="sig-left">
-        <p class="sig-label">Signature du client</p>
-        <div class="sig-line"></div>
-      </div>
-      <div class="sig-right">
-        <p class="sig-label">Cachet / Signature atelier</p>
-        <div class="sig-line"></div>
-      </div>
-      <div class="clearfix"></div>
-    </div>
+    <!-- ===== SIGNATURES ===== -->
+    <table width="100%" style="margin-top: 26px;">
+        <tr>
+            <td width="45%" valign="top">
+                <div class="cadre-signature"></div>
+                <div class="libelle-sig">Signature du client</div>
+            </td>
+            <td width="10%"></td>
+            <td width="45%" valign="top">
+                <div class="cadre-signature"></div>
+                <div class="libelle-sig">Cachet et signature de l'atelier</div>
+            </td>
+        </tr>
+    </table>
 
-  </div>
-</div>
+    <!-- ===== PIED DE PAGE ===== -->
+    <div class="pied">
+        {{ atelier.nom }} — facture {{ commande.code }} générée le {{ date_edition|date:"d/m/Y à H:i" }} avec TailleurPro ·
+        Merci de votre confiance.
+    </div>
 
 </body>
 </html>

@@ -873,23 +873,7 @@ def mensuration_pdf(request, pk):
     atelier = get_user_atelier(request.user)
     mensuration = get_object_or_404(Mensuration, pk=pk, atelier=atelier)
 
-    # Logo de la boutique en data-URI (xhtml2pdf ne charge pas les URL)
-    logo_uri = ''
-    if atelier.logo:
-        import base64
-        import os as _os
-        try:
-            ext = _os.path.splitext(atelier.logo.name)[1].lower()
-            if ext == '.png':
-                mime = 'image/png'
-            elif ext == '.gif':
-                mime = 'image/gif'
-            else:
-                mime = 'image/jpeg'
-            with atelier.logo.open('rb') as f:
-                logo_uri = 'data:' + mime + ';base64,' + base64.b64encode(f.read()).decode('ascii')
-        except Exception:
-            logo_uri = ''
+    logo_uri = _logo_data_uri(atelier)
 
     # Mesures réparties sur 2 colonnes pour une feuille compacte
     items = list((mensuration.donnees or {}).items())
@@ -1456,7 +1440,7 @@ def creer_commande(request):
                 f"attribué. Pensez à les affecter."
             )
 
-    return redirect('core:recu_paiement', pk=commande.pk)
+    return redirect('core:liste_commandes')
 
 
 @login_required
@@ -2242,13 +2226,45 @@ def ajuster_stock(request):
 # ==========================================
 # 8. REÇUS & FACTURES
 # ==========================================
-def _rendre_pdf(request, template, contexte, nom_fichier):
+def _logo_data_uri(atelier):
+    """Logo de la boutique en data-URI (xhtml2pdf ne charge pas les URL)."""
+    if not atelier.logo:
+        return ''
+    import base64
+    import os as _os
+    try:
+        ext = _os.path.splitext(atelier.logo.name)[1].lower()
+        if ext == '.png':
+            mime = 'image/png'
+        elif ext == '.gif':
+            mime = 'image/gif'
+        else:
+            mime = 'image/jpeg'
+        with atelier.logo.open('rb') as f:
+            return ('data:' + mime + ';base64,' +
+                    base64.b64encode(f.read()).decode('ascii'))
+    except Exception:
+        return ''
+
+
+def _lignes_detail(lignes):
+    """Libellé / qté / PU / total de chaque ligne de commande."""
+    detail = []
+    for l in lignes:
+        lib = l.modele.nom if l.modele else (l.description or 'Confection sur mesure')
+        tot = (l.prix_unitaire or 0) * l.quantite
+        detail.append((lib, l.quantite, l.prix_unitaire, tot))
+    return detail
+
+
+def _rendre_pdf(request, template, contexte, nom_fichier, inline=False):
     from xhtml2pdf import pisa
     from django.template.loader import render_to_string
 
     html = render_to_string(template, contexte, request=request)
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="{nom_fichier}"'
+    mode = 'inline' if inline else 'attachment'
+    response['Content-Disposition'] = f'{mode}; filename="{nom_fichier}"'
     if pisa.CreatePDF(html, dest=response).err:
         return HttpResponse("Erreur lors de la génération du PDF.", status=500)
     return response
@@ -2304,14 +2320,18 @@ def recu_paiement(request, pk):
 def recu_paiement_pdf(request, pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
+    lignes = commande.lignes.prefetch_related(
+        'accessoires_ligne__accessoire').all()
     return _rendre_pdf(request, 'core/recu_paiement_pdf.html', {
         'commande': commande,
         'paiement': commande.paiements.order_by('date_paiement').first(),
-        'lignes': commande.lignes.prefetch_related(
-            'accessoires_ligne__accessoire').all(),
+        'lignes': lignes,
+        'lignes_detail': _lignes_detail(lignes),
         'atelier': atelier,
+        'logo_uri': _logo_data_uri(atelier),
+        'date_edition': timezone.now(),
         'pdf': True,
-    }, f"recu_{commande.code}.pdf")
+    }, f"recu_{commande.code}.pdf", inline=True)
 
 
 @login_required
@@ -2334,14 +2354,18 @@ def facture_commande(request, pk):
 def facture_commande_pdf(request, pk):
     atelier = get_user_atelier(request.user)
     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
+    lignes = commande.lignes.prefetch_related(
+        'accessoires_ligne__accessoire').all()
     return _rendre_pdf(request, 'core/facture_commande_pdf.html', {
         'commande': commande,
         'paiements': commande.paiements.order_by('date_paiement'),
-        'lignes': commande.lignes.prefetch_related(
-            'accessoires_ligne__accessoire').all(),
+        'lignes': lignes,
+        'lignes_detail': _lignes_detail(lignes),
         'atelier': atelier,
+        'logo_uri': _logo_data_uri(atelier),
+        'date_edition': timezone.now(),
         'pdf': True,
-    }, f"facture_{commande.code}.pdf")
+    }, f"facture_{commande.code}.pdf", inline=True)
 
 
 # ==========================================

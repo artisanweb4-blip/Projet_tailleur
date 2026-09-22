@@ -290,10 +290,10 @@
                                     <i class="bi bi-person-badge me-2"></i>Fiche de {{ e.nom_complet }}</a></li>
                                 {% endfor %}
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{% url 'core:recu_paiement' r.c.pk %}">
-                                    <i class="bi bi-receipt me-2"></i>Reçu</a></li>
-                                <li><a class="dropdown-item" href="{% url 'core:facture_commande' r.c.pk %}">
-                                    <i class="bi bi-file-earmark-text me-2"></i>Facture</a></li>
+                                <li><a class="dropdown-item" href="{% url 'core:recu_paiement_pdf' r.c.pk %}">
+                                    <i class="bi bi-receipt me-2"></i>Reçu d'acompte (PDF)</a></li>
+                                <li><a class="dropdown-item" href="{% url 'core:facture_commande_pdf' r.c.pk %}">
+                                    <i class="bi bi-file-earmark-pdf me-2"></i>Facture (PDF)</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="{% url 'core:supprimer_commande' r.c.pk %}">
                                     <i class="bi bi-trash me-2"></i>Supprimer</a></li>

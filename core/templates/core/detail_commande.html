@@ -115,8 +115,8 @@
             <a href="{% url 'core:fiche_atelier_pdf' commande.pk %}" class="btn btn-outline-primary">
                 <i class="bi bi-rulers me-1"></i> Fiche atelier
             </a>
-            <a href="{% url 'core:facture_commande' commande.pk %}" class="btn btn-success">
-                <i class="bi bi-file-earmark-text me-1"></i> Facture
+            <a href="{% url 'core:facture_commande_pdf' commande.pk %}" class="btn btn-primary">
+                <i class="bi bi-file-earmark-pdf me-1"></i> Facture
             </a>
         </div>
     </div>
@@ -551,21 +551,13 @@
                        class="btn btn-outline-dark btn-sm">
                         <i class="bi bi-rulers me-1"></i>Fiche atelier (mensurations)
                     </a>
-                    <a href="{% url 'core:recu_paiement' commande.pk %}"
-                       class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-receipt me-1"></i>Voir le reçu
-                    </a>
                     <a href="{% url 'core:recu_paiement_pdf' commande.pk %}"
-                       class="btn btn-outline-primary btn-sm">
-                        <i class="bi bi-file-pdf me-1"></i>Reçu PDF
-                    </a>
-                    <a href="{% url 'core:facture_commande' commande.pk %}"
-                       class="btn btn-outline-success btn-sm">
-                        <i class="bi bi-file-earmark-text me-1"></i>Voir la facture
+                       class="btn btn-primary btn-sm">
+                        <i class="bi bi-receipt me-1"></i>Reçu d'acompte
                     </a>
                     <a href="{% url 'core:facture_commande_pdf' commande.pk %}"
-                       class="btn btn-outline-success btn-sm">
-                        <i class="bi bi-file-pdf me-1"></i>Facture PDF
+                       class="btn btn-primary btn-sm">
+                        <i class="bi bi-file-earmark-pdf me-1"></i>Facture
                     </a>
                 </div>
             </div>
