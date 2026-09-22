@@ -210,11 +210,11 @@
                 <span>Total net :</span>
                 <strong><span id="recap_total_net">0</span> {{ atelier.devise }}</strong>
               </div>
-              <div class="d-flex justify-content-between mb-1">
+              <div class="d-flex justify-content-between mb-1" id="recap_acompte_row">
                 <span class="text-muted">Acompte :</span>
                 <strong class="text-success"><span id="recap_acompte">0</span> {{ atelier.devise }}</strong>
               </div>
-              <div class="d-flex justify-content-between fw-bold text-danger">
+              <div class="d-flex justify-content-between fw-bold text-danger" id="recap_reste_row">
                 <span>Reste à payer :</span>
                 <strong><span id="recap_reste">0</span> {{ atelier.devise }}</strong>
               </div>
@@ -236,6 +236,25 @@
 </div>
 
 <!-- TEMPLATE LIGNE COUTURE -->
+<!-- Petite modale de confirmation : suppression d'une ligne du formulaire -->
+<div class="modal fade" id="modalConfirmerSupprLigne" tabindex="-1" aria-hidden="true" style="z-index:1070;">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-body text-center p-4">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size:2rem;"></i>
+        <p class="mt-2 mb-1 fw-bold">Supprimer cette ligne ?</p>
+        <small class="text-muted">Elle sera retirée du formulaire, puis définitivement supprimée à l'enregistrement.</small>
+      </div>
+      <div class="modal-footer justify-content-center border-0 pt-0">
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-sm btn-danger fw-semibold" id="btn_confirmer_suppr_ligne">
+          <i class="bi bi-trash me-1"></i>Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <template id="template_ligne">
   <div class="card border shadow-sm rounded-3 mb-3 ligne-card" data-ligne="__N__">
     <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
@@ -425,6 +444,9 @@
   let nextId = 0;
   const ACTION_AJOUT = form.action;
   const TITRE_AJOUT  = document.getElementById('titreModalCommande').textContent;
+  const modalSupprLigneEl = document.getElementById('modalConfirmerSupprLigne');
+  let modalSupprLigne = null;
+  let carteASupprimer = null;
 
   const fmt = n => (Math.round(n * 100) / 100).toLocaleString('fr-FR');
   const nomComplet = c => (c.nom + ' ' + (c.prenom || '')).trim();
@@ -543,6 +565,10 @@
           if (colAcc.nextElementSibling) colAcc.nextElementSibling.classList.add('d-none');
         }
       }
+      const racRow = document.getElementById('recap_acompte_row');
+      if (racRow) racRow.classList.add('d-none');
+      const rreRow = document.getElementById('recap_reste_row');
+      if (rreRow) rreRow.classList.add('d-none');
 
       // Lignes existantes pré-remplies (et possibilité d'en ajouter)
       conteneur.innerHTML = '';
@@ -732,6 +758,7 @@
       r.querySelector('[name="ligne_' + n + '_acc_qtes[]"]').value = a.qte;
       r.querySelector('[name="ligne_' + n + '_acc_prix[]"]').value = a.prix;
     });
+    recalculerSousTotal(el);
     return el;
   }
 
@@ -802,9 +829,9 @@
         alert('La commande doit contenir au moins une couture.');
         return;
       }
-      card.remove();
-      majCompteurs();
-      recalculerTotal();
+      carteASupprimer = card;
+      if (!modalSupprLigne) modalSupprLigne = new bootstrap.Modal(modalSupprLigneEl);
+      modalSupprLigne.show();
     });
   }
 
@@ -894,6 +921,22 @@
 
     cont.appendChild(clone);
   }
+
+  // ============ CONFIRMATION SUPPRESSION DE LIGNE ============
+  document.getElementById('btn_confirmer_suppr_ligne').addEventListener('click', function () {
+    if (carteASupprimer) {
+      carteASupprimer.remove();
+      carteASupprimer = null;
+      majCompteurs();
+      recalculerTotal();
+    }
+    if (modalSupprLigne) modalSupprLigne.hide();
+  });
+  modalSupprLigneEl.addEventListener('hidden.bs.modal', function () {
+    carteASupprimer = null;
+    const m = document.getElementById('modalNouvelleCommande');
+    if (m && m.classList.contains('show')) document.body.classList.add('modal-open');
+  });
 
   // ============ COUTURIER GLOBAL → LIGNES ============
   selEmpGlobal.addEventListener('change', function () {
@@ -992,6 +1035,10 @@
           if (colAcc2.nextElementSibling) colAcc2.nextElementSibling.classList.remove('d-none');
         }
       }
+      const racRow2 = document.getElementById('recap_acompte_row');
+      if (racRow2) racRow2.classList.remove('d-none');
+      const rreRow2 = document.getElementById('recap_reste_row');
+      if (rreRow2) rreRow2.classList.remove('d-none');
       conteneur.innerHTML = '';
       nextId = 0;
       creerLigne();
