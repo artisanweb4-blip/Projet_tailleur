@@ -1,0 +1,97 @@
+From e2383dc30dd5312ebeab2e8dc9b51cb332a0e397 Mon Sep 17 00:00:00 2001
+From: Arena Agent <agent@arena.ai>
+Date: Sat, 19 Sep 2026 15:13:50 +0000
+Subject: [PATCH] =?UTF-8?q?Barre=20sup=C3=A9rieure=20fixe=20et=20de=20la?=
+ =?UTF-8?q?=20m=C3=AAme=20couleur=20que=20la=20sidebar?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- position: fixed (top:0, left: sidebar-width, right:0, z-index 1030) :
+  la barre reste visible pendant le défilement ; le sticky-top ne
+  fonctionnait pas à cause de overflow-x:hidden sur body.
+- Couleurs identiques à la sidebar : fond var(--sidebar-bg) blanc,
+  bordure basse var(--sidebar-border), textes sombres lisibles
+  (Bienvenue, icônes en couleur standard).
+- .main-wrapper gagne padding-top:64px pour ne rien masquer ;
+  en mobile (<992px) la barre prend toute la largeur (left:0).
+- Bouton du sélecteur de langue adapté au fond clair.
+---
+ core/templates/base.html | 28 ++++++++++++++++++----------
+ 1 file changed, 18 insertions(+), 10 deletions(-)
+
+diff --git a/core/templates/base.html b/core/templates/base.html
+index 4196c6d..8a54d8c 100644
+--- a/core/templates/base.html
++++ b/core/templates/base.html
+@@ -72,26 +72,33 @@
+         .main-wrapper {
+             margin-left: var(--sidebar-width);
+             min-height: 100vh;
++            padding-top: 64px; /* espace réservé à la barre supérieure fixe */
+             transition: all 0.3s ease-in-out;
+         }
+ 
+-        /* Header supérieur principal : mêmes couleurs que la landing */
++        /* Header supérieur principal : FIXE et mêmes couleurs que la sidebar */
+         .top-navbar {
+             height: 64px;
+-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+-            border-bottom: none;
++            position: fixed;
++            top: 0;
++            right: 0;
++            left: var(--sidebar-width);
++            z-index: 1030;
++            background-color: var(--sidebar-bg);
++            border-bottom: 1px solid var(--sidebar-border);
++            box-shadow: 0 1px 3px rgba(15, 23, 42, .06);
+         }
+         .top-navbar .text-dark,
+-        .top-navbar .text-secondary { color: #f8fafc !important; }
+-        .top-navbar i { color: var(--accent-light); }
++        .top-navbar .text-secondary { color: #334155 !important; }
++        .top-navbar i { color: var(--primary-color); }
+         .top-navbar .btn-outline-secondary {
+-            color: #f8fafc; border-color: rgba(248, 250, 252, .35);
++            color: #475569; border-color: var(--sidebar-border);
+         }
+         .top-navbar .btn-outline-secondary:hover {
+-            background: rgba(248, 250, 252, .12); color: #fff;
++            background: #f1f5f9; color: #1e293b;
+         }
+         .top-navbar .dropdown-toggle,
+-        .top-navbar .nav-link { color: #f8fafc; }
++        .top-navbar .nav-link { color: #334155; }
+ 
+         /* Entête standard de chaque page : icône + titre alignés */
+         .entete-page { margin-top: .25rem; }
+@@ -149,6 +156,7 @@
+             .sidebar.show {
+                 margin-left: 0;
+             }
++            .top-navbar { left: 0; }
+             .main-wrapper {
+                 margin-left: 0;
+             }
+@@ -302,7 +310,7 @@
+     <!-- Content Wrapper avec Top Header -->
+     <div class="main-wrapper">
+         <!-- Top Navbar -->
+-        <header class="top-navbar px-4 d-flex align-items-center justify-content-between sticky-top">
++        <header class="top-navbar px-4 d-flex align-items-center justify-content-between">
+             <div class="d-flex align-items-center gap-3">
+                 <button class="btn btn-outline-secondary btn-sm d-lg-none" onclick="toggleSidebar()">
+                     <i class="bi bi-list fs-5"></i>
+@@ -316,7 +324,7 @@
+             <div class="d-flex align-items-center gap-3">
+                 <!-- Selecteur de langue -->
+                 <div class="dropdown">
+-                    <button class="btn btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border: 1px solid rgba(255,255,255,0.3); border-radius: 10px; padding: 6px 12px; font-weight: 500; color: #fff;">
++                    <button class="btn btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border: 1px solid var(--sidebar-border); border-radius: 10px; padding: 6px 12px; font-weight: 500; color: #334155; background: #fff;">
+                         <i class="bi bi-globe"></i>
+                         <span id="current-lang">{{ langue|upper }}</span>
+                     </button>
+-- 
+2.47.3
+

@@ -1,0 +1,55 @@
+From 6166ec974729f897efeeb8034e3a97e64e63133a Mon Sep 17 00:00:00 2001
+From: Arena Agent <agent@arena.ai>
+Date: Mon, 21 Sep 2026 13:25:40 +0000
+Subject: [PATCH] =?UTF-8?q?Sidebar=20:=20retour=20au=20style=20d'origine?=
+ =?UTF-8?q?=20des=20ic=C3=B4nes,=20carte=20boutique=20retir=C3=A9e?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Les pastilles bleues des menus de la sidebar sont retirées : les
+  icônes retrouvent leur style d'origine (glyphe bleu standard aligné
+  avec le texte), selon le choix de l'utilisateur après essai du 0019.
+- Le bloc « BOUTIQUE » en bas de la sidebar est supprimé.
+- Le reste du 0019 est conservé : en-tête TailleurPro, pied de page
+  TailleurPro, fenêtre modale de confirmation 2 s, pastilles bleues
+  de la barre supérieure et des onglets Paramètres.
+---
+ core/templates/base.html | 14 --------------
+ 1 file changed, 14 deletions(-)
+
+diff --git a/core/templates/base.html b/core/templates/base.html
+index 9ed007a..0c98b9c 100644
+--- a/core/templates/base.html
++++ b/core/templates/base.html
+@@ -101,12 +101,6 @@
+         .top-navbar .nav-link { color: #334155; }
+ 
+         /* Icônes de navigation : fond bleu standard, icône blanche, partout */
+-        .sidebar .nav-pills .nav-link i.bi {
+-            width: 32px; height: 32px; border-radius: 9px;
+-            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+-            color: #fff; display: inline-flex; align-items: center; justify-content: center;
+-            font-size: .95rem; margin-right: .4rem; flex-shrink: 0;
+-        }
+         .top-navbar .btn i.bi {
+             width: 30px; height: 30px; border-radius: 9px;
+             background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+@@ -339,14 +333,6 @@
+             </ul>
+         </div>
+ 
+-        <!-- Boutique courante (nom seul, sans devise) -->
+-        {% if current_atelier %}
+-        <div class="px-4 py-2 border-top flex-shrink-0">
+-            <small class="text-muted d-block" style="font-size: 10.5px; letter-spacing: .4px; text-transform: uppercase;">{% tr "Boutique" %}</small>
+-            <div class="fw-semibold small text-dark text-truncate">{{ current_atelier.nom }}</div>
+-        </div>
+-        {% endif %}
+-
+         <!-- Profil Utilisateur Bas de Sidebar avec Déconnexion -->
+         <div class="p-3 border-top bg-light flex-shrink-0">
+             <div class="d-flex align-items-center justify-content-between">
+-- 
+2.47.3
+

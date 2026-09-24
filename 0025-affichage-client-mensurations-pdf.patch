@@ -1,0 +1,312 @@
+From 4d06e30939e585f0d94e2dc9587abb85e6807db0 Mon Sep 17 00:00:00 2001
+From: Arena Agent <agent@arena.ai>
+Date: Mon, 21 Sep 2026 22:27:21 +0000
+Subject: [PATCH] =?UTF-8?q?0025=20Avatar=20initiales=20+=20badge=20Client?=
+ =?UTF-8?q?=20visible=20+=20boutons=20align=C3=A9s=20+=20modale=20mensurat?=
+ =?UTF-8?q?ions=20pr=C3=A9-remplie=20sans=20r=C3=A9seau=20+=20page=20d?=
+ =?UTF-8?q?=C3=A9tail=20mensuration=20=C3=A9pur=C3=A9e=20+=20PDF=202=20col?=
+ =?UTF-8?q?onnes=20corrig=C3=A9?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ core/templates/core/commandes.html          |  3 +-
+ core/templates/core/detail_client.html      | 38 +++++++--------
+ core/templates/core/detail_commande.html    |  2 +-
+ core/templates/core/detail_mensuration.html | 19 +++-----
+ core/templates/core/mensuration_pdf.html    | 53 +++++++++++++--------
+ core/views.py                               | 29 ++++++++---
+ 6 files changed, 84 insertions(+), 60 deletions(-)
+
+diff --git a/core/templates/core/commandes.html b/core/templates/core/commandes.html
+index 59dcf67..6f4ccf5 100644
+--- a/core/templates/core/commandes.html
++++ b/core/templates/core/commandes.html
+@@ -158,7 +158,8 @@
+                         <span class="text-muted small d-block">Chiffre d'affaires</span>
+                         <span class="h5 mb-0 fw-bold text-dark">{{ total_ca|floatformat:0 }} {{ atelier.devise }}</span>
+                     </div>
+-                    <div class="rounded-circle bg-primary bg-opacity-10 text-primary p-2">
++                    <div class="rounded-circle p-2 text-white"
++                         style="background:linear-gradient(135deg, var(--primary-color), var(--accent-color));">
+                         <i class="bi bi-wallet2 fs-4"></i>
+                     </div>
+                 </div>
+diff --git a/core/templates/core/detail_client.html b/core/templates/core/detail_client.html
+index 6c858ef..607a354 100644
+--- a/core/templates/core/detail_client.html
++++ b/core/templates/core/detail_client.html
+@@ -77,9 +77,9 @@
+   <!-- En-tête -->
+   <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 pb-3 mb-4 border-bottom">
+     <div class="d-flex align-items-center gap-3">
+-      <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center fw-bold fs-4"
+-           style="width:52px;height:52px;">
+-        {{ client.nom|slice:":2"|upper }}
++      <div class="rounded-circle d-flex align-items-center justify-content-center fw-bold fs-4 text-white"
++           style="width:52px;height:52px;background:linear-gradient(135deg, var(--primary-color), var(--accent-color));">
++        {{ initiales_client }}
+       </div>
+       <div>
+         <h2 class="h4 mb-0 fw-bold text-dark">
+@@ -158,7 +158,7 @@
+               <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                 <strong class="text-dark">{{ g.nom }}</strong>
+                 {% if g.est_client %}
+-                  <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-2">Client</span>
++                  <span class="badge rounded-pill px-2" style="background:#e8efff;color:#2b59c3;border:1px solid #c7d7f8;">Client</span>
+                 {% else %}
+                   <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-2">{{ g.lien }}</span>
+                 {% endif %}
+@@ -176,21 +176,21 @@
+                       <td class="fw-medium text-dark">{{ m.libelle }}</td>
+                       <td class="small text-muted">{{ m.donnees|length }} mesure(s)</td>
+                       <td class="text-end">
+-                        <div class="btn-group btn-group-sm">
+-                          <a href="{% url 'core:detail_mensuration' m.id %}" class="btn btn-light text-dark" title="Voir">
++                        <div class="d-inline-flex align-items-center gap-1">
++                          <a href="{% url 'core:detail_mensuration' m.id %}" class="btn btn-sm btn-light text-dark" title="Voir">
+                             <i class="bi bi-eye"></i>
+                           </a>
+-                          <a href="{% url 'core:mensuration_pdf' m.id %}" class="btn btn-light text-dark" title="PDF">
++                          <a href="{% url 'core:mensuration_pdf' m.id %}" class="btn btn-sm btn-light text-dark" title="PDF">
+                             <i class="bi bi-file-earmark-pdf"></i>
+                           </a>
+-                          <button type="button" class="btn btn-light text-dark btn-edit-mensuration" title="Modifier"
++                          <button type="button" class="btn btn-sm btn-light text-dark btn-edit-mensuration" title="Modifier"
+                                   data-bs-toggle="modal" data-bs-target="#mensurationModal" data-edit-id="{{ m.id }}">
+                             <i class="bi bi-pencil"></i>
+                           </button>
+                           <form method="post" action="{% url 'core:supprimer_mensuration' m.id %}"
+-                                class="d-inline" onsubmit="return confirm('Supprimer cette fiche de mensurations ?');">
++                                class="d-inline-flex" onsubmit="return confirm('Supprimer cette fiche de mensurations ?');">
+                             {% csrf_token %}
+-                            <button type="submit" class="btn btn-light text-danger" title="Supprimer">
++                            <button type="submit" class="btn btn-sm btn-light text-danger" title="Supprimer">
+                               <i class="bi bi-trash"></i>
+                             </button>
+                           </form>
+@@ -249,7 +249,7 @@
+                       {% if cmd.statut == 'EN_ATTENTE' %}
+                         <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-2">En attente</span>
+                       {% elif cmd.statut == 'EN_COURS' %}
+-                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-2">En cours</span>
++                        <span class="badge rounded-pill px-2" style="background:#e8efff;color:#2b59c3;border:1px solid #c7d7f8;">En cours</span>
+                       {% elif cmd.statut == 'PRET' %}
+                         <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-2">Prêt</span>
+                       {% elif cmd.statut == 'LIVRE' %}
+@@ -551,6 +551,7 @@
+   </div>
+ </div>
+ 
++{{ fiches_json|json_script:"donneesMensurations" }}
+ <script>
+ document.addEventListener('DOMContentLoaded', function () {
+   const modal            = document.getElementById('mensurationModal');
+@@ -620,16 +621,15 @@ document.addEventListener('DOMContentLoaded', function () {
+   inputBeneficiaire.addEventListener('input', majSousTitre);
+   selectLien.addEventListener('change', majSousTitre);
+ 
+-  // --- Édition : chargement des données via l'API ---
+-  const API_MENS  = "{% url 'core:api_mensurations_client' client.id %}";
++  // --- Édition : données embarquées dans la page (aucun appel réseau) ---
+   const AJOUT_URL = form.action;
+-  let cacheMens = null;
++  let DONNEES_MENS = [];
++  try {
++    DONNEES_MENS = JSON.parse(
++      document.getElementById('donneesMensurations').textContent || '[]');
++  } catch (e) { DONNEES_MENS = []; }
+   function chargerMensurations() {
+-    if (cacheMens) return Promise.resolve(cacheMens);
+-    return fetch(API_MENS, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+-      .then(function (r) { return r.json(); })
+-      .then(function (d) { cacheMens = d.mensurations || []; return cacheMens; })
+-      .catch(function () { return []; });
++    return Promise.resolve(DONNEES_MENS);
+   }
+   function viderLignes() {
+     modal.querySelectorAll('.dynamic-row').forEach(function (r) { r.remove(); });
+diff --git a/core/templates/core/detail_commande.html b/core/templates/core/detail_commande.html
+index a10fb0f..b99c8c7 100644
+--- a/core/templates/core/detail_commande.html
++++ b/core/templates/core/detail_commande.html
+@@ -89,7 +89,7 @@
+                 {% if commande.statut == 'EN_ATTENTE' %}
+                     <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-3 py-1">En attente</span>
+                 {% elif commande.statut == 'EN_COURS' %}
+-                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary rounded-pill px-3 py-1">En cours</span>
++                    <span class="badge rounded-pill px-3 py-1" style="background:#e8efff;color:#2b59c3;border:1px solid #c7d7f8;">En cours</span>
+                 {% elif commande.statut == 'PRET' %}
+                     <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1">Prêt</span>
+                 {% elif commande.statut == 'LIVRE' %}
+diff --git a/core/templates/core/detail_mensuration.html b/core/templates/core/detail_mensuration.html
+index b420047..32da981 100644
+--- a/core/templates/core/detail_mensuration.html
++++ b/core/templates/core/detail_mensuration.html
+@@ -6,7 +6,13 @@
+     <div class="card shadow-sm border-0">
+         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+             <h3 class="mb-0"><i class="bi bi-rulers me-2"></i>{{ mensuration.libelle }}</h3>
+-            <span class="badge bg-white text-dark">{{ mensuration.date_prise|date:"d/m/Y" }}</span>
++            <span class="d-flex align-items-center gap-2">
++                <span class="badge bg-white text-dark">{{ mensuration.date_prise|date:"d/m/Y" }}</span>
++                <a href="{% url 'core:detail_client' mensuration.client.id %}"
++                   class="btn btn-sm btn-light fw-semibold">
++                    <i class="bi bi-arrow-left me-1"></i>Retour
++                </a>
++            </span>
+         </div>
+         <div class="card-body p-4">
+             <p class="text-muted mb-4">
+@@ -36,17 +42,6 @@
+                 <p class="text-muted fst-italic">Aucune mesure enregistrée sur cette fiche.</p>
+             {% endif %}
+ 
+-            <div class="mt-4 d-flex gap-2">
+-                <a href="{% url 'core:mensuration_pdf' mensuration.id %}" class="btn btn-outline-danger rounded-pill px-4">
+-                    <i class="bi bi-file-earmark-pdf me-1"></i> Télécharger en PDF
+-                </a>
+-                <a href="{% url 'core:modifier_mensuration' mensuration.id %}" class="btn btn-outline-dark rounded-pill px-4">
+-                    <i class="bi bi-pencil me-1"></i> Modifier
+-                </a>
+-                <a href="{% url 'core:detail_client' mensuration.client.id %}" class="btn btn-secondary rounded-pill px-4">
+-                    <i class="bi bi-arrow-left me-1"></i> Retour au client
+-                </a>
+-            </div>
+         </div>
+     </div>
+ </div>
+diff --git a/core/templates/core/mensuration_pdf.html b/core/templates/core/mensuration_pdf.html
+index 04f0ec8..9be8189 100644
+--- a/core/templates/core/mensuration_pdf.html
++++ b/core/templates/core/mensuration_pdf.html
+@@ -93,28 +93,41 @@
+         </tr>
+     </table>
+ 
+-    <!-- ===== TABLEAU DES MESURES ===== -->
+-    {% if lignes_mesures %}
+-    <table class="mesures">
++    <!-- ===== TABLEAU DES MESURES (2 colonnes imbriquées) ===== -->
++    {% if col_gauche or col_droite %}
++    <table width="100%" style="margin-top: 14px;">
+         <tr>
+-            <th width="29%">Mesure</th>
+-            <th width="21%">Valeur</th>
+-            <th width="29%">Mesure</th>
+-            <th width="21%">Valeur</th>
+-        </tr>
+-        {% for g_nom, g_val, d_nom, d_val in lignes_mesures %}
+-        <tr class="{% cycle '' 'zebre' %}">
+-            <td>{{ g_nom }}</td>
+-            <td class="valeur">{{ g_val }} cm</td>
+-            {% if d_nom %}
+-                <td>{{ d_nom }}</td>
+-                <td class="valeur">{{ d_val }} cm</td>
+-            {% else %}
+-                <td style="border: none;"></td>
+-                <td style="border: none;"></td>
+-            {% endif %}
++            <td width="50%" valign="top" style="padding-right: 5px;">
++                <table class="mesures" style="margin-top: 0;">
++                    <tr>
++                        <th width="62%">Mesure</th>
++                        <th width="38%">Valeur</th>
++                    </tr>
++                    {% for nom, valeur in col_gauche %}
++                    <tr class="{% cycle '' 'zebre' %}">
++                        <td>{{ nom }}</td>
++                        <td class="valeur">{{ valeur }} cm</td>
++                    </tr>
++                    {% endfor %}
++                </table>
++            </td>
++            <td width="50%" valign="top" style="padding-left: 5px;">
++                {% if col_droite %}
++                <table class="mesures" style="margin-top: 0;">
++                    <tr>
++                        <th width="62%">Mesure</th>
++                        <th width="38%">Valeur</th>
++                    </tr>
++                    {% for nom, valeur in col_droite %}
++                    <tr class="{% cycle '' 'zebre' %}">
++                        <td>{{ nom }}</td>
++                        <td class="valeur">{{ valeur }} cm</td>
++                    </tr>
++                    {% endfor %}
++                </table>
++                {% endif %}
++            </td>
+         </tr>
+-        {% endfor %}
+     </table>
+     {% else %}
+     <p style="margin-top: 14px; color: #64748b;">Aucune mesure enregistrée sur cette fiche.</p>
+diff --git a/core/views.py b/core/views.py
+index 0545125..ac14271 100644
+--- a/core/views.py
++++ b/core/views.py
+@@ -685,6 +685,21 @@ def detail_client(request, pk):
+         'lignes__accessoires_ligne', 'paiements'
+     ).order_by('-date_commande')
+ 
++    initiales = (
++        client.nom[:1] + (client.prenom[:1] if client.prenom else '')
++    ).upper() or '?'
++
++    fiches_json = [{
++        'id': m.id,
++        'beneficiaire': m.beneficiaire,
++        'lien_code': m.lien_parente,
++        'est_proche': not m.est_pour_client,
++        'genre': m.genre_mesure,
++        'libelle': m.libelle,
++        'donnees': m.donnees or {},
++        'url_edit': reverse('core:modifier_mensuration', args=[m.id]),
++    } for m in mensurations]
++
+     return render(request, 'core/detail_client.html', {
+         'client': client,
+         'mensurations': mensurations,
+@@ -692,6 +707,8 @@ def detail_client(request, pk):
+         'commandes': commandes,
+         'liens_parente': Mensuration.LIENS,
+         'atelier': atelier,
++        'initiales_client': initiales,
++        'fiches_json': fiches_json,
+     })
+ 
+ 
+@@ -873,14 +890,11 @@ def mensuration_pdf(request, pk):
+         except Exception:
+             logo_uri = ''
+ 
+-    # Mesures appariées sur 2 colonnes pour une feuille compacte
++    # Mesures réparties sur 2 colonnes pour une feuille compacte
+     items = list((mensuration.donnees or {}).items())
+     demi = (len(items) + 1) // 2
+-    lignes_mesures = []
+-    for i in range(demi):
+-        g = items[i]
+-        d = items[demi + i] if demi + i < len(items) else ('', '')
+-        lignes_mesures.append((g[0], g[1], d[0], d[1]))
++    col_gauche = items[:demi]
++    col_droite = items[demi:]
+ 
+     html = render_to_string('core/mensuration_pdf.html', {
+         'mensuration': mensuration,
+@@ -888,7 +902,8 @@ def mensuration_pdf(request, pk):
+         'atelier': atelier,
+         'date_edition': timezone.now(),
+         'logo_uri': logo_uri,
+-        'lignes_mesures': lignes_mesures,
++        'col_gauche': col_gauche,
++        'col_droite': col_droite,
+     }, request=request)
+ 
+     response = HttpResponse(content_type='application/pdf')
+-- 
+2.47.3
+

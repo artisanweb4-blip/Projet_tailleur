@@ -1,0 +1,869 @@
+From a8512e215efc08f4b02ceff07cddebc7443117fc Mon Sep 17 00:00:00 2001
+From: Arena Agent <agent@arena.ai>
+Date: Tue, 22 Sep 2026 14:43:17 +0000
+Subject: [PATCH] =?UTF-8?q?0030=20Apr=C3=A8s=20cr=C3=A9ation=20commande=20?=
+ =?UTF-8?q?->=20liste=20;=20re=C3=A7u=20d'acompte=20et=20facture=20=3D=20P?=
+ =?UTF-8?q?DF=20professionnels=20directs=20(logo,=20boutique,=20client,=20?=
+ =?UTF-8?q?totaux,=20signatures)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ core/templates/core/commandes.html            |   8 +-
+ core/templates/core/detail_commande.html      |  20 +-
+ core/templates/core/facture_commande_pdf.html | 310 +++++++-----------
+ core/templates/core/recu_paiement_pdf.html    | 278 ++++++++--------
+ core/views.py                                 |  76 +++--
+ 5 files changed, 319 insertions(+), 373 deletions(-)
+
+diff --git a/core/templates/core/commandes.html b/core/templates/core/commandes.html
+index 3793a8c..a1454dc 100644
+--- a/core/templates/core/commandes.html
++++ b/core/templates/core/commandes.html
+@@ -290,10 +290,10 @@
+                                     <i class="bi bi-person-badge me-2"></i>Fiche de {{ e.nom_complet }}</a></li>
+                                 {% endfor %}
+                                 <li><hr class="dropdown-divider"></li>
+-                                <li><a class="dropdown-item" href="{% url 'core:recu_paiement' r.c.pk %}">
+-                                    <i class="bi bi-receipt me-2"></i>Reçu</a></li>
+-                                <li><a class="dropdown-item" href="{% url 'core:facture_commande' r.c.pk %}">
+-                                    <i class="bi bi-file-earmark-text me-2"></i>Facture</a></li>
++                                <li><a class="dropdown-item" href="{% url 'core:recu_paiement_pdf' r.c.pk %}">
++                                    <i class="bi bi-receipt me-2"></i>Reçu d'acompte (PDF)</a></li>
++                                <li><a class="dropdown-item" href="{% url 'core:facture_commande_pdf' r.c.pk %}">
++                                    <i class="bi bi-file-earmark-pdf me-2"></i>Facture (PDF)</a></li>
+                                 <li><hr class="dropdown-divider"></li>
+                                 <li><a class="dropdown-item text-danger" href="{% url 'core:supprimer_commande' r.c.pk %}">
+                                     <i class="bi bi-trash me-2"></i>Supprimer</a></li>
+diff --git a/core/templates/core/detail_commande.html b/core/templates/core/detail_commande.html
+index b99c8c7..5b629a0 100644
+--- a/core/templates/core/detail_commande.html
++++ b/core/templates/core/detail_commande.html
+@@ -115,8 +115,8 @@
+             <a href="{% url 'core:fiche_atelier_pdf' commande.pk %}" class="btn btn-outline-primary">
+                 <i class="bi bi-rulers me-1"></i> Fiche atelier
+             </a>
+-            <a href="{% url 'core:facture_commande' commande.pk %}" class="btn btn-success">
+-                <i class="bi bi-file-earmark-text me-1"></i> Facture
++            <a href="{% url 'core:facture_commande_pdf' commande.pk %}" class="btn btn-primary">
++                <i class="bi bi-file-earmark-pdf me-1"></i> Facture
+             </a>
+         </div>
+     </div>
+@@ -551,21 +551,13 @@
+                        class="btn btn-outline-dark btn-sm">
+                         <i class="bi bi-rulers me-1"></i>Fiche atelier (mensurations)
+                     </a>
+-                    <a href="{% url 'core:recu_paiement' commande.pk %}"
+-                       class="btn btn-outline-primary btn-sm">
+-                        <i class="bi bi-receipt me-1"></i>Voir le reçu
+-                    </a>
+                     <a href="{% url 'core:recu_paiement_pdf' commande.pk %}"
+-                       class="btn btn-outline-primary btn-sm">
+-                        <i class="bi bi-file-pdf me-1"></i>Reçu PDF
+-                    </a>
+-                    <a href="{% url 'core:facture_commande' commande.pk %}"
+-                       class="btn btn-outline-success btn-sm">
+-                        <i class="bi bi-file-earmark-text me-1"></i>Voir la facture
++                       class="btn btn-primary btn-sm">
++                        <i class="bi bi-receipt me-1"></i>Reçu d'acompte
+                     </a>
+                     <a href="{% url 'core:facture_commande_pdf' commande.pk %}"
+-                       class="btn btn-outline-success btn-sm">
+-                        <i class="bi bi-file-pdf me-1"></i>Facture PDF
++                       class="btn btn-primary btn-sm">
++                        <i class="bi bi-file-earmark-pdf me-1"></i>Facture
+                     </a>
+                 </div>
+             </div>
+diff --git a/core/templates/core/facture_commande_pdf.html b/core/templates/core/facture_commande_pdf.html
+index 8e9d6ef..f37f2d0 100644
+--- a/core/templates/core/facture_commande_pdf.html
++++ b/core/templates/core/facture_commande_pdf.html
+@@ -1,216 +1,160 @@
+ <!DOCTYPE html>
+ <html lang="fr">
+ <head>
+-  <meta charset="UTF-8">
+-  <style>
+-    body { font-family: Arial, sans-serif; font-size: 13px; color: #333; }
+-    .container { max-width: 680px; margin: 0 auto; padding: 20px; }
+-    .header-soldee { background-color: #198754; color: white;
+-                     padding: 15px 20px; border-radius: 6px 6px 0 0; }
+-    .header-partielle { background-color: #ffc107; color: #333;
+-                        padding: 15px 20px; border-radius: 6px 6px 0 0; }
+-    .header h5 { margin: 0; font-size: 16px; }
+-    .header small { font-size: 12px; }
+-    .body { border: 1px solid #dee2e6; border-top: none;
+-            padding: 20px; border-radius: 0 0 6px 6px; }
+-    .info-left { float: left; width: 50%; }
+-    .info-right { float: right; width: 50%; text-align: right; }
+-    .clearfix { clear: both; }
+-    p { margin: 2px 0; font-size: 12px; }
+-    .label { color: #6c757d; font-size: 11px; }
+-    .value { font-weight: bold; }
+-    hr { border: none; border-top: 1px solid #dee2e6; margin: 15px 0; }
+-    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+-    table th { background-color: #f8f9fa; padding: 8px 10px;
+-               text-align: left; font-size: 12px; border: 1px solid #dee2e6; }
+-    table td { padding: 8px 10px; font-size: 12px; border: 1px solid #dee2e6; }
+-    .text-end { text-align: right; }
+-    .row-remise td { background-color: #fff3cd; }
+-    .row-net td { background-color: #f8f9fa; font-weight: bold; }
+-    .row-encaisse td { background-color: #d1e7dd; font-weight: bold; }
+-    .row-soldee td { background-color: #d1e7dd; font-weight: bold; }
+-    .row-due td { background-color: #f8d7da; font-weight: bold; }
+-    .badge-code { padding: 4px 10px; border-radius: 4px;
+-                  font-size: 13px; font-weight: bold; float: right; }
+-    .sig-left { float: left; width: 45%; text-align: center; }
+-    .sig-right { float: right; width: 45%; text-align: center; }
+-    .sig-label { font-size: 11px; color: #6c757d; margin-bottom: 5px; }
+-    .sig-line { border-top: 1px solid #aaa; margin-top: 40px; }
+-    h6 { font-size: 13px; font-weight: bold; margin-bottom: 8px; margin-top: 15px; }
+-  </style>
+-</head>
+-<body>
++    <meta charset="UTF-8">
++    <style>
++        @page { size: A4; margin: 1.6cm; }
++        body { font-family: Helvetica, Arial, sans-serif; font-size: 10px; color: #1e293b; }
+ 
+-<div class="container">
++        .nom-atelier { font-size: 16px; font-weight: bold; color: #2b59c3; }
++        .coordonnees { font-size: 8.5px; color: #64748b; line-height: 1.5; }
++        .logo { max-height: 64px; max-width: 150px; }
+ 
+-  <!-- En-tête -->
+-  {% if commande.est_soldee %}
+-  <div class="header-soldee">
+-  {% else %}
+-  <div class="header-partielle">
+-  {% endif %}
+-    {% if commande.est_soldee %}
+-<span class="badge-code" style="background:#fff; color:#198754;">
+-  {{ commande.code }}
+-</span>
+-{% else %}
+-<span class="badge-code" style="background:#fff; color:#856404;">
+-  {{ commande.code }}
+-</span>
+-{% endif %}
++        .bandeau { background-color: #2b59c3; color: #ffffff; font-size: 14px;
++                   font-weight: bold; text-align: center; padding: 8px 0; letter-spacing: 2px; }
++        .sous-bandeau { text-align: center; font-size: 10px; color: #475569; padding: 5px 0 12px 0; }
+ 
+-    <h5>
+-      {% if commande.est_soldee %}
+-        Facture Soldee
+-      {% else %}
+-        Facture (Solde restant)
+-      {% endif %}
+-    </h5>
+-    <small>{{ atelier.nom }}</small>
+-    <div class="clearfix"></div>
+-  </div>
++        .bloc-titre { font-size: 9px; font-weight: bold; color: #2b59c3;
++                      text-transform: uppercase; letter-spacing: 0.5px;
++                      border-bottom: 1px solid #dbe3f0; padding-bottom: 3px; }
++        .info { font-size: 9.5px; line-height: 1.8; }
++        .info .libelle { color: #64748b; }
+ 
+-  <div class="body">
++        table.mesures { width: 100%; border-collapse: collapse; margin-top: 14px; }
++        table.mesures th { background-color: #2b59c3; color: #ffffff; font-size: 9.5px;
++                           padding: 6px 10px; text-align: left; }
++        table.mesures td { border: 1px solid #dbe3f0; padding: 5px 10px; font-size: 10px; }
++        .zebre { background-color: #f4f7fd; }
++        .text-end { text-align: right; }
++        .total-lib { font-weight: bold; }
++        .total-val { font-weight: bold; color: #2b59c3; }
++        .reste-val { font-weight: bold; color: #dc2626; }
++        .solde-val { font-weight: bold; color: #059669; }
+ 
+-    <!-- Infos atelier / date -->
+-    <div style="margin-bottom:15px;">
+-      <div class="info-left">
+-        <p class="value">{{ atelier.nom }}</p>
+-        {% if atelier.telephone %}<p>{{ atelier.telephone }}</p>{% endif %}
+-        {% if atelier.adresse %}<p>{{ atelier.adresse }}</p>{% endif %}
+-      </div>
+-      <div class="info-right">
+-        <p class="label">Date de livraison</p>
+-        <p class="value">
+-          {% if commande.date_livraison_effective %}
+-            {{ commande.date_livraison_effective|date:"d/m/Y" }}
+-          {% else %}
+-            {{ commande.date_livraison_prevue|date:"d/m/Y" }}
+-          {% endif %}
+-        </p>
+-      </div>
+-      <div class="clearfix"></div>
+-    </div>
++        .cadre-signature { border: 1px solid #cbd5e1; height: 64px; }
++        .libelle-sig { font-size: 8.5px; color: #64748b; padding-top: 4px; text-align: center; }
+ 
+-    <hr>
++        .pied { margin-top: 22px; font-size: 8px; color: #94a3b8; text-align: center;
++                border-top: 1px solid #e2e8f0; padding-top: 6px; }
++    </style>
++</head>
++<body>
+ 
+-    <!-- Client -->
+-    <div style="margin-bottom:15px;">
+-      <p class="label">Facture a</p>
+-      <p class="value">{{ commande.client }}</p>
+-      <p>{{ commande.client.telephone }}</p>
++    <!-- ===== EN-TÊTE BOUTIQUE ===== -->
++    <table width="100%">
++        <tr>
++            <td width="40%" valign="middle">
++                {% if logo_uri %}<img src="{{ logo_uri }}" class="logo" />{% endif %}
++            </td>
++            <td width="60%" valign="middle" align="right">
++                <span class="nom-atelier">{{ atelier.nom }}</span><br/>
++                <span class="coordonnees">
++                    {% if atelier.adresse %}{{ atelier.adresse|linebreaksbr }}<br/>{% endif %}
++                    {% if atelier.telephone %}Tél : {{ atelier.telephone }}{% if atelier.email %} &nbsp;·&nbsp; {% endif %}{% endif %}
++                    {% if atelier.email %}{{ atelier.email }}{% endif %}
++                </span>
++            </td>
++        </tr>
++    </table>
++
++    <!-- ===== BANDEAU TITRE ===== -->
++    <table width="100%" style="margin-top: 14px;">
++        <tr><td class="bandeau">FACTURE</td></tr>
++    </table>
++    <div class="sous-bandeau">
++        Facture n° {{ commande.code }} &nbsp;·&nbsp;
++        éditée le {{ date_edition|date:"d/m/Y" }} &nbsp;·&nbsp;
++        {% if commande.est_soldee %}Soldée{% else %}Solde restant{% endif %}
+     </div>
+ 
+-    <!-- Détail commande -->
+-    <table>
+-      <thead>
++    <!-- ===== CLIENT / COMMANDE ===== -->
++    <table width="100%">
+         <tr>
+-          <th>Designation</th>
+-          <th class="text-end">Montant</th>
++            <td width="50%" valign="top" style="padding-right: 12px;">
++                <div class="bloc-titre">Facturé à</div>
++                <div class="info">
++                    <b>{{ commande.client.nom }}{% if commande.client.prenom %} {{ commande.client.prenom }}{% endif %}</b><br/>
++                    <span class="libelle">Téléphone :</span> {{ commande.client.telephone|default:"—" }}<br/>
++                    {% if commande.client.email %}<span class="libelle">Email :</span> {{ commande.client.email }}<br/>{% endif %}
++                    {% if commande.client.adresse %}<span class="libelle">Adresse :</span> {{ commande.client.adresse|linebreaksbr }}{% endif %}
++                </div>
++            </td>
++            <td width="50%" valign="top" style="padding-left: 12px;">
++                <div class="bloc-titre">Commande</div>
++                <div class="info">
++                    <span class="libelle">Code :</span> <b>{{ commande.code }}</b><br/>
++                    <span class="libelle">Passée le :</span> {{ commande.date_creation|date:"d/m/Y" }}<br/>
++                    <span class="libelle">Livraison prévue :</span> {{ commande.date_livraison_prevue|date:"d/m/Y" }}<br/>
++                    <span class="libelle">Statut :</span> {{ commande.get_statut_display }}
++                </div>
++            </td>
+         </tr>
+-      </thead>
+-      <tbody>
++    </table>
++
++    <!-- ===== LIGNES DE LA FACTURE ===== -->
++    <table class="mesures">
+         <tr>
+-          <td>
+-            {% if commande.modele %}
+-              <strong>{{ commande.modele.nom }}</strong><br>
+-            {% else %}
+-              <strong>Confection sur mesure</strong><br>
+-            {% endif %}
+-            <span style="color:#6c757d;">
+-              {{ commande.description_vetement|truncatechars:80 }}
+-            </span>
+-          </td>
+-          <td class="text-end">
+-            {{ commande.prix_total|floatformat:0 }} {{ atelier.devise }}
+-          </td>
++            <th width="52%">Désignation</th>
++            <th width="12%">Qté</th>
++            <th width="18%">P.U.</th>
++            <th width="18%">Total</th>
++        </tr>
++        {% for lib, qte, pu, tot in lignes_detail %}
++        <tr class="{% cycle '' 'zebre' %}">
++            <td>{{ lib }}</td>
++            <td>{{ qte }}</td>
++            <td class="text-end">{{ pu|floatformat:0 }}</td>
++            <td class="text-end">{{ tot|floatformat:0 }}</td>
+         </tr>
++        {% endfor %}
+         {% if commande.remise_type and commande.remise_valeur %}
+-        <tr class="row-remise">
+-          <td>
+-            Remise
+-            {% if commande.remise_type == 'POURCENTAGE' %}
+-              ({{ commande.remise_valeur }}%)
+-            {% else %}
+-              (montant fixe)
+-            {% endif %}
+-          </td>
+-          <td class="text-end" style="color:#dc3545;">
+-            - {{ commande.remise_valeur|floatformat:0 }} {{ atelier.devise }}
+-          </td>
++        <tr>
++            <td colspan="3" class="text-end total-lib">
++                Remise {% if commande.remise_type == 'POURCENTAGE' %}({{ commande.remise_valeur }}%){% endif %}
++            </td>
++            <td class="text-end">- {{ commande.remise_valeur|floatformat:0 }}{% if commande.remise_type == 'POURCENTAGE' %} %{% else %} {{ atelier.devise }}{% endif %}</td>
+         </tr>
+         {% endif %}
+-      </tbody>
+-      <tfoot>
+-        <tr class="row-net">
+-          <td>Prix net</td>
+-          <td class="text-end">
+-            {{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}
+-          </td>
+-        </tr>
+-      </tfoot>
+-    </table>
+-
+-    <!-- Historique des paiements -->
+-    <h6>Historique des paiements</h6>
+-    <table>
+-      <thead>
+         <tr>
+-          <th>Date</th>
+-          <th>Mode</th>
+-          <th class="text-end">Montant</th>
++            <td colspan="3" class="text-end total-lib">Total net</td>
++            <td class="text-end total-val">{{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}</td>
+         </tr>
+-      </thead>
+-      <tbody>
+         {% for p in paiements %}
+         <tr>
+-          <td>{{ p.date_paiement|date:"d/m/Y" }}</td>
+-          <td>{{ p.get_mode_paiement_display }}</td>
+-          <td class="text-end">
+-            {{ p.montant|floatformat:0 }} {{ atelier.devise }}
+-          </td>
+-        </tr>
+-        {% empty %}
+-        <tr>
+-          <td colspan="3" style="text-align:center; color:#6c757d;">
+-            Aucun paiement enregistre
+-          </td>
++            <td colspan="3" class="text-end">Payé le {{ p.date_paiement|date:"d/m/Y" }} ({{ p.get_mode_paiement_display }})</td>
++            <td class="text-end">- {{ p.montant|floatformat:0 }} {{ atelier.devise }}</td>
+         </tr>
+         {% endfor %}
+-      </tbody>
+-      <tfoot>
+-        <tr class="row-encaisse">
+-          <td colspan="2">Total encaisse</td>
+-          <td class="text-end">
+-            {{ commande.montant_paye|floatformat:0 }} {{ atelier.devise }}
+-          </td>
++        <tr>
++            <td colspan="3" class="text-end total-lib">
++                {% if commande.est_soldee %}Statut{% else %}Reste à payer{% endif %}
++            </td>
++            <td class="text-end {% if commande.est_soldee %}solde-val{% else %}reste-val{% endif %}">
++                {% if commande.est_soldee %}SOLDÉE{% else %}{{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}{% endif %}
++            </td>
+         </tr>
+-        <tr {% if commande.est_soldee %}class="row-soldee"{% else %}class="row-due"{% endif %}>
+-          <td colspan="2">
+-            {% if commande.est_soldee %}Soldee{% else %}Reste a payer{% endif %}
+-          </td>
+-          <td class="text-end">
+-            {{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}
+-          </td>
++    </table>
++
++    <!-- ===== SIGNATURES ===== -->
++    <table width="100%" style="margin-top: 26px;">
++        <tr>
++            <td width="45%" valign="top">
++                <div class="cadre-signature"></div>
++                <div class="libelle-sig">Signature du client</div>
++            </td>
++            <td width="10%"></td>
++            <td width="45%" valign="top">
++                <div class="cadre-signature"></div>
++                <div class="libelle-sig">Cachet et signature de l'atelier</div>
++            </td>
+         </tr>
+-      </tfoot>
+     </table>
+ 
+-    <!-- Signatures -->
+-    <div style="margin-top:40px;">
+-      <div class="sig-left">
+-        <p class="sig-label">Signature du client</p>
+-        <div class="sig-line"></div>
+-      </div>
+-      <div class="sig-right">
+-        <p class="sig-label">Cachet / Signature atelier</p>
+-        <div class="sig-line"></div>
+-      </div>
+-      <div class="clearfix"></div>
++    <!-- ===== PIED DE PAGE ===== -->
++    <div class="pied">
++        {{ atelier.nom }} — facture {{ commande.code }} générée le {{ date_edition|date:"d/m/Y à H:i" }} avec TailleurPro ·
++        Merci de votre confiance.
+     </div>
+ 
+-  </div>
+-</div>
+-
+ </body>
+ </html>
+diff --git a/core/templates/core/recu_paiement_pdf.html b/core/templates/core/recu_paiement_pdf.html
+index 8fb77d0..436bc05 100644
+--- a/core/templates/core/recu_paiement_pdf.html
++++ b/core/templates/core/recu_paiement_pdf.html
+@@ -1,172 +1,158 @@
+ <!DOCTYPE html>
+ <html lang="fr">
+ <head>
+-  <meta charset="UTF-8">
+-  <style>
+-    body { font-family: Arial, sans-serif; font-size: 13px; color: #333; }
+-    .container { max-width: 680px; margin: 0 auto; padding: 20px; }
+-    .header { background-color: #0d6efd; color: white;
+-              padding: 15px 20px; border-radius: 6px 6px 0 0; }
+-    .header h5 { margin: 0; font-size: 16px; }
+-    .header small { font-size: 12px; }
+-    .body { border: 1px solid #dee2e6; border-top: none;
+-            padding: 20px; border-radius: 0 0 6px 6px; }
+-    .info-left { float: left; width: 50%; }
+-    .info-right { float: right; width: 50%; text-align: right; }
+-    .clearfix { clear: both; }
+-    p { margin: 2px 0; font-size: 12px; }
+-    .label { color: #6c757d; font-size: 11px; }
+-    .value { font-weight: bold; }
+-    hr { border: none; border-top: 1px solid #dee2e6; margin: 15px 0; }
+-    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
+-    table th { background-color: #f8f9fa; padding: 8px 10px;
+-               text-align: left; font-size: 12px; border: 1px solid #dee2e6; }
+-    table td { padding: 8px 10px; font-size: 12px; border: 1px solid #dee2e6; }
+-    .text-end { text-align: right; }
+-    .row-remise td { background-color: #fff3cd; }
+-    .row-net td { background-color: #f8f9fa; font-weight: bold; }
+-    .row-acompte td { background-color: #d1e7dd; }
+-    .row-reste td { background-color: #f8d7da; font-weight: bold; }
+-    .alert-info-box { background-color: #cff4fc; border: 1px solid #b6effb;
+-                      padding: 8px 12px; border-radius: 4px;
+-                      font-size: 12px; margin-bottom: 15px; }
+-    .badge-code { background-color: #ffffff; color: #0d6efd;
+-                  padding: 4px 10px; border-radius: 4px;
+-                  font-size: 13px; font-weight: bold; float: right; }
+-    .sig-left { float: left; width: 45%; text-align: center; }
+-    .sig-right { float: right; width: 45%; text-align: center; }
+-    .sig-label { font-size: 11px; color: #6c757d; margin-bottom: 5px; }
+-    .sig-line { border-top: 1px solid #aaa; margin-top: 40px; }
+-  </style>
+-</head>
+-<body>
++    <meta charset="UTF-8">
++    <style>
++        @page { size: A4; margin: 1.6cm; }
++        body { font-family: Helvetica, Arial, sans-serif; font-size: 10px; color: #1e293b; }
+ 
+-<div class="container">
++        .nom-atelier { font-size: 16px; font-weight: bold; color: #2b59c3; }
++        .coordonnees { font-size: 8.5px; color: #64748b; line-height: 1.5; }
++        .logo { max-height: 64px; max-width: 150px; }
+ 
+-  <!-- En-tête -->
+-  <div class="header">
+-    <span class="badge-code">{{ commande.code }}</span>
+-    <h5>Recu d'acompte</h5>
+-    <small>{{ atelier.nom }}</small>
+-    <div class="clearfix"></div>
+-  </div>
++        .bandeau { background-color: #2b59c3; color: #ffffff; font-size: 13px;
++                   font-weight: bold; text-align: center; padding: 7px 0; letter-spacing: 1px; }
++        .sous-bandeau { text-align: center; font-size: 10px; color: #475569; padding: 5px 0 12px 0; }
+ 
+-  <div class="body">
++        .bloc-titre { font-size: 9px; font-weight: bold; color: #2b59c3;
++                      text-transform: uppercase; letter-spacing: 0.5px;
++                      border-bottom: 1px solid #dbe3f0; padding-bottom: 3px; }
++        .info { font-size: 9.5px; line-height: 1.8; }
++        .info .libelle { color: #64748b; }
+ 
+-    <!-- Infos atelier / date -->
+-    <div style="margin-bottom:15px;">
+-      <div class="info-left">
+-        <p class="value">{{ atelier.nom }}</p>
+-        {% if atelier.telephone %}<p>{{ atelier.telephone }}</p>{% endif %}
+-        {% if atelier.adresse %}<p>{{ atelier.adresse }}</p>{% endif %}
+-      </div>
+-      <div class="info-right">
+-        <p class="label">Date de commande</p>
+-        <p class="value">{{ commande.date_commande|date:"d/m/Y" }}</p>
+-      </div>
+-      <div class="clearfix"></div>
+-    </div>
++        .montant-box { background-color: #e8efff; border: 1px solid #c7d7f8;
++                       padding: 10px 14px; text-align: center; margin-top: 12px; }
++        .montant-label { font-size: 9px; color: #2b59c3; text-transform: uppercase;
++                         letter-spacing: 0.5px; }
++        .montant { font-size: 20px; font-weight: bold; color: #2b59c3; }
++
++        table.mesures { width: 100%; border-collapse: collapse; margin-top: 14px; }
++        table.mesures th { background-color: #2b59c3; color: #ffffff; font-size: 9.5px;
++                           padding: 6px 10px; text-align: left; }
++        table.mesures td { border: 1px solid #dbe3f0; padding: 5px 10px; font-size: 10px; }
++        .zebre { background-color: #f4f7fd; }
++        .text-end { text-align: right; }
++        .total-lib { font-weight: bold; }
++        .total-val { font-weight: bold; color: #2b59c3; }
++        .reste-val { font-weight: bold; color: #dc2626; }
+ 
+-    <hr>
++        .cadre-signature { border: 1px solid #cbd5e1; height: 64px; }
++        .libelle-sig { font-size: 8.5px; color: #64748b; padding-top: 4px; text-align: center; }
++
++        .pied { margin-top: 22px; font-size: 8px; color: #94a3b8; text-align: center;
++                border-top: 1px solid #e2e8f0; padding-top: 6px; }
++    </style>
++</head>
++<body>
++
++    <!-- ===== EN-TÊTE BOUTIQUE ===== -->
++    <table width="100%">
++        <tr>
++            <td width="40%" valign="middle">
++                {% if logo_uri %}<img src="{{ logo_uri }}" class="logo" />{% endif %}
++            </td>
++            <td width="60%" valign="middle" align="right">
++                <span class="nom-atelier">{{ atelier.nom }}</span><br/>
++                <span class="coordonnees">
++                    {% if atelier.adresse %}{{ atelier.adresse|linebreaksbr }}<br/>{% endif %}
++                    {% if atelier.telephone %}Tél : {{ atelier.telephone }}{% if atelier.email %} &nbsp;·&nbsp; {% endif %}{% endif %}
++                    {% if atelier.email %}{{ atelier.email }}{% endif %}
++                </span>
++            </td>
++        </tr>
++    </table>
++
++    <!-- ===== BANDEAU TITRE ===== -->
++    <table width="100%" style="margin-top: 14px;">
++        <tr><td class="bandeau">REÇU D'ACOMPTE</td></tr>
++    </table>
++    <div class="sous-bandeau">
++        Commande {{ commande.code }} &nbsp;·&nbsp;
++        {% if paiement %}Reçu n° {{ paiement.id }} du {{ paiement.date_paiement|date:"d/m/Y" }}{% endif %}
++    </div>
+ 
+-    <!-- Client -->
+-    <div style="margin-bottom:15px;">
+-      <p class="label">Client</p>
+-      <p class="value">{{ commande.client }}</p>
+-      <p>{{ commande.client.telephone }}</p>
++    <!-- ===== MONTANT ENCAISSÉ ===== -->
++    {% if paiement %}
++    <div class="montant-box">
++        <div class="montant-label">Montant reçu ({% if paiement.mode_paiement %}{{ paiement.get_mode_paiement_display }}{% endif %})</div>
++        <div class="montant">{{ paiement.montant|floatformat:0 }} {{ atelier.devise }}</div>
+     </div>
++    {% endif %}
+ 
+-    <!-- Tableau détail -->
+-    <table>
+-      <thead>
++    <!-- ===== CLIENT / COMMANDE ===== -->
++    <table width="100%" style="margin-top: 14px;">
+         <tr>
+-          <th>Designation</th>
+-          <th class="text-end">Montant</th>
++            <td width="50%" valign="top" style="padding-right: 12px;">
++                <div class="bloc-titre">Client</div>
++                <div class="info">
++                    <span class="libelle">Nom :</span> <b>{{ commande.client.nom }}{% if commande.client.prenom %} {{ commande.client.prenom }}{% endif %}</b><br/>
++                    <span class="libelle">Téléphone :</span> {{ commande.client.telephone|default:"—" }}<br/>
++                    {% if commande.client.adresse %}<span class="libelle">Adresse :</span> {{ commande.client.adresse|linebreaksbr }}{% endif %}
++                </div>
++            </td>
++            <td width="50%" valign="top" style="padding-left: 12px;">
++                <div class="bloc-titre">Commande</div>
++                <div class="info">
++                    <span class="libelle">Code :</span> <b>{{ commande.code }}</b><br/>
++                    <span class="libelle">Passée le :</span> {{ commande.date_creation|date:"d/m/Y" }}<br/>
++                    <span class="libelle">Livraison prévue :</span> {{ commande.date_livraison_prevue|date:"d/m/Y" }}
++                </div>
++            </td>
+         </tr>
+-      </thead>
+-      <tbody>
++    </table>
++
++    <!-- ===== DÉTAIL DE LA COMMANDE ===== -->
++    <table class="mesures">
+         <tr>
+-          <td>
+-            {% if commande.modele %}
+-              <strong>{{ commande.modele.nom }}</strong><br>
+-            {% else %}
+-              <strong>Confection sur mesure</strong><br>
+-            {% endif %}
+-            <span style="color:#6c757d;">
+-              {{ commande.description_vetement|truncatechars:80 }}
+-            </span>
+-          </td>
+-          <td class="text-end">
+-            {{ commande.prix_total|floatformat:0 }} {{ atelier.devise }}
+-          </td>
++            <th width="52%">Article</th>
++            <th width="12%">Qté</th>
++            <th width="18%">P.U.</th>
++            <th width="18%">Total</th>
+         </tr>
+-        {% if commande.remise_type and commande.remise_valeur %}
+-        <tr class="row-remise">
+-          <td>
+-            Remise
+-            {% if commande.remise_type == 'POURCENTAGE' %}
+-              ({{ commande.remise_valeur }}%)
+-            {% else %}
+-              (montant fixe)
+-            {% endif %}
+-          </td>
+-          <td class="text-end" style="color:#dc3545;">
+-            - {{ commande.remise_valeur|floatformat:0 }} {{ atelier.devise }}
+-          </td>
++        {% for lib, qte, pu, tot in lignes_detail %}
++        <tr class="{% cycle '' 'zebre' %}">
++            <td>{{ lib }}</td>
++            <td>{{ qte }}</td>
++            <td class="text-end">{{ pu|floatformat:0 }}</td>
++            <td class="text-end">{{ tot|floatformat:0 }}</td>
+         </tr>
+-        {% endif %}
+-      </tbody>
+-      <tfoot>
+-        <tr class="row-net">
+-          <td>Prix net</td>
+-          <td class="text-end">
+-            {{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}
+-          </td>
++        {% endfor %}
++        <tr>
++            <td colspan="3" class="text-end total-lib">Total net</td>
++            <td class="text-end total-val">{{ commande.prix_net|floatformat:0 }} {{ atelier.devise }}</td>
+         </tr>
+-        <tr class="row-acompte">
+-          <td>
+-            Acompte recu
+-            {% if paiement %}({{ paiement.get_mode_paiement_display }}){% endif %}
+-          </td>
+-          <td class="text-end">
+-            {% if paiement %}
+-              {{ paiement.montant|floatformat:0 }}
+-            {% else %}
+-              0
+-            {% endif %}
+-            {{ atelier.devise }}
+-          </td>
++        {% if paiement %}
++        <tr>
++            <td colspan="3" class="text-end total-lib">Acompte versé</td>
++            <td class="text-end total-val">- {{ paiement.montant|floatformat:0 }} {{ atelier.devise }}</td>
+         </tr>
+-        <tr class="row-reste">
+-          <td>Reste a payer</td>
+-          <td class="text-end">
+-            {{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}
+-          </td>
++        {% endif %}
++        <tr>
++            <td colspan="3" class="text-end total-lib">Reste à payer</td>
++            <td class="text-end reste-val">{{ commande.reste_a_payer|floatformat:0 }} {{ atelier.devise }}</td>
+         </tr>
+-      </tfoot>
+     </table>
+ 
+-    <!-- Date livraison -->
+-    <div class="alert-info-box">
+-      Date de livraison prevue :
+-      <strong>{{ commande.date_livraison_prevue|date:"d/m/Y" }}</strong>
+-    </div>
++    <!-- ===== SIGNATURES ===== -->
++    <table width="100%" style="margin-top: 26px;">
++        <tr>
++            <td width="45%" valign="top">
++                <div class="cadre-signature"></div>
++                <div class="libelle-sig">Signature du client</div>
++            </td>
++            <td width="10%"></td>
++            <td width="45%" valign="top">
++                <div class="cadre-signature"></div>
++                <div class="libelle-sig">Cachet et signature de l'atelier</div>
++            </td>
++        </tr>
++    </table>
+ 
+-    <!-- Signatures -->
+-    <div style="margin-top:40px;">
+-      <div class="sig-left">
+-        <p class="sig-label">Signature du client</p>
+-        <div class="sig-line"></div>
+-      </div>
+-      <div class="sig-right">
+-        <p class="sig-label">Cachet / Signature atelier</p>
+-        <div class="sig-line"></div>
+-      </div>
+-      <div class="clearfix"></div>
++    <!-- ===== PIED DE PAGE ===== -->
++    <div class="pied">
++        {{ atelier.nom }} — reçu généré le {{ date_edition|date:"d/m/Y à H:i" }} avec TailleurPro ·
++        Ce reçu atteste d'un acompte sur la commande {{ commande.code }}.
+     </div>
+ 
+-  </div>
+-</div>
+-
+ </body>
+ </html>
+diff --git a/core/views.py b/core/views.py
+index 82b1018..5ef8f4c 100644
+--- a/core/views.py
++++ b/core/views.py
+@@ -873,23 +873,7 @@ def mensuration_pdf(request, pk):
+     atelier = get_user_atelier(request.user)
+     mensuration = get_object_or_404(Mensuration, pk=pk, atelier=atelier)
+ 
+-    # Logo de la boutique en data-URI (xhtml2pdf ne charge pas les URL)
+-    logo_uri = ''
+-    if atelier.logo:
+-        import base64
+-        import os as _os
+-        try:
+-            ext = _os.path.splitext(atelier.logo.name)[1].lower()
+-            if ext == '.png':
+-                mime = 'image/png'
+-            elif ext == '.gif':
+-                mime = 'image/gif'
+-            else:
+-                mime = 'image/jpeg'
+-            with atelier.logo.open('rb') as f:
+-                logo_uri = 'data:' + mime + ';base64,' + base64.b64encode(f.read()).decode('ascii')
+-        except Exception:
+-            logo_uri = ''
++    logo_uri = _logo_data_uri(atelier)
+ 
+     # Mesures réparties sur 2 colonnes pour une feuille compacte
+     items = list((mensuration.donnees or {}).items())
+@@ -1456,7 +1440,7 @@ def creer_commande(request):
+                 f"attribué. Pensez à les affecter."
+             )
+ 
+-    return redirect('core:recu_paiement', pk=commande.pk)
++    return redirect('core:liste_commandes')
+ 
+ 
+ @login_required
+@@ -2242,13 +2226,45 @@ def ajuster_stock(request):
+ # ==========================================
+ # 8. REÇUS & FACTURES
+ # ==========================================
+-def _rendre_pdf(request, template, contexte, nom_fichier):
++def _logo_data_uri(atelier):
++    """Logo de la boutique en data-URI (xhtml2pdf ne charge pas les URL)."""
++    if not atelier.logo:
++        return ''
++    import base64
++    import os as _os
++    try:
++        ext = _os.path.splitext(atelier.logo.name)[1].lower()
++        if ext == '.png':
++            mime = 'image/png'
++        elif ext == '.gif':
++            mime = 'image/gif'
++        else:
++            mime = 'image/jpeg'
++        with atelier.logo.open('rb') as f:
++            return ('data:' + mime + ';base64,' +
++                    base64.b64encode(f.read()).decode('ascii'))
++    except Exception:
++        return ''
++
++
++def _lignes_detail(lignes):
++    """Libellé / qté / PU / total de chaque ligne de commande."""
++    detail = []
++    for l in lignes:
++        lib = l.modele.nom if l.modele else (l.description or 'Confection sur mesure')
++        tot = (l.prix_unitaire or 0) * l.quantite
++        detail.append((lib, l.quantite, l.prix_unitaire, tot))
++    return detail
++
++
++def _rendre_pdf(request, template, contexte, nom_fichier, inline=False):
+     from xhtml2pdf import pisa
+     from django.template.loader import render_to_string
+ 
+     html = render_to_string(template, contexte, request=request)
+     response = HttpResponse(content_type='application/pdf')
+-    response['Content-Disposition'] = f'attachment; filename="{nom_fichier}"'
++    mode = 'inline' if inline else 'attachment'
++    response['Content-Disposition'] = f'{mode}; filename="{nom_fichier}"'
+     if pisa.CreatePDF(html, dest=response).err:
+         return HttpResponse("Erreur lors de la génération du PDF.", status=500)
+     return response
+@@ -2304,14 +2320,18 @@ def recu_paiement(request, pk):
+ def recu_paiement_pdf(request, pk):
+     atelier = get_user_atelier(request.user)
+     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
++    lignes = commande.lignes.prefetch_related(
++        'accessoires_ligne__accessoire').all()
+     return _rendre_pdf(request, 'core/recu_paiement_pdf.html', {
+         'commande': commande,
+         'paiement': commande.paiements.order_by('date_paiement').first(),
+-        'lignes': commande.lignes.prefetch_related(
+-            'accessoires_ligne__accessoire').all(),
++        'lignes': lignes,
++        'lignes_detail': _lignes_detail(lignes),
+         'atelier': atelier,
++        'logo_uri': _logo_data_uri(atelier),
++        'date_edition': timezone.now(),
+         'pdf': True,
+-    }, f"recu_{commande.code}.pdf")
++    }, f"recu_{commande.code}.pdf", inline=True)
+ 
+ 
+ @login_required
+@@ -2334,14 +2354,18 @@ def facture_commande(request, pk):
+ def facture_commande_pdf(request, pk):
+     atelier = get_user_atelier(request.user)
+     commande = get_object_or_404(Commande, pk=pk, atelier=atelier)
++    lignes = commande.lignes.prefetch_related(
++        'accessoires_ligne__accessoire').all()
+     return _rendre_pdf(request, 'core/facture_commande_pdf.html', {
+         'commande': commande,
+         'paiements': commande.paiements.order_by('date_paiement'),
+-        'lignes': commande.lignes.prefetch_related(
+-            'accessoires_ligne__accessoire').all(),
++        'lignes': lignes,
++        'lignes_detail': _lignes_detail(lignes),
+         'atelier': atelier,
++        'logo_uri': _logo_data_uri(atelier),
++        'date_edition': timezone.now(),
+         'pdf': True,
+-    }, f"facture_{commande.code}.pdf")
++    }, f"facture_{commande.code}.pdf", inline=True)
+ 
+ 
+ # ==========================================
+-- 
+2.47.3
+

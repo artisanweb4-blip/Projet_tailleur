@@ -1,0 +1,46 @@
+From 130764ce66b9e13297960e992d5d941bf577be76 Mon Sep 17 00:00:00 2001
+From: Arena Agent <agent@arena.ai>
+Date: Mon, 21 Sep 2026 22:43:20 +0000
+Subject: [PATCH] =?UTF-8?q?0026=20Fix=20pr=C3=A9-remplissage=20modale=20me?=
+ =?UTF-8?q?nsurations=20pour=20fiche=20du=20client=20lui-m=C3=AAme=20(lien?=
+ =?UTF-8?q?=20MOI=20absent=20du=20select=20->=20exception)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ core/templates/core/detail_client.html | 10 ++++++++--
+ 1 file changed, 8 insertions(+), 2 deletions(-)
+
+diff --git a/core/templates/core/detail_client.html b/core/templates/core/detail_client.html
+index 607a354..76b8272 100644
+--- a/core/templates/core/detail_client.html
++++ b/core/templates/core/detail_client.html
+@@ -612,8 +612,13 @@ document.addEventListener('DOMContentLoaded', function () {
+     }
+   }
+   function majSousTitre() {
++    if (!pourProche.checked) {
++      sousTitre.textContent = 'Pour ' + NOM_CLIENT;
++      return;
++    }
+     const nom = inputBeneficiaire.value.trim();
+-    const lien = selectLien.options[selectLien.selectedIndex].text;
++    const opt = selectLien.options[selectLien.selectedIndex];
++    const lien = opt ? opt.text : '';
+     sousTitre.textContent = nom ? `Pour ${nom} (${lien})` : `Pour un proche (${lien})`;
+   }
+   pourClient.addEventListener('change', toggleProche);
+@@ -672,7 +677,8 @@ document.addEventListener('DOMContentLoaded', function () {
+       if (m.est_proche) pourProche.checked = true; else pourClient.checked = true;
+       toggleProche();
+       inputBeneficiaire.value = m.beneficiaire || '';
+-      if (m.lien_code) selectLien.value = m.lien_code;
++      if (m.lien_code && m.lien_code !== 'MOI') selectLien.value = m.lien_code;
++      if (selectLien.selectedIndex < 0) selectLien.selectedIndex = 0;
+       if (m.genre === 'femme') btnFemme.checked = true; else btnHomme.checked = true;
+       toggleSections();
+       inputLibelle.value = m.libelle || '';
+-- 
+2.47.3
+

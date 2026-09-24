@@ -1,0 +1,590 @@
+From e1c5853c1a04516f1216854f79134998ca10dbdd Mon Sep 17 00:00:00 2001
+From: Arena Agent <agent@arena.ai>
+Date: Mon, 21 Sep 2026 10:32:24 +0000
+Subject: [PATCH 17/18] =?UTF-8?q?Sauvegardes=20Excel=20:=20propri=C3=A9tai?=
+ =?UTF-8?q?re=20(onglet=20Sauvegarde)=20et=20syst=C3=A8me=20(super-admin)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- Le propriétaire télécharge désormais un classeur Excel (.xlsx) :
+  une feuille lisible par modèle métier + feuille Informations +
+  feuille masquée _RESTAURATION portant la charge JSON de
+  restauration exacte (tronçons < 32 767 caractères).
+- Restauration acceptée depuis le .xlsx téléchargé (ou .json
+  historique) ; classeur sans charge masquée refusé.
+- Back-office super-admin : page Sauvegardes (nav, liste, création,
+  téléchargement, suppression) -> classeur Excel de TOUTE la
+  plateforme (données métier toutes boutiques + Ateliers,
+  Abonnements, Formules, Profils, Comptes sans mots de passe).
+- Fichiers système dans BASE_DIR/sauvegardes_systeme/ (gitignore).
+- requirements.txt : openpyxl.
+---
+ core/sauvegarde.py                            | 265 +++++++++++++++++-
+ core/templates/core/parametres.html           |   4 +-
+ .../templates/saas_admin/base_superadmin.html |   3 +
+ .../saas_admin/sauvegardes_systeme.html       |  90 ++++++
+ core/views.py                                 |   2 +-
+ requirements.txt                              |   3 +
+ saas_admin/urls.py                            |   3 +
+ saas_admin/views.py                           |  39 ++-
+ 8 files changed, 394 insertions(+), 15 deletions(-)
+ create mode 100644 core/templates/saas_admin/sauvegardes_systeme.html
+
+diff --git a/core/sauvegarde.py b/core/sauvegarde.py
+index 6862e91..eb6154f 100644
+--- a/core/sauvegarde.py
++++ b/core/sauvegarde.py
+@@ -12,13 +12,18 @@ fichiers média (photos, logos) ne sont PAS inclus : restaurer des
+ comptes pourrait verrouiller l'accès à l'atelier.
+ 
+ Les fichiers sont déposés dans <BASE_DIR>/sauvegardes/ sous le nom
+-sauvegarde_<idAtelier>_<AAAAMMJJ-HHMMSS>.json.
++sauvegarde_<idAtelier>_<AAAAMMJJ-HHMMSS>.xlsx : un classeur Excel lisible
++(une feuille par modèle) contenant en feuille masquée « _RESTAURATION »
++la charge JSON nécessaire à une restauration exacte.
+ """
+ import json
+ import re
+-from datetime import datetime
++from datetime import date, datetime
++from io import BytesIO
+ from pathlib import Path
+ 
++from openpyxl import Workbook, load_workbook
++
+ from django.apps import apps
+ from django.conf import settings
+ from django.core import serializers
+@@ -33,7 +38,23 @@ MODELES_SAUVEGARDES = [
+ # Suppression avant restauration : enfants d'abord.
+ ORDRE_SUPPRESSION = list(reversed(MODELES_SAUVEGARDES))
+ 
+-MOTIF_NOM = re.compile(r'^sauvegarde_(\d+)_(\d{8}-\d{6})\.json$')
++FEUILLES = {
++    'Client': 'Clients',
++    'Mensuration': 'Mensurations',
++    'CatalogueModele': 'Modèles',
++    'Accessoire': 'Accessoires',
++    'Commande': 'Commandes',
++    'LigneCommande': 'Lignes de commande',
++    'LigneAccessoire': 'Lignes accessoires',
++    'Paiement': 'Paiements',
++    'MouvementStock': 'Mouvements de stock',
++    'Depense': 'Dépenses',
++    'Employe': 'Employés',
++    'Paie': 'Paies',
++}
++CHARGE_MAX = 30000  # limite de caractères par cellule Excel
++
++MOTIF_NOM = re.compile(r'^sauvegarde_(\d+)_(\d{8}-\d{6})\.xlsx$')
+ 
+ 
+ def _modele(nom):
+@@ -55,11 +76,80 @@ def chemin_sauvegarde(atelier, nom):
+     return chemin if chemin.is_file() else None
+ 
+ 
++def _valeur_lisible(valeur, field, cache):
++    """Valeur de champ transformée pour lecture humaine dans Excel."""
++    if valeur is None:
++        return ''
++    if field is not None and field.many_to_many or field.many_to_one or field.one_to_one:
++        modele = field.related_model
++        if modele is not None:
++            table = cache.setdefault(modele, {o.pk: str(o) for o in modele.objects.all()})
++            if isinstance(valeur, list):
++                return ', '.join(table.get(v, v) for v in valeur)
++            return table.get(valeur, valeur)
++    if isinstance(valeur, list):
++        return ', '.join(str(v) for v in valeur)
++    if isinstance(valeur, dict):
++        return json.dumps(valeur, ensure_ascii=False)
++    if isinstance(valeur, datetime):
++        return valeur.replace(tzinfo=None)  # Excel ne gère pas les fuseaux
++    if isinstance(valeur, date):
++        return valeur
++    return valeur
++
++
++def _ecrire_classeur(modeles_objets, enveloppe_json, infos):
++    """Construit le classeur Excel : feuilles lisibles + charge masquée."""
++    wb = Workbook()
++    wb.remove(wb.active)
++    feuille = wb.create_sheet('Informations')
++    for cle, val in infos:
++        feuille.append([cle, val])
++    cache = {}
++    for nom, objets in modeles_objets:
++        ws = wb.create_sheet(FEUILLES.get(nom, nom)[:31])
++        if not objets:
++            ws.append(['(aucun enregistrement)'])
++            continue
++        champs = []
++        for objet in objets:
++            for cle in objet['fields']:
++                if cle not in champs:
++                    champs.append(cle)
++        modele = _modele(nom)
++        entetes = ['Identifiant']
++        for c in champs:
++            try:
++                entetes.append(str(modele._meta.get_field(c).verbose_name).capitalize())
++            except Exception:
++                entetes.append(c.capitalize().replace('_', ' '))
++        ws.append(entetes)
++        for objet in objets:
++            ligne = [objet['pk']]
++            for cle in champs:
++                field = None
++                try:
++                    field = modele._meta.get_field(cle)
++                except Exception:
++                    field = None
++                ligne.append(_valeur_lisible(objet['fields'].get(cle), field, cache))
++            ws.append(ligne)
++    # Charge de restauration, masquée, découpée en tronçons < 32 767 caractères
++    ws = wb.create_sheet('_RESTAURATION')
++    ws.sheet_state = 'hidden'
++    for i in range(0, len(enveloppe_json), CHARGE_MAX):
++        ws.append([enveloppe_json[i:i + CHARGE_MAX]])
++    return wb
++
++
+ def creer_sauvegarde(atelier):
+-    """Exporte les données de l'atelier ; retourne le nom du fichier."""
++    """Exporte les données de l'atelier en Excel ; retourne le nom du fichier."""
++    modeles_objets = []
+     objets = []
+     for nom in MODELES_SAUVEGARDES:
+-        objets.extend(_modele(nom).objects.filter(atelier=atelier).order_by('pk'))
++        qs = list(_modele(nom).objects.filter(atelier=atelier).order_by('pk'))
++        modeles_objets.append((nom, qs))
++        objets.extend(qs)
+     contenu = json.loads(serializers.serialize('json', objets))
+     enveloppe = {
+         'version': 1,
+@@ -69,16 +159,28 @@ def creer_sauvegarde(atelier):
+         'cree_le': datetime.now().isoformat(timespec='seconds'),
+         'objets': contenu,
+     }
+-    nom = f"sauvegarde_{atelier.id}_{datetime.now():%Y%m%d-%H%M%S}.json"
+-    (dossier_sauvegardes() / nom).write_text(
+-        json.dumps(enveloppe, ensure_ascii=False, indent=2), encoding='utf-8')
++    charge = json.dumps(enveloppe, ensure_ascii=False)
++    wb = _ecrire_classeur(
++        [(nom, json.loads(serializers.serialize('json', qs))) for nom, qs in modeles_objets],
++        charge,
++        [
++            ('Application', 'Projet_tailleur'),
++            ('Atelier', atelier.nom),
++            ('Identifiant atelier', atelier.id),
++            ('Créée le', datetime.now().strftime('%d/%m/%Y %H:%M')),
++            ('Enregistrements', len(objets)),
++            ('Feuille masquée', '_RESTAURATION (charge de restauration)'),
++        ],
++    )
++    nom = f"sauvegarde_{atelier.id}_{datetime.now():%Y%m%d-%H%M%S}.xlsx"
++    wb.save(dossier_sauvegardes() / nom)
+     return nom
+ 
+ 
+ def lister_sauvegardes(atelier):
+     """Sauvegardes de l'atelier, plus récentes d'abord."""
+     resultats = []
+-    for chemin in dossier_sauvegardes().glob('sauvegarde_*.json'):
++    for chemin in dossier_sauvegardes().glob('sauvegarde_*.xlsx'):
+         motif = MOTIF_NOM.match(chemin.name)
+         if not motif or motif.group(1) != str(atelier.id):
+             continue
+@@ -126,13 +228,35 @@ def objets_pour_atelier(atelier, objets):
+     return None
+ 
+ 
+-def restaurer_sauvegarde(atelier, contenu):
++def _charge_depuis_fichier(contenu, nom_fichier=''):
++    """Retourne (objets, erreur) depuis un .xlsx (feuille masquée) ou .json."""
++    if nom_fichier.lower().endswith('.xlsx') or contenu[:2] == b'PK':
++        donnees = contenu if isinstance(contenu, bytes) else contenu.encode('latin-1', 'replace')
++        try:
++            wb = load_workbook(BytesIO(donnees), read_only=True)
++        except Exception:
++            return None, "Fichier Excel illisible ou corrompu."
++        if '_RESTAURATION' not in wb.sheetnames:
++            return None, ("Ce classeur ne contient pas de charge de "
++                          "restauration (feuille masquée _RESTAURATION).")
++        troncons = []
++        for ligne in wb['_RESTAURATION'].iter_rows(values_only=True):
++            if ligne and ligne[0]:
++                troncons.append(str(ligne[0]))
++        wb.close()
++        contenu = ''.join(troncons)
++    elif isinstance(contenu, bytes):
++        contenu = contenu.decode('utf-8', errors='replace')
++    return _objets_du_fichier(contenu)
++
++
++def restaurer_sauvegarde(atelier, contenu, nom_fichier=''):
+     """Remplace les données de l'atelier par celles du fichier.
+ 
+     Retourne (succès, message). Tout se passe dans une transaction :
+     en cas d'erreur, rien n'est modifié.
+     """
+-    objets, erreur = _objets_du_fichier(contenu)
++    objets, erreur = _charge_depuis_fichier(contenu, nom_fichier)
+     if erreur:
+         return False, erreur
+     erreur = objets_pour_atelier(atelier, objets)
+@@ -150,3 +274,122 @@ def restaurer_sauvegarde(atelier, contenu):
+     except Exception as exc:  # fichier corrompu, contraintes…
+         return False, f"Restauration interrompue, aucune donnée modifiée : {exc}"
+     return True, f"Restauration terminée : {nombre} enregistrements rétablis."
++
++
++# ==========================================
++# SAUVEGARDE SYSTÈME (super-admin) : classeur Excel global, archivage
++# ==========================================
++DOSSIER_SYSTEME = 'sauvegardes_systeme'
++MOTIF_NOM_SYSTEME = re.compile(r'^sauvegarde_systeme_(\d{8}-\d{6})\.xlsx$')
++
++
++def dossier_systeme():
++    dossier = Path(settings.BASE_DIR) / DOSSIER_SYSTEME
++    dossier.mkdir(parents=True, exist_ok=True)
++    return dossier
++
++
++def creer_sauvegarde_systeme():
++    """Classeur Excel de TOUTES les données de la plateforme (archivage)."""
++    from django.contrib.auth.models import User
++    from .models import Atelier, Abonnement, PlanAbonnement, Profil
++
++    wb = Workbook()
++    wb.remove(wb.active)
++    infos = wb.create_sheet('Informations')
++    infos.append(['Application', 'Projet_tailleur'])
++    infos.append(['Portée', 'Plateforme complète (toutes boutiques)'])
++    infos.append(['Créée le', datetime.now().strftime('%d/%m/%Y %H:%M')])
++
++    def nettoie(valeur):
++        if isinstance(valeur, datetime):
++            return valeur.replace(tzinfo=None)
++        return valeur
++
++    def feuille(nom, entetes, lignes):
++        ws = wb.create_sheet(nom[:31])
++        ws.append(entetes)
++        for ligne in lignes:
++            ws.append([nettoie(v) for v in ligne])
++        return ws
++
++    for nom in MODELES_SAUVEGARDES:
++        qs = list(_modele(nom).objects.all().order_by('pk'))
++        contenu = json.loads(serializers.serialize('json', qs))
++        _ecrire_classeur_systeme(wb, nom, contenu, _modele(nom))
++
++    feuille('Ateliers', ['ID', 'Nom', 'Ville', 'Créé le', 'Actif'],
++            [[a.id, a.nom, getattr(a, 'ville', ''), a.date_creation, a.est_actif]
++             for a in Atelier.objects.all().order_by('pk')])
++    feuille('Abonnements', ['ID', 'Atelier', 'Plan', 'Statut', 'Début', 'Fin'],
++            [[ab.id, str(ab.atelier), ab.plan.nom if ab.plan else '', ab.statut,
++              ab.date_debut, ab.date_fin]
++             for ab in Abonnement.objects.all().order_by('pk')])
++    feuille('Formules', ['ID', 'Nom', 'Prix mensuel'],
++            [[p.id, p.nom, float(p.prix_mensuel)]
++             for p in PlanAbonnement.objects.all().order_by('pk')])
++    feuille('Profils', ['ID', 'Utilisateur', 'Rôle', 'Atelier', 'Fondateur'],
++            [[p.id, p.user.username, p.role,
++              p.atelier.nom if p.atelier else '', p.est_fondateur]
++             for p in Profil.objects.all().order_by('pk')])
++    feuille('Comptes', ['ID', 'Nom d’utilisateur', 'Courriel', 'Prénom', 'Nom', 'Actif'],
++            [[u.id, u.username, u.email, u.first_name, u.last_name, u.is_active]
++             for u in User.objects.all().order_by('pk')])
++
++    nom = f"sauvegarde_systeme_{datetime.now():%Y%m%d-%H%M%S}.xlsx"
++    wb.save(dossier_systeme() / nom)
++    return nom
++
++
++def _ecrire_classeur_systeme(wb, nom, contenu, modele):
++    ws = wb.create_sheet(FEUILLES.get(nom, nom)[:31])
++    if not contenu:
++        ws.append(['(aucun enregistrement)'])
++        return
++    champs = []
++    for objet in contenu:
++        for cle in objet['fields']:
++            if cle not in champs:
++                champs.append(cle)
++    ws.append(['Identifiant'] + [c.capitalize().replace('_', ' ') for c in champs])
++    cache = {}
++    for objet in contenu:
++        ligne = [objet['pk']]
++        for cle in champs:
++            field = None
++            try:
++                field = modele._meta.get_field(cle)
++            except Exception:
++                field = None
++            ligne.append(_valeur_lisible(objet['fields'].get(cle), field, cache))
++        ws.append(ligne)
++
++
++def lister_sauvegardes_systeme():
++    resultats = []
++    for chemin in dossier_systeme().glob('sauvegarde_systeme_*.xlsx'):
++        motif = MOTIF_NOM_SYSTEME.match(chemin.name)
++        if not motif:
++            continue
++        resultats.append({
++            'nom': chemin.name,
++            'date': datetime.strptime(motif.group(1), '%Y%m%d-%H%M%S'),
++            'taille': chemin.stat().st_size,
++        })
++    resultats.sort(key=lambda e: e['date'], reverse=True)
++    return resultats
++
++
++def chemin_sauvegarde_systeme(nom):
++    if not MOTIF_NOM_SYSTEME.match(nom or ''):
++        return None
++    chemin = dossier_systeme() / nom
++    return chemin if chemin.is_file() else None
++
++
++def supprimer_sauvegarde_systeme(nom):
++    chemin = chemin_sauvegarde_systeme(nom)
++    if chemin is None:
++        return False
++    chemin.unlink()
++    return True
+diff --git a/core/templates/core/parametres.html b/core/templates/core/parametres.html
+index a73ccb6..e9a4bf3 100644
+--- a/core/templates/core/parametres.html
++++ b/core/templates/core/parametres.html
+@@ -460,7 +460,7 @@
+                         </h5>
+                         <p class="text-muted small mb-4">
+                             {% tr "Copiez et restaurez les données de l'atelier (clients, commandes, paiements, stock, employés)." %}
+-                            <br>{% tr "Les photos et logos (fichiers média) ne sont pas inclus dans la sauvegarde." %}
++                            <br>{% tr "Les photos et logos (fichiers média) ne sont pas inclus. Le fichier téléchargé est un classeur Excel (.xlsx) lisible ; la restauration accepte ce .xlsx." %}
+                         </p>
+ 
+                         {% if est_admin %}
+@@ -526,7 +526,7 @@
+                         <form method="POST" action="{% url 'core:sauvegarde_restaurer' %}"
+                               enctype="multipart/form-data">
+                             {% csrf_token %}
+-                            <input type="file" name="fichier" accept=".json,application/json"
++                            <input type="file" name="fichier" accept=".xlsx,.json,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                    class="form-control mb-2" required>
+                             <div class="form-check mb-3">
+                                 <input class="form-check-input" type="checkbox" required
+diff --git a/core/templates/saas_admin/base_superadmin.html b/core/templates/saas_admin/base_superadmin.html
+index f2dfbca..d4f8eca 100644
+--- a/core/templates/saas_admin/base_superadmin.html
++++ b/core/templates/saas_admin/base_superadmin.html
+@@ -103,6 +103,9 @@
+                     </a>
+                 </li>
+                 <li class="nav-item">
++                    <a href="{% url 'saas_admin:sauvegardes_systeme' %}" class="nav-link {% block nav_sauvegardes %}{% endblock %}">
++                        <i class="bi bi-hdd-stack me-2"></i>Sauvegardes
++                    </a>
+                     <a href="{% url 'saas_admin:superadmin_liste_utilisateurs' %}" class="nav-link {% block nav_utilisateurs %}{% endblock %}">
+                         <i class="bi bi-people"></i> Utilisateurs
+                     </a>
+diff --git a/core/templates/saas_admin/sauvegardes_systeme.html b/core/templates/saas_admin/sauvegardes_systeme.html
+new file mode 100644
+index 0000000..5478dd9
+--- /dev/null
++++ b/core/templates/saas_admin/sauvegardes_systeme.html
+@@ -0,0 +1,90 @@
++{% extends "saas_admin/base_superadmin.html" %}
++
++{% block title %}Sauvegardes système - Super Admin TailleurPro{% endblock %}
++{% block nav_sauvegardes %}active{% endblock %}
++
++{% block top_navbar %}
++<div class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-3">
++    <div>
++        <h4 class="fw-bold mb-0">Sauvegardes système</h4>
++        <small class="text-muted">Archives Excel de toutes les données de la plateforme</small>
++    </div>
++    <form method="POST" class="d-inline">
++        {% csrf_token %}
++        <button type="submit" class="btn btn-primary btn-sm fw-semibold">
++            <i class="bi bi-database-add me-1"></i> Créer une sauvegarde système
++        </button>
++    </form>
++</div>
++{% endblock %}
++
++{% block content %}
++{% if messages %}
++    {% for message in messages %}
++        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
++            {{ message }}
++            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
++        </div>
++    {% endfor %}
++{% endif %}
++
++<div class="card border-0 shadow-sm">
++    <div class="card-body p-0">
++        {% if sauvegardes %}
++        <div class="table-responsive">
++            <table class="table table-hover align-middle mb-0">
++                <thead class="table-light">
++                    <tr>
++                        <th class="ps-3">Fichier</th>
++                        <th>Date</th>
++                        <th>Taille</th>
++                        <th class="text-end pe-3">Actions</th>
++                    </tr>
++                </thead>
++                <tbody>
++                    {% for s in sauvegardes %}
++                    <tr>
++                        <td class="ps-3">
++                            <i class="bi bi-file-earmark-excel text-success me-2"></i>
++                            <span class="fw-semibold small">{{ s.nom }}</span>
++                        </td>
++                        <td class="small">{{ s.date|date:"d/m/Y H:i" }}</td>
++                        <td class="small">{{ s.taille|filesizeformat }}</td>
++                        <td class="text-end pe-3 text-nowrap">
++                            <a class="btn btn-sm btn-outline-primary"
++                               href="{% url 'saas_admin:sauvegarde_systeme_telecharger' nom=s.nom %}">
++                                <i class="bi bi-download me-1"></i>Télécharger
++                            </a>
++                            <form method="POST" class="d-inline"
++                                  action="{% url 'saas_admin:sauvegarde_systeme_supprimer' %}"
++                                  onsubmit="return confirm('Supprimer définitivement cette sauvegarde système ?');">
++                                {% csrf_token %}
++                                <input type="hidden" name="nom" value="{{ s.nom }}">
++                                <button type="submit" class="btn btn-sm btn-outline-danger">
++                                    <i class="bi bi-trash me-1"></i>Supprimer
++                                </button>
++                            </form>
++                        </td>
++                    </tr>
++                    {% endfor %}
++                </tbody>
++            </table>
++        </div>
++        {% else %}
++        <div class="text-center py-5">
++            <i class="bi bi-hdd-stack d-block mb-2" style="font-size: 2.2rem; color: #cbd5e1;"></i>
++            <p class="text-muted mb-0">Aucune sauvegarde système pour le moment.</p>
++            <p class="text-muted small">Créez-en une : toutes les boutiques, abonnements, comptes et données métier seront archivés dans un classeur Excel.</p>
++        </div>
++        {% endif %}
++    </div>
++</div>
++
++<div class="alert alert-info border-0 shadow-sm mt-3 small mb-0">
++    <i class="bi bi-info-circle me-1"></i>
++    Contenu du classeur : une feuille par modèle métier (toutes boutiques confondues),
++    plus les feuilles Ateliers, Abonnements, Formules, Profils et Comptes.
++    Archive destinée au super-admin : elle ne sert pas à restaurer une boutique
++    individuellement (chaque propriétaire restaure la sienne depuis Paramètres &gt; Sauvegarde).
++</div>
++{% endblock %}
+diff --git a/core/views.py b/core/views.py
+index 7226b5c..c518b1c 100644
+--- a/core/views.py
++++ b/core/views.py
+@@ -2400,7 +2400,7 @@ def sauvegarde_restaurer(request):
+     if fichier.size > 20 * 1024 * 1024:
+         messages.error(request, "Fichier trop volumineux (20 Mo maximum).")
+         return redirect('core:parametres')
+-    ok, message = restaurer_sauvegarde(atelier, fichier.read().decode('utf-8', errors='replace'))
++    ok, message = restaurer_sauvegarde(atelier, fichier.read(), fichier.name)
+     if ok:
+         messages.success(request, message)
+     else:
+diff --git a/requirements.txt b/requirements.txt
+index 659b31d..fc8f4c4 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -19,6 +19,9 @@ psycopg2-binary>=2.9,<3.0
+ # --- Images (champs ImageField : logos, photos employés, tissus, catalogue) ---
+ Pillow>=12.0,<13.0
+ 
++# --- Export / sauvegarde Excel (onglet Sauvegarde + back-office) ---
++openpyxl>=3.1,<4.0
++
+ # --- Génération des PDF ---
+ # xhtml2pdf est importé dans 6 vues (factures, reçus, fiches atelier,
+ # mensurations). Il tire reportlab, svglib, arabic-reshaper et python-bidi.
+diff --git a/saas_admin/urls.py b/saas_admin/urls.py
+index 1a2d815..235117f 100644
+--- a/saas_admin/urls.py
++++ b/saas_admin/urls.py
+@@ -45,4 +45,7 @@ urlpatterns = [
+     path('utilisateurs/<int:user_id>/supprimer/', views.supprimer_utilisateur, name='supprimer_utilisateur'),
+     path('utilisateurs/<int:user_id>/changer-statut/', views.changer_statut_utilisateur, name='changer_statut_utilisateur'),
+     path('parametres/', views.superadmin_parametres, name='superadmin_parametres'),
++    path('sauvegardes/', views.sauvegardes_systeme, name='sauvegardes_systeme'),
++    path('sauvegardes/supprimer/', views.sauvegarde_systeme_supprimer, name='sauvegarde_systeme_supprimer'),
++    path('sauvegardes/<str:nom>/telecharger/', views.sauvegarde_systeme_telecharger, name='sauvegarde_systeme_telecharger'),
+ ]
+\ No newline at end of file
+diff --git a/saas_admin/views.py b/saas_admin/views.py
+index 62bc41d..74fd7f8 100644
+--- a/saas_admin/views.py
++++ b/saas_admin/views.py
+@@ -10,6 +10,11 @@ from core.validators import generer_mot_de_passe_temporaire
+ from django.core.paginator import Paginator
+ from django.db import transaction
+ from django.db.models import Q, Sum, Count
++from core.sauvegarde import (
++    chemin_sauvegarde_systeme, creer_sauvegarde_systeme,
++    lister_sauvegardes_systeme, supprimer_sauvegarde_systeme,
++)
++from django.http import FileResponse
+ from django.shortcuts import get_object_or_404, redirect, render
+ 
+ from core.models import (
+@@ -535,4 +540,36 @@ def superadmin_parametres(request):
+     context = {
+         'active_tab': 'parametres',
+     }
+-    return render(request, 'saas_admin/parametres.html', context)
+\ No newline at end of file
++    return render(request, 'saas_admin/parametres.html', context)
++
++# ==========================================
++# SAUVEGARDES SYSTÈME (super-admin)
++# ==========================================
++@superadmin_required
++def sauvegardes_systeme(request):
++    if request.method == 'POST':
++        nom = creer_sauvegarde_systeme()
++        messages.success(request, f"Sauvegarde système créée : {nom}")
++        return redirect('saas_admin:sauvegardes_systeme')
++    return render(request, 'saas_admin/sauvegardes_systeme.html', {
++        'sauvegardes': lister_sauvegardes_systeme(),
++    })
++
++
++@superadmin_required
++def sauvegarde_systeme_telecharger(request, nom):
++    chemin = chemin_sauvegarde_systeme(nom)
++    if chemin is None:
++        messages.error(request, "Sauvegarde système introuvable.")
++        return redirect('saas_admin:sauvegardes_systeme')
++    return FileResponse(chemin.open('rb'), as_attachment=True, filename=nom)
++
++
++@superadmin_required
++def sauvegarde_systeme_supprimer(request):
++    if request.method == 'POST':
++        if supprimer_sauvegarde_systeme(request.POST.get('nom', '')):
++            messages.success(request, "Sauvegarde système supprimée.")
++        else:
++            messages.error(request, "Sauvegarde système introuvable.")
++    return redirect('saas_admin:sauvegardes_systeme')
+-- 
+2.47.3
+

@@ -1,0 +1,679 @@
+From c44932d869e4f4a87c8aa9d3a829e440230ba581 Mon Sep 17 00:00:00 2001
+From: Arena Agent <agent@arena.ai>
+Date: Mon, 21 Sep 2026 12:47:39 +0000
+Subject: [PATCH] =?UTF-8?q?Marque=20TailleurPro,=20messages=20en=20fen?=
+ =?UTF-8?q?=C3=AAtre=20modale=202=20s,=20pastilles=20bleues=20partout?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- En-tête de sidebar : marque « TailleurPro » (pastille ciseaux en
+  dégradé standard + sous-titre) au lieu du nom de boutique ; le nom
+  de la boutique seul (sans devise) descend en bas de sidebar.
+- La devise n'apparaît plus dans la sidebar ; elle reste sur les
+  factures et reçus (inchangés).
+- Pied de page : « TailleurPro · © 2026 · Tous droits réservés ».
+- Messages de confirmation : petite fenêtre modale centrée (icône
+  selon le type) sur TOUTES les pages, disparition automatique en
+  2 secondes ; les blocs d'alerts locaux et leur JS d'auto-masquage
+  sont retirés des 17 templates locataires (connexion/inscription,
+  pages autonomes, conservent les leurs).
+- Toutes les pastilles d'icônes en dégradé bleu standard avec icône
+  blanche : navigation sidebar, boutons de la barre supérieure
+  (globe, cloche, menu), onglets Paramètres (.nav-ic) ; entêtes et
+  KPI déjà conformes.
+---
+ core/templates/base.html                      | 84 +++++++++++++++++--
+ core/templates/core/abonnements.html          |  9 --
+ core/templates/core/accueil.html              | 11 ---
+ core/templates/core/clients.html              |  9 --
+ core/templates/core/clients_list.html         | 17 ----
+ core/templates/core/commandes.html            |  9 --
+ core/templates/core/detail_client.html        |  9 --
+ core/templates/core/detail_commande.html      |  9 --
+ core/templates/core/detail_employe.html       | 17 ----
+ core/templates/core/detail_vente_directe.html |  9 --
+ core/templates/core/employes.html             | 17 ----
+ core/templates/core/historique_stock.html     | 16 ----
+ core/templates/core/liste_depenses.html       | 17 ----
+ core/templates/core/modeles.html              | 16 ----
+ core/templates/core/mon_profil.html           |  8 --
+ core/templates/core/parametres.html           | 20 +----
+ core/templates/core/plan_charge.html          | 16 ----
+ core/templates/core/ventes_directes.html      |  9 --
+ core/traduction.py                            |  4 +
+ 19 files changed, 81 insertions(+), 225 deletions(-)
+
+diff --git a/core/templates/base.html b/core/templates/base.html
+index 8a54d8c..9ed007a 100644
+--- a/core/templates/base.html
++++ b/core/templates/base.html
+@@ -100,6 +100,47 @@
+         .top-navbar .dropdown-toggle,
+         .top-navbar .nav-link { color: #334155; }
+ 
++        /* Icônes de navigation : fond bleu standard, icône blanche, partout */
++        .sidebar .nav-pills .nav-link i.bi {
++            width: 32px; height: 32px; border-radius: 9px;
++            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
++            color: #fff; display: inline-flex; align-items: center; justify-content: center;
++            font-size: .95rem; margin-right: .4rem; flex-shrink: 0;
++        }
++        .top-navbar .btn i.bi {
++            width: 30px; height: 30px; border-radius: 9px;
++            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
++            color: #fff; display: inline-flex; align-items: center; justify-content: center;
++        }
++        .top-navbar .btn-outline-secondary { border: none; background: transparent; }
++        .top-navbar .topbar-cloche {
++            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
++            border: none; color: #fff;
++        }
++        .top-navbar .topbar-cloche i.bi { background: none; width: auto; height: auto; }
++
++        /* Messages de confirmation : petite fenêtre modale, disparaît en 2 s */
++        #toastZone {
++            position: fixed; top: 84px; left: 50%; transform: translateX(-50%);
++            z-index: 1090; display: flex; flex-direction: column; gap: 8px;
++            align-items: center; pointer-events: none;
++        }
++        .toast-card {
++            display: flex; align-items: center; gap: 10px;
++            background: #fff; border-radius: 12px; padding: 10px 16px;
++            box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
++            border: 1px solid #e2e8f0; font-size: .9rem; font-weight: 500;
++            color: #1e293b; max-width: 420px;
++            animation: toast-in .25s ease-out;
++        }
++        .toast-card i { font-size: 1.1rem; }
++        .toast-success i { color: #059669; }
++        .toast-error i { color: #dc2626; }
++        .toast-warning i { color: #d97706; }
++        .toast-info i { color: var(--accent-color); }
++        .toast-hide { opacity: 0; transform: translateY(-6px); transition: all .35s; }
++        @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
++
+         /* Entête standard de chaque page : icône + titre alignés */
+         .entete-page { margin-top: .25rem; }
+         .entete-page .entete-icone {
+@@ -179,6 +220,23 @@
+     {% block extra_css %}{% endblock %}
+ </head>
+ <body>
++    {% if messages %}
++    <!-- Messages de confirmation : petite fenêtre modale auto-2 s (toutes pages) -->
++    <div id="toastZone" aria-live="polite">
++        {% for message in messages %}
++        <div class="toast-card toast-{{ message.tags|default:'info' }}">
++            <i class="bi {% if message.tags == 'error' %}bi-x-octagon-fill{% elif message.tags == 'success' %}bi-check-circle-fill{% elif message.tags == 'warning' %}bi-exclamation-triangle-fill{% else %}bi-info-circle-fill{% endif %}"></i>
++            <span>{{ message }}</span>
++        </div>
++        {% endfor %}
++    </div>
++    <script>
++        setTimeout(function () {
++            var z = document.getElementById('toastZone');
++            if (z) { z.classList.add('toast-hide'); setTimeout(function () { z.remove(); }, 350); }
++        }, 2000);
++    </script>
++    {% endif %}
+ 
+     <!-- Overlay mobile -->
+     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+@@ -190,15 +248,15 @@
+             <!-- Header de la Sidebar (Nom dynamique de l'atelier) -->
+             <div class="px-4 py-3 d-flex align-items-center justify-content-between border-bottom flex-shrink-0" style="height: 64px;">
+                 <div class="d-flex align-items-center gap-2 overflow-hidden">
+-                    <div class="bg-primary text-white rounded-3 p-2 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
++                    <div class="text-white rounded-3 d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px; background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); box-shadow: 0 4px 10px rgba(43, 89, 195, .35);">
+                         <i class="bi bi-scissors fs-5"></i>
+                     </div>
+                     <div class="text-truncate">
+-                        <h6 class="fw-bold text-dark m-0 text-truncate">
+-                            {{ current_atelier.nom|default:"TailleurPro" }}
++                        <h6 class="fw-bold text-dark m-0 text-truncate" style="letter-spacing: .3px; font-size: 1.05rem;">
++                            TailleurPro
+                         </h6>
+-                        <small class="badge bg-indigo text-primary p-0 fw-semibold" style="font-size: 10px;">
+-                            {% if current_atelier %}{{ current_atelier.devise|default:"Gestion Atelier" }}{% else %}Gestion Atelier{% endif %}
++                        <small class="text-muted d-block text-truncate" style="font-size: 10.5px;">
++                            {% tr "Gestion d'ateliers de couture" %}
+                         </small>
+                     </div>
+                 </div>
+@@ -281,6 +339,14 @@
+             </ul>
+         </div>
+ 
++        <!-- Boutique courante (nom seul, sans devise) -->
++        {% if current_atelier %}
++        <div class="px-4 py-2 border-top flex-shrink-0">
++            <small class="text-muted d-block" style="font-size: 10.5px; letter-spacing: .4px; text-transform: uppercase;">{% tr "Boutique" %}</small>
++            <div class="fw-semibold small text-dark text-truncate">{{ current_atelier.nom }}</div>
++        </div>
++        {% endif %}
++
+         <!-- Profil Utilisateur Bas de Sidebar avec Déconnexion -->
+         <div class="p-3 border-top bg-light flex-shrink-0">
+             <div class="d-flex align-items-center justify-content-between">
+@@ -324,7 +390,7 @@
+             <div class="d-flex align-items-center gap-3">
+                 <!-- Selecteur de langue -->
+                 <div class="dropdown">
+-                    <button class="btn btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border: 1px solid var(--sidebar-border); border-radius: 10px; padding: 6px 12px; font-weight: 500; color: #334155; background: #fff;">
++                    <button class="btn btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border: none; border-radius: 10px; padding: 4px 6px; font-weight: 500; color: #334155; background: transparent;">
+                         <i class="bi bi-globe"></i>
+                         <span id="current-lang">{{ langue|upper }}</span>
+                     </button>
+@@ -336,8 +402,8 @@
+ 
+                 <!-- Notifications Dropdown -->
+                 <div class="dropdown">
+-                    <button class="btn btn-sm btn-light border position-relative rounded-circle p-2 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" type="button" data-bs-toggle="dropdown">
+-                        <i class="bi bi-bell text-dark"></i>
++                    <button class="btn btn-sm position-relative rounded-circle p-2 d-flex align-items-center justify-content-center topbar-cloche" style="width: 38px; height: 38px;" type="button" data-bs-toggle="dropdown">
++                        <i class="bi bi-bell"></i>
+                         <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                             <span class="visually-hidden">Nouvelles notifications</span>
+                         </span>
+@@ -376,7 +442,7 @@
+ 
+         <!-- Footer -->
+         <footer class="app-footer text-center py-3 mt-3">
+-            <span>{% if current_atelier %}{{ current_atelier.nom }}{% else %}TailleurPro{% endif %}</span> &middot; <span>{% tr "Tous droits réservés" %}</span>
++            <span class="fw-semibold">TailleurPro</span> &middot; <span>© 2026 {% tr "Tous droits réservés" %}</span>
+         </footer>
+     </div>
+ 
+diff --git a/core/templates/core/abonnements.html b/core/templates/core/abonnements.html
+index 17c61a6..69cf294 100644
+--- a/core/templates/core/abonnements.html
++++ b/core/templates/core/abonnements.html
+@@ -3,15 +3,6 @@
+ 
+ {% block content %}
+ <!-- Messages d'alerte Django -->
+-{% if messages %}
+-    {% for message in messages %}
+-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss-alert" role="alert">
+-            {{ message }}
+-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+-        </div>
+-    {% endfor %}
+-{% endif %}
+-
+ <div class="d-flex justify-content-between align-items-center mb-4">
+     <div>
+         <p class="text-muted mb-0">Atelier {{ atelier.nom }}</p>
+diff --git a/core/templates/core/accueil.html b/core/templates/core/accueil.html
+index e629a51..d4cc295 100644
+--- a/core/templates/core/accueil.html
++++ b/core/templates/core/accueil.html
+@@ -142,17 +142,6 @@
+          tout comme les confirmations de création/suppression qui redirigent
+          vers le tableau de bord. Rendu ici (et non dans base.html) pour ne pas
+          créer de doublon avec les 16 templates qui les affichent déjà. -->
+-    {% if messages %}
+-    <div id="messagesZone" class="mb-3">
+-        {% for message in messages %}
+-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3">
+-            {{ message }}
+-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+-        </div>
+-        {% endfor %}
+-    </div>
+-    {% endif %}
+-
+     <!-- ===== HERO ===== -->
+     <div class="hero-card mb-4 d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+         <div>
+diff --git a/core/templates/core/clients.html b/core/templates/core/clients.html
+index 9615305..49e5300 100644
+--- a/core/templates/core/clients.html
++++ b/core/templates/core/clients.html
+@@ -3,15 +3,6 @@
+ {% block content %}
+ <div class="container-fluid py-4">
+     <!-- Messages d'alerte Django -->
+-    {% if messages %}
+-        {% for message in messages %}
+-            <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss-alert" role="alert">
+-                {{ message }}
+-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+-            </div>
+-        {% endfor %}
+-    {% endif %}
+-
+     <!-- En-tete et Actions -->
+     <div class="d-flex justify-content-between align-items-center mb-4">
+         <div>
+diff --git a/core/templates/core/clients_list.html b/core/templates/core/clients_list.html
+index d2ce4e8..d718dac 100644
+--- a/core/templates/core/clients_list.html
++++ b/core/templates/core/clients_list.html
+@@ -105,17 +105,6 @@
+         </div>
+     </div>
+ 
+-    {% if messages %}
+-    <div id="messagesZone">
+-        {% for message in messages %}
+-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3" role="alert">
+-            {{ message }}
+-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-        </div>
+-        {% endfor %}
+-    </div>
+-    {% endif %}
+-
+     <!-- KPI -->
+     <div class="row g-3 mb-4">
+         <div class="col-6 col-lg-3">
+@@ -662,12 +651,6 @@ document.addEventListener('DOMContentLoaded', function () {
+         });
+     });
+ 
+-    /* ===== Auto-masquage des messages ===== */
+-    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+-        setTimeout(function () {
+-            bootstrap.Alert.getOrCreateInstance(el).close();
+-        }, 3500);
+-    });
+ });
+ </script>
+ {% endblock %}
+\ No newline at end of file
+diff --git a/core/templates/core/commandes.html b/core/templates/core/commandes.html
+index 5b36b6e..ff4b611 100644
+--- a/core/templates/core/commandes.html
++++ b/core/templates/core/commandes.html
+@@ -126,15 +126,6 @@
+         </div>
+     </div>
+ 
+-    {% if messages %}
+-        {% for message in messages %}
+-            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+-                {{ message }}
+-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-            </div>
+-        {% endfor %}
+-    {% endif %}
+-
+     {% if nb_non_attribuees %}
+     <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center justify-content-between flex-wrap gap-2">
+         <div>
+diff --git a/core/templates/core/detail_client.html b/core/templates/core/detail_client.html
+index 2d7606d..1aa72ff 100644
+--- a/core/templates/core/detail_client.html
++++ b/core/templates/core/detail_client.html
+@@ -104,15 +104,6 @@
+     </div>
+   </div>
+ 
+-  {% if messages %}
+-    {% for message in messages %}
+-      <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show">
+-        {{ message }}
+-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-      </div>
+-    {% endfor %}
+-  {% endif %}
+-
+   <div class="row g-4">
+ 
+     <!-- Coordonnées -->
+diff --git a/core/templates/core/detail_commande.html b/core/templates/core/detail_commande.html
+index 8f59130..a10fb0f 100644
+--- a/core/templates/core/detail_commande.html
++++ b/core/templates/core/detail_commande.html
+@@ -121,15 +121,6 @@
+         </div>
+     </div>
+ 
+-    {% if messages %}
+-        {% for message in messages %}
+-            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+-                {{ message }}
+-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-            </div>
+-        {% endfor %}
+-    {% endif %}
+-
+     {% if commande.est_en_retard %}
+         <div class="alert alert-danger border-0 shadow-sm d-flex align-items-center gap-2 mb-4">
+             <i class="bi bi-exclamation-triangle-fill fs-5"></i>
+diff --git a/core/templates/core/detail_employe.html b/core/templates/core/detail_employe.html
+index 294f957..145cbbf 100644
+--- a/core/templates/core/detail_employe.html
++++ b/core/templates/core/detail_employe.html
+@@ -103,17 +103,6 @@
+         </div>
+     </div>
+ 
+-    {% if messages %}
+-    <div id="messagesZone">
+-        {% for message in messages %}
+-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3">
+-            {{ message }}
+-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-        </div>
+-        {% endfor %}
+-    </div>
+-    {% endif %}
+-
+     <!-- ===== PROFIL ===== -->
+     <div class="profil-card mb-4 {% if not emp.est_actif %}inactif{% endif %}">
+         <div class="d-flex flex-column flex-md-row align-items-md-center gap-3">
+@@ -721,12 +710,6 @@ document.addEventListener('DOMContentLoaded', function () {
+         });
+     }
+ 
+-    /* Auto-masquage des messages */
+-    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+-        setTimeout(function () {
+-            bootstrap.Alert.getOrCreateInstance(el).close();
+-        }, 3500);
+-    });
+ });
+ </script>
+ 
+diff --git a/core/templates/core/detail_vente_directe.html b/core/templates/core/detail_vente_directe.html
+index 97a7f95..7fced18 100644
+--- a/core/templates/core/detail_vente_directe.html
++++ b/core/templates/core/detail_vente_directe.html
+@@ -40,15 +40,6 @@
+     </div>
+ 
+     <!-- Messages Flash -->
+-    {% if messages %}
+-        {% for message in messages %}
+-            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+-                {{ message }}
+-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-            </div>
+-        {% endfor %}
+-    {% endif %}
+-
+     <!-- KPI -->
+     <div class="row g-3 mb-4">
+         <div class="col-6 col-md-3">
+diff --git a/core/templates/core/employes.html b/core/templates/core/employes.html
+index 6927680..fff9133 100644
+--- a/core/templates/core/employes.html
++++ b/core/templates/core/employes.html
+@@ -70,17 +70,6 @@
+         </button>
+     </div>
+ 
+-    {% if messages %}
+-    <div id="messagesZone">
+-        {% for message in messages %}
+-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3">
+-            {{ message }}
+-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-        </div>
+-        {% endfor %}
+-    </div>
+-    {% endif %}
+-
+     <!-- KPI -->
+     <div class="row g-3 mb-4">
+         <div class="col-6 col-lg-3">
+@@ -533,12 +522,6 @@ document.addEventListener('DOMContentLoaded', function () {
+         });
+     }
+ 
+-    /* ===== Auto-masquage des messages ===== */
+-    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+-        setTimeout(function () {
+-            bootstrap.Alert.getOrCreateInstance(el).close();
+-        }, 3500);
+-    });
+ });
+ </script>
+ {% endblock %}
+\ No newline at end of file
+diff --git a/core/templates/core/historique_stock.html b/core/templates/core/historique_stock.html
+index 106e6fa..4c0e459 100644
+--- a/core/templates/core/historique_stock.html
++++ b/core/templates/core/historique_stock.html
+@@ -98,17 +98,6 @@
+         </a>
+     </div>
+ 
+-    {% if messages %}
+-    <div id="messagesZone">
+-        {% for message in messages %}
+-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3">
+-            {{ message }}
+-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-        </div>
+-        {% endfor %}
+-    </div>
+-    {% endif %}
+-
+     <!-- ===== KPI de la page courante ===== -->
+     <div class="row g-3 mb-4">
+         <div class="col-6 col-lg-3">
+@@ -400,11 +389,6 @@
+ 
+ <script>
+ document.addEventListener('DOMContentLoaded', function () {
+-    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+-        setTimeout(function () {
+-            bootstrap.Alert.getOrCreateInstance(el).close();
+-        }, 3500);
+-    });
+ });
+ </script>
+ {% endblock %}
+diff --git a/core/templates/core/liste_depenses.html b/core/templates/core/liste_depenses.html
+index f440e09..ee9e273 100644
+--- a/core/templates/core/liste_depenses.html
++++ b/core/templates/core/liste_depenses.html
+@@ -95,17 +95,6 @@
+         </button>
+     </div>
+ 
+-    {% if messages %}
+-    <div id="messagesZone">
+-        {% for message in messages %}
+-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3">
+-            {{ message }}
+-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-        </div>
+-        {% endfor %}
+-    </div>
+-    {% endif %}
+-
+     <!-- KPI -->
+     <div class="row g-3 mb-4">
+         <div class="col-6 col-lg-3">
+@@ -572,12 +561,6 @@ document.addEventListener('DOMContentLoaded', function () {
+         });
+     });
+ 
+-    /* ===== Auto-masquage des messages ===== */
+-    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+-        setTimeout(function () {
+-            bootstrap.Alert.getOrCreateInstance(el).close();
+-        }, 3500);
+-    });
+ });
+ </script>
+ {% endblock %}
+\ No newline at end of file
+diff --git a/core/templates/core/modeles.html b/core/templates/core/modeles.html
+index 316426c..3846350 100644
+--- a/core/templates/core/modeles.html
++++ b/core/templates/core/modeles.html
+@@ -111,17 +111,6 @@
+         </div>
+     </div>
+ 
+-    {% if messages %}
+-    <div id="messagesZone">
+-        {% for message in messages %}
+-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3" role="alert">
+-            <i class="bi bi-check-circle me-2"></i>{{ message }}
+-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-        </div>
+-        {% endfor %}
+-    </div>
+-    {% endif %}
+-
+     <!-- KPI -->
+     <div class="row g-3 mb-4">
+         <div class="col-6 col-lg-3">
+@@ -928,11 +917,6 @@ document.addEventListener('DOMContentLoaded', function () {
+     });
+ 
+     /* ===== Auto-masquage messages ===== */
+-    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+-        setTimeout(function () {
+-            bootstrap.Alert.getOrCreateInstance(el).close();
+-        }, 3500);
+-    });
+ });
+ </script>
+ {% endblock %}
+\ No newline at end of file
+diff --git a/core/templates/core/mon_profil.html b/core/templates/core/mon_profil.html
+index 457d2e4..5a76d9a 100644
+--- a/core/templates/core/mon_profil.html
++++ b/core/templates/core/mon_profil.html
+@@ -39,14 +39,6 @@
+ 
+ {% block content %}
+ <!-- Messages d'alerte Django -->
+-{% if messages %}
+-    {% for message in messages %}
+-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show auto-dismiss-alert" role="alert">
+-            {{ message }}
+-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+-        </div>
+-    {% endfor %}
+-{% endif %}
+ <div class="container-fluid px-4 py-4">
+     <!-- En-tête de la page -->
+     <div class="d-flex justify-content-between align-items-center mb-4">
+diff --git a/core/templates/core/parametres.html b/core/templates/core/parametres.html
+index e9a4bf3..6f1eeba 100644
+--- a/core/templates/core/parametres.html
++++ b/core/templates/core/parametres.html
+@@ -19,7 +19,7 @@
+     .nav-ic {
+         width:36px; height:36px; border-radius:10px; flex-shrink:0;
+         display:flex; align-items:center; justify-content:center;
+-        background:#ede9fe; color:#cbcacf; font-size:1rem;
++        background: linear-gradient(135deg, var(--primary-color), var(--accent-color)); color:#fff; font-size:1rem;
+     }
+     .nav-titre { font-weight:600; font-size:.92rem; color:#111827; }
+     .nav-sub { color:#9ca3af; font-size:.74rem; }
+@@ -94,17 +94,6 @@
+         {% endif %}
+     </div>
+ 
+-    {% if messages %}
+-    <div id="messagesZone">
+-        {% for message in messages %}
+-        <div class="alert alert-{% if message.tags == 'error' %}danger{% else %}{{ message.tags }}{% endif %} alert-dismissible fade show shadow-sm rounded-3">
+-            {{ message }}
+-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-        </div>
+-        {% endfor %}
+-    </div>
+-    {% endif %}
+-
+     {% if not est_admin %}
+     <div class="alert alert-info border-0 shadow-sm">
+         <i class="bi bi-info-circle me-2"></i>
+@@ -801,12 +790,7 @@ document.addEventListener('DOMContentLoaded', function () {
+         });
+     });
+ 
+-    /* ===== Auto-masquage des messages ===== */
+-    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+-        setTimeout(function () {
+-            bootstrap.Alert.getOrCreateInstance(el).close();
+-        }, 4000);
+-    });
++    
+ });
+ </script>
+ {% endblock %}
+\ No newline at end of file
+diff --git a/core/templates/core/plan_charge.html b/core/templates/core/plan_charge.html
+index d4f50c6..2b9b3a0 100644
+--- a/core/templates/core/plan_charge.html
++++ b/core/templates/core/plan_charge.html
+@@ -107,17 +107,6 @@
+         </div>
+     </div>
+ 
+-    {% if messages %}
+-    <div id="messagesZone">
+-        {% for message in messages %}
+-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm rounded-3">
+-            {{ message }}
+-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-        </div>
+-        {% endfor %}
+-    </div>
+-    {% endif %}
+-
+     <!-- KPI -->
+     <div class="row g-3 mb-4">
+         <div class="col-6 col-lg-3">
+@@ -413,11 +402,6 @@ document.addEventListener('DOMContentLoaded', function () {
+         });
+     });
+ 
+-    document.querySelectorAll('#messagesZone .alert').forEach(function (el) {
+-        setTimeout(function () {
+-            bootstrap.Alert.getOrCreateInstance(el).close();
+-        }, 3500);
+-    });
+ });
+ </script>
+ {% endblock %}
+\ No newline at end of file
+diff --git a/core/templates/core/ventes_directes.html b/core/templates/core/ventes_directes.html
+index 79f4a27..3419135 100644
+--- a/core/templates/core/ventes_directes.html
++++ b/core/templates/core/ventes_directes.html
+@@ -153,15 +153,6 @@
+         </div>
+     </div>
+ 
+-    {% if messages %}
+-        {% for message in messages %}
+-            <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+-                {{ message }}
+-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+-            </div>
+-        {% endfor %}
+-    {% endif %}
+-
+     <!-- KPI -->
+     <div class="row g-3 mb-4">
+         <div class="col-6 col-lg-3">
+diff --git a/core/traduction.py b/core/traduction.py
+index a20e3f3..9b6761d 100644
+--- a/core/traduction.py
++++ b/core/traduction.py
+@@ -96,6 +96,10 @@ EN = {
+     "Pour réactiver la boutique avec toutes ses anciennes données, contactez le gestionnaire de la plateforme avant cette date : un nouvel abonnement peut être activé à tout moment pendant la période de conservation.": "To reactivate the shop with all its old data, contact the platform manager before this date: a new subscription can be activated at any time during the retention period.",
+     "Se déconnecter": "Sign out",
+ 
++    # --- Marque & sidebar (0019) ---
++    "Gestion d'ateliers de couture": "Tailoring shop management",
++    "Boutique": "Shop",
++
+ }
+ 
+ 
+-- 
+2.47.3
+

@@ -1,0 +1,512 @@
+From 0c2fcb503df605ba78141dfc723e1b6838b968ef Mon Sep 17 00:00:00 2001
+From: Arena Agent <agent@arena.ai>
+Date: Mon, 21 Sep 2026 18:54:34 +0000
+Subject: [PATCH] =?UTF-8?q?0023=20Modaux=20bleu=20application=20+=20redire?=
+ =?UTF-8?q?ction=20onglet=20apr=C3=A8s=20ajout/modif=20+=20pied=20de=20pag?=
+ =?UTF-8?q?e=20en=20bas=20de=20liste=20partout?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ core/templates/core/accueil.html          |  2 +-
+ core/templates/core/calendrier.html       |  2 +-
+ core/templates/core/clients_list.html     |  6 ++--
+ core/templates/core/detail_employe.html   |  8 ++---
+ core/templates/core/employes.html         |  2 +-
+ core/templates/core/historique_stock.html |  2 +-
+ core/templates/core/liste_depenses.html   |  6 ++--
+ core/templates/core/modeles.html          | 26 ++++++++--------
+ core/templates/core/mon_profil.html       |  2 +-
+ core/templates/core/parametres.html       |  6 ++--
+ core/templates/core/plan_charge.html      |  2 +-
+ core/templates/core/ventes_directes.html  |  2 +-
+ core/views.py                             | 36 ++++++++++++++++-------
+ 13 files changed, 58 insertions(+), 44 deletions(-)
+
+diff --git a/core/templates/core/accueil.html b/core/templates/core/accueil.html
+index 3ea9f03..678f855 100644
+--- a/core/templates/core/accueil.html
++++ b/core/templates/core/accueil.html
+@@ -5,7 +5,7 @@
+ 
+ {% block extra_css %}
+ <style>
+-    .dash-wrap { background: #f7f8fc; min-height: 100vh; }
++    .dash-wrap { background: transparent; }
+ 
+     /* ===== HERO ===== */
+     .hero-card {
+diff --git a/core/templates/core/calendrier.html b/core/templates/core/calendrier.html
+index 645a85d..59005cf 100644
+--- a/core/templates/core/calendrier.html
++++ b/core/templates/core/calendrier.html
+@@ -4,7 +4,7 @@
+ 
+ {% block extra_css %}
+ <style>
+-    .ag-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
++    .ag-wrap { background: transparent; }
+ 
+     /* ===== KPI ===== */
+     .kpi-a {
+diff --git a/core/templates/core/clients_list.html b/core/templates/core/clients_list.html
+index 6ef69de..38c496a 100644
+--- a/core/templates/core/clients_list.html
++++ b/core/templates/core/clients_list.html
+@@ -3,7 +3,7 @@
+ 
+ {% block extra_css %}
+ <style>
+-    .cl-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
++    .cl-wrap { background: transparent; }
+ 
+     /* ===== KPI ===== */
+     .kpi-c {
+@@ -522,7 +522,7 @@
+         <div class="modal-content border-0 shadow">
+             <form method="POST" id="formEditClient">
+                 {% csrf_token %}
+-                <div class="modal-header bg-dark text-white">
++                <div class="modal-header bg-primary text-white">
+                     <h5 class="modal-title fw-bold">
+                         <i class="bi bi-pencil-square me-2"></i>Modifier le client
+                     </h5>
+@@ -564,7 +564,7 @@
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+-                    <button type="submit" class="btn btn-success fw-semibold">
++                    <button type="submit" class="btn btn-primary fw-semibold">
+                         <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                     </button>
+                 </div>
+diff --git a/core/templates/core/detail_employe.html b/core/templates/core/detail_employe.html
+index bcfc41d..7cb1d60 100644
+--- a/core/templates/core/detail_employe.html
++++ b/core/templates/core/detail_employe.html
+@@ -3,7 +3,7 @@
+ 
+ {% block extra_css %}
+ <style>
+-    .de-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
++    .de-wrap { background: transparent; }
+ 
+     /* ===== EN-TÊTE PROFIL ===== */
+     .profil-card {
+@@ -478,7 +478,7 @@
+             <form method="POST" action="{% url 'core:modifier_employe' emp.pk %}"
+                   enctype="multipart/form-data" id="formEditEmploye">
+                 {% csrf_token %}
+-                <div class="modal-header bg-dark text-white">
++                <div class="modal-header bg-primary text-white">
+                     <h5 class="modal-title fw-bold">
+                         <i class="bi bi-pencil-square me-2"></i>Modifier {{ emp.nom_complet }}
+                     </h5>
+@@ -601,7 +601,7 @@
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+-                    <button type="submit" class="btn btn-success fw-semibold">
++                    <button type="submit" class="btn btn-primary fw-semibold">
+                         <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                     </button>
+                 </div>
+@@ -669,7 +669,7 @@
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+-                    <button type="submit" class="btn btn-success fw-semibold">
++                    <button type="submit" class="btn btn-primary fw-semibold">
+                         <i class="bi bi-check2-circle me-1"></i>Valider le paiement
+                     </button>
+                 </div>
+diff --git a/core/templates/core/employes.html b/core/templates/core/employes.html
+index 43e7956..5a5b7c2 100644
+--- a/core/templates/core/employes.html
++++ b/core/templates/core/employes.html
+@@ -3,7 +3,7 @@
+ 
+ {% block extra_css %}
+ <style>
+-    .em-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
++    .em-wrap { background: transparent; }
+ 
+     .kpi-e { background:#fff; border:1px solid #eef0f6; border-radius:14px; padding:1rem 1.15rem; height:100%; }
+     .kpi-e .lbl { color:#6b7280; font-size:.8rem; }
+diff --git a/core/templates/core/historique_stock.html b/core/templates/core/historique_stock.html
+index fce4595..c1a6cdf 100644
+--- a/core/templates/core/historique_stock.html
++++ b/core/templates/core/historique_stock.html
+@@ -4,7 +4,7 @@
+ 
+ {% block extra_css %}
+ <style>
+-    .hs-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
++    .hs-wrap { background: transparent; }
+ 
+     /* ===== KPI ===== */
+     .kpi-h {
+diff --git a/core/templates/core/liste_depenses.html b/core/templates/core/liste_depenses.html
+index 37b9874..13c6842 100644
+--- a/core/templates/core/liste_depenses.html
++++ b/core/templates/core/liste_depenses.html
+@@ -4,7 +4,7 @@
+ 
+ {% block extra_css %}
+ <style>
+-    .dp-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
++    .dp-wrap { background: transparent; }
+ 
+     /* ===== KPI ===== */
+     .kpi-d {
+@@ -410,7 +410,7 @@
+ <div class="modal fade modal-dep" id="modalEditDepense" tabindex="-1" aria-hidden="true">
+     <div class="modal-dialog modal-dialog-centered">
+         <div class="modal-content shadow">
+-            <div class="modal-header bg-dark text-white">
++            <div class="modal-header bg-primary text-white">
+                 <h5 class="modal-title fw-bold">
+                     <i class="bi bi-pencil-square me-2"></i>Modifier la dépense
+                 </h5>
+@@ -443,7 +443,7 @@
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+-                    <button type="submit" class="btn btn-success fw-semibold">
++                    <button type="submit" class="btn btn-primary fw-semibold">
+                         <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                     </button>
+                 </div>
+diff --git a/core/templates/core/modeles.html b/core/templates/core/modeles.html
+index 44af87d..1cac5cd 100644
+--- a/core/templates/core/modeles.html
++++ b/core/templates/core/modeles.html
+@@ -3,7 +3,7 @@
+ 
+ {% block extra_css %}
+ <style>
+-    .cat-wrap { background: #f7f8fc; min-height: 100vh; margin: -1.5rem -1rem; padding: 1.5rem 1rem; }
++    .cat-wrap { background: transparent; }
+ 
+     .kpi-mini {
+         background: #fff; border: 1px solid #eef0f6; border-radius: 14px;
+@@ -167,19 +167,19 @@
+     <!-- Onglets -->
+     <ul class="nav nav-pills mb-4 gap-2" role="tablist">
+         <li class="nav-item">
+-            <button class="nav-link active px-4" data-bs-toggle="tab" data-bs-target="#tab-couture" type="button">
++            <button class="nav-link px-4 {% if request.GET.tab != 'pap' and request.GET.tab != 'acc' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-couture" type="button">
+                 <i class="bi bi-scissors me-1"></i>Couture sur mesure
+                 <span class="badge bg-white text-dark ms-1">{{ nb_couture }}</span>
+             </button>
+         </li>
+         <li class="nav-item">
+-            <button class="nav-link px-4" data-bs-toggle="tab" data-bs-target="#tab-pap" type="button">
++            <button class="nav-link px-4 {% if request.GET.tab == 'pap' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-pap" type="button">
+                 <i class="bi bi-bag me-1"></i>Prêt-à-porter
+                 <span class="badge bg-secondary ms-1">{{ nb_pap }}</span>
+             </button>
+         </li>
+         <li class="nav-item">
+-            <button class="nav-link px-4" data-bs-toggle="tab" data-bs-target="#tab-acc" type="button">
++            <button class="nav-link px-4 {% if request.GET.tab == 'acc' %}active{% endif %}" data-bs-toggle="tab" data-bs-target="#tab-acc" type="button">
+                 <i class="bi bi-gem me-1"></i>Accessoires
+                 <span class="badge bg-secondary ms-1">{{ nb_accessoires }}</span>
+             </button>
+@@ -189,7 +189,7 @@
+     <div class="tab-content">
+ 
+         <!-- ===== ONGLET 1 : COUTURE ===== -->
+-        <div class="tab-pane fade show active" id="tab-couture" role="tabpanel">
++        <div class="tab-pane fade {% if request.GET.tab != 'pap' and request.GET.tab != 'acc' %}show active{% endif %}" id="tab-couture" role="tabpanel">
+             <div class="input-group mb-4" style="max-width:340px;">
+                 <span class="input-group-text bg-white border-end-0">
+                     <i class="bi bi-search text-muted"></i>
+@@ -300,7 +300,7 @@
+         </div>
+ 
+         <!-- ===== ONGLET 2 : PRÊT-À-PORTER ===== -->
+-        <div class="tab-pane fade" id="tab-pap" role="tabpanel">
++        <div class="tab-pane fade {% if request.GET.tab == 'pap' %}show active{% endif %}" id="tab-pap" role="tabpanel">
+             <div class="d-flex flex-wrap gap-2 align-items-center mb-4">
+                 <div class="input-group" style="max-width:340px;">
+                     <span class="input-group-text bg-white border-end-0">
+@@ -439,7 +439,7 @@
+         </div>
+ 
+         <!-- ===== ONGLET 3 : ACCESSOIRES ===== -->
+-        <div class="tab-pane fade" id="tab-acc" role="tabpanel">
++        <div class="tab-pane fade {% if request.GET.tab == 'acc' %}show active{% endif %}" id="tab-acc" role="tabpanel">
+             <div class="d-flex flex-wrap gap-2 mb-4">
+                 <button class="btn btn-sm btn-dark active filtre-cat" data-cat="">Tous</button>
+                 {% for code, label in categories_acc %}
+@@ -688,7 +688,7 @@
+         <div class="modal-content border-0 shadow">
+             <form method="POST" id="formEditModele" enctype="multipart/form-data">
+                 {% csrf_token %}
+-                <div class="modal-header bg-dark text-white">
++                <div class="modal-header bg-primary text-white">
+                     <h5 class="modal-title fw-bold">
+                         <i class="bi bi-pencil-square me-2"></i>Modifier l'article
+                     </h5>
+@@ -745,7 +745,7 @@
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+-                    <button type="submit" class="btn btn-success fw-semibold">
++                    <button type="submit" class="btn btn-primary fw-semibold">
+                         <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                     </button>
+                 </div>
+@@ -789,7 +789,7 @@
+         <div class="modal-content border-0 shadow">
+             <form method="POST" action="{% url 'core:ajouter_accessoire' %}" enctype="multipart/form-data">
+                 {% csrf_token %}
+-                <div class="modal-header bg-secondary text-white">
++                <div class="modal-header bg-primary text-white">
+                     <h5 class="modal-title fw-bold">
+                         <i class="bi bi-gem me-2"></i>Nouvel accessoire
+                     </h5>
+@@ -840,7 +840,7 @@
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+-                    <button type="submit" class="btn btn-secondary fw-semibold">
++                    <button type="submit" class="btn btn-primary fw-semibold">
+                         <i class="bi bi-save me-1"></i>Enregistrer
+                     </button>
+                 </div>
+@@ -855,7 +855,7 @@
+         <div class="modal-content border-0 shadow">
+             <form method="POST" id="formEditAccessoire" enctype="multipart/form-data">
+                 {% csrf_token %}
+-                <div class="modal-header bg-dark text-white">
++                <div class="modal-header bg-primary text-white">
+                     <h5 class="modal-title fw-bold">
+                         <i class="bi bi-pencil-square me-2"></i>Modifier l'accessoire
+                     </h5>
+@@ -903,7 +903,7 @@
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+-                    <button type="submit" class="btn btn-success fw-semibold">
++                    <button type="submit" class="btn btn-primary fw-semibold">
+                         <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                     </button>
+                 </div>
+diff --git a/core/templates/core/mon_profil.html b/core/templates/core/mon_profil.html
+index 5a76d9a..7736a5a 100644
+--- a/core/templates/core/mon_profil.html
++++ b/core/templates/core/mon_profil.html
+@@ -201,7 +201,7 @@
+ <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel" aria-hidden="true">
+     <div class="modal-dialog modal-dialog-centered">
+         <div class="modal-content border-0 shadow">
+-            <div class="modal-header bg-dark text-white">
++            <div class="modal-header bg-primary text-white">
+                 <h5 class="modal-title fw-bold" id="changePasswordModalLabel">
+                     <i class="bi bi-shield-lock me-2"></i>Changer de mot de passe
+                 </h5>
+diff --git a/core/templates/core/parametres.html b/core/templates/core/parametres.html
+index edeac06..5bea551 100644
+--- a/core/templates/core/parametres.html
++++ b/core/templates/core/parametres.html
+@@ -5,7 +5,7 @@
+ 
+ {% block extra_css %}
+ <style>
+-    .pa-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
++    .pa-wrap { background: transparent; }
+ 
+     .nav-param .list-group-item {
+         border:none; padding:.85rem 1rem; cursor:pointer;
+@@ -629,7 +629,7 @@
+         <div class="modal-content border-0 shadow">
+             <form method="POST" id="formEditUser" action="">
+                 {% csrf_token %}
+-                <div class="modal-header bg-dark text-white">
++                <div class="modal-header bg-primary text-white">
+                     <h5 class="modal-title fw-bold">
+                         <i class="bi bi-pencil-square me-2"></i>Modifier l'utilisateur
+                     </h5>
+@@ -690,7 +690,7 @@
+                 </div>
+                 <div class="modal-footer">
+                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+-                    <button type="submit" class="btn btn-success fw-semibold">
++                    <button type="submit" class="btn btn-primary fw-semibold">
+                         <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                     </button>
+                 </div>
+diff --git a/core/templates/core/plan_charge.html b/core/templates/core/plan_charge.html
+index c2dc837..3975ffa 100644
+--- a/core/templates/core/plan_charge.html
++++ b/core/templates/core/plan_charge.html
+@@ -3,7 +3,7 @@
+ 
+ {% block extra_css %}
+ <style>
+-    .pc-wrap { background:#f7f8fc; min-height:100vh; margin:-1.5rem -1rem; padding:1.5rem 1rem; }
++    .pc-wrap { background: transparent; }
+ 
+     /* ===== COLONNES KANBAN ===== */
+     .board {
+diff --git a/core/templates/core/ventes_directes.html b/core/templates/core/ventes_directes.html
+index f087681..c9746a3 100644
+--- a/core/templates/core/ventes_directes.html
++++ b/core/templates/core/ventes_directes.html
+@@ -3,7 +3,7 @@
+ 
+ {% block extra_css %}
+ <style>
+-    .vd-wrap { background: #f7f8fc; min-height: 100vh; margin: -1.5rem -1rem; padding: 1.5rem 1rem; }
++    .vd-wrap { background: transparent; }
+ 
+     /* ===== KPI ===== */
+     .kpi-v {
+diff --git a/core/views.py b/core/views.py
+index 8708aad..f41b3a0 100644
+--- a/core/views.py
++++ b/core/views.py
+@@ -942,6 +942,14 @@ def liste_modeles(request):
+     })
+ 
+ 
++def _redir_modeles(tab=None):
++    """Redirige vers le catalogue en activant l'onglet voulu (cou/pap/acc)."""
++    url = reverse('core:liste_modeles')
++    if tab:
++        url = url + '?tab=' + tab
++    return redirect(url)
++
++
+ @login_required
+ @droit_requis('catalogue')
+ def ajouter_accessoire(request):
+@@ -966,7 +974,7 @@ def ajouter_accessoire(request):
+             messages.success(request, f"Accessoire « {acc.nom} » ajouté.")
+         else:
+             messages.error(request, "Veuillez corriger les erreurs.")
+-    return redirect('core:liste_modeles')
++    return _redir_modeles('acc')
+ 
+ 
+ @login_required
+@@ -994,7 +1002,7 @@ def modifier_accessoire(request, pk):
+             messages.success(request, f"Accessoire « {acc.nom} » mis à jour.")
+         else:
+             messages.error(request, "Erreur lors de la modification.")
+-    return redirect('core:liste_modeles')
++    return _redir_modeles('acc')
+ 
+ 
+ @login_required
+@@ -1005,13 +1013,14 @@ def supprimer_accessoire(request, pk):
+     if request.method == 'POST':
+         acc.delete()
+         messages.success(request, "Accessoire supprimé.")
+-    return redirect('core:liste_modeles')
++    return _redir_modeles('acc')
+ 
+ 
+ @login_required
+ @droit_requis('catalogue')
+ def ajouter_modele(request):
+     atelier = get_user_atelier(request.user)
++    tab = None
+     if request.method == 'POST':
+         form = CatalogueModeleForm(request.POST, request.FILES)
+         if form.is_valid():
+@@ -1030,9 +1039,11 @@ def ajouter_modele(request):
+                     commentaire="Stock initial à la création",
+                 )
+             messages.success(request, f"Modèle « {modele.nom} » ajouté avec succès.")
++            tab = 'pap' if modele.est_pap else 'cou'
+         else:
+             messages.error(request, "Veuillez corriger les erreurs du formulaire.")
+-    return redirect('core:liste_modeles')
++            tab = 'pap' if request.POST.get('type_modele') == 'PRET_A_PORTER' else 'cou'
++    return _redir_modeles(tab)
+ 
+ 
+ @login_required
+@@ -1040,6 +1051,7 @@ def ajouter_modele(request):
+ def modifier_modele(request, pk):
+     atelier = get_user_atelier(request.user)
+     modele = get_object_or_404(CatalogueModele, pk=pk, atelier=atelier)
++    tab = 'pap' if modele.est_pap else 'cou'
+     if request.method == 'POST':
+         stock_avant = modele.stock_pret_a_porter
+         form = CatalogueModeleForm(request.POST, request.FILES, instance=modele)
+@@ -1060,7 +1072,7 @@ def modifier_modele(request, pk):
+             messages.success(request, "Modèle mis à jour.")
+         else:
+             messages.error(request, "Erreur lors de la modification du modèle.")
+-    return redirect('core:liste_modeles')
++    return _redir_modeles(tab)
+ 
+ 
+ @login_required
+@@ -1068,10 +1080,11 @@ def modifier_modele(request, pk):
+ def supprimer_modele(request, pk):
+     atelier = get_user_atelier(request.user)
+     modele = get_object_or_404(CatalogueModele, pk=pk, atelier=atelier)
++    tab = 'pap' if modele.est_pap else 'cou'
+     if request.method == 'POST':
+         modele.delete()
+         messages.success(request, "Modèle supprimé.")
+-    return redirect('core:liste_modeles')
++    return _redir_modeles(tab)
+ 
+ 
+ # ==========================================
+@@ -2124,9 +2137,10 @@ def ajuster_stock(request):
+     atelier = get_user_atelier(request.user)
+ 
+     if request.method != 'POST':
+-        return redirect('core:liste_modeles')
++        return _redir_modeles()
+ 
+     genre = request.POST.get('genre')            # 'PAP' ou 'ACC'
++    tab = {'PAP': 'pap', 'ACC': 'acc'}.get(genre)
+     obj_id = _to_int(request.POST.get('article_id'), 0)
+     quantite = _to_int(request.POST.get('quantite'), 0)
+     type_mvt = request.POST.get('type_mouvement', 'REAPPRO')
+@@ -2134,13 +2148,13 @@ def ajuster_stock(request):
+ 
+     if genre not in ('PAP', 'ACC') or not obj_id or quantite == 0:
+         messages.error(request, "Paramètres d'ajustement invalides.")
+-        return redirect('core:liste_modeles')
++        return _redir_modeles(tab)
+ 
+     obj = _modele_pour_genre(genre).objects.filter(
+         pk=obj_id, atelier=atelier).first()
+     if not obj:
+         messages.error(request, "Article introuvable.")
+-        return redirect('core:liste_modeles')
++        return _redir_modeles(tab)
+ 
+     sens = 1 if quantite > 0 else -1
+     qte_abs = abs(quantite)
+@@ -2151,7 +2165,7 @@ def ajuster_stock(request):
+             f"Impossible de retirer {qte_abs} : stock actuel "
+             f"{_stock_actuel(obj, genre)}."
+         )
+-        return redirect('core:liste_modeles')
++        return _redir_modeles(tab)
+ 
+     with transaction.atomic():
+         _appliquer_stock(
+@@ -2166,7 +2180,7 @@ def ajuster_stock(request):
+         f"Stock de « {obj.nom} » ajusté : "
+         f"{_stock_actuel(obj, genre)} unité(s) disponible(s)."
+     )
+-    return redirect('core:liste_modeles')
++    return _redir_modeles(tab)
+ 
+ 
+ # ==========================================
+-- 
+2.47.3
+

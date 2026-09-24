@@ -1,0 +1,37 @@
+From 0f3b6488ab4f9741226393f673b92427928cfb89 Mon Sep 17 00:00:00 2001
+From: Arena Agent <agent@arena.ai>
+Date: Mon, 21 Sep 2026 15:59:00 +0000
+Subject: [PATCH] =?UTF-8?q?0022=20Fix=20structure=20modeles.html=20:=20fer?=
+ =?UTF-8?q?meture=20des=20conteneurs=20grille=20(onglets=20PAP/Accessoires?=
+ =?UTF-8?q?=20r=C3=A9tablis)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+---
+ core/templates/core/modeles.html | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/core/templates/core/modeles.html b/core/templates/core/modeles.html
+index d144c90..44af87d 100644
+--- a/core/templates/core/modeles.html
++++ b/core/templates/core/modeles.html
+@@ -258,6 +258,7 @@
+                 </div>
+                 {% endfor %}
+             </div>
++            </div>
+             <div class="conteneur-tableau d-none">
+                 <div class="card border-0 shadow-sm rounded-3"><div class="card-body p-0"><div class="table-responsive">
+                     <table class="table table-hover align-middle mb-0">
+@@ -394,6 +395,7 @@
+                 </div>
+                 {% endfor %}
+             </div>
++            </div>
+             <div class="conteneur-tableau d-none">
+                 <div class="card border-0 shadow-sm rounded-3"><div class="card-body p-0"><div class="table-responsive">
+                     <table class="table table-hover align-middle mb-0">
+-- 
+2.47.3
+

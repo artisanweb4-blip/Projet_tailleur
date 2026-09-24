@@ -1,0 +1,555 @@
+From 5a85432ae208b22364a42f18b942b4d427f685b1 Mon Sep 17 00:00:00 2001
+From: Arena Agent <agent@arena.ai>
+Date: Mon, 21 Sep 2026 10:39:48 +0000
+Subject: [PATCH 18/18] =?UTF-8?q?Cycle=20de=20vie=20des=20boutiques=20expi?=
+ =?UTF-8?q?r=C3=A9es=20(3=20mois)=20+=20liste=20boutiques=20professionnell?=
+ =?UTF-8?q?e?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+- core/expiration.py : statut effectif (ACTIF / EXPIRE / SUSPENDU /
+  SANS_ABONNEMENT), échéance de conservation = fin d'abonnement (ou
+  création) + 90 jours, flag supprimable.
+- Middleware AbonnementExpireMiddleware : une boutique non
+  fonctionnelle est bloquée sur toutes les routes et dirigée vers la
+  page /abonnement-bloque/ (données intactes, déconnexion et langue
+  accessibles) ; page traduite FR/EN.
+- Super-admin : « Réactiver » active un nouvel abonnement de 30 jours
+  (boutique fonctionnelle avec toutes ses anciennes données) ;
+  « Supprimer » est impossible pendant les 90 jours de conservation
+  puis supprime TOTALEMENT boutique, données et comptes (confirmation
+  SUPPRIMER obligatoire).
+- Liste des boutiques redesignée : 4 cartes KPI (total, fonctionnelles,
+  expirées en conservation, supprimables), avatars, badges de statut,
+  compte à rebours J-x, actions Gérer/Réactiver/Supprimer contextualisées.
+- Règle des 3 mois rappelée en pied de liste.
+---
+ core/expiration.py                            |  47 ++++++
+ core/middleware.py                            |  33 +++-
+ core/templates/core/abonnement_bloque.html    |  46 ++++++
+ .../templates/saas_admin/liste_boutiques.html | 143 +++++++++++++++---
+ core/traduction.py                            |  10 ++
+ core/urls.py                                  |   1 +
+ core/views.py                                 |  11 ++
+ saas_admin/views.py                           |  58 +++++--
+ tailleur_gestion/settings.py                  |   1 +
+ 9 files changed, 316 insertions(+), 34 deletions(-)
+ create mode 100644 core/expiration.py
+ create mode 100644 core/templates/core/abonnement_bloque.html
+
+diff --git a/core/expiration.py b/core/expiration.py
+new file mode 100644
+index 0000000..bdc3e0d
+--- /dev/null
++++ b/core/expiration.py
+@@ -0,0 +1,47 @@
++"""Cycle de vie des boutiques : expiration, délai de conservation, suppression.
++
++Règle métier (3 mois) :
++- une boutique dont l'abonnement est expiré (ou jamais souscrit) est
++  bloquée côté locataire mais ses données sont CONSERVÉES ;
++- pendant 90 jours après la date de fin (ou la création si aucun
++  abonnement), le super-admin peut activer un nouvel abonnement : la
++  boutique redevient fonctionnelle avec toutes ses anciennes données ;
++- passé ce délai, la boutique devient supprimable : le super-admin peut
++  alors la supprimer totalement (données comprises).
++"""
++from datetime import date, timedelta
++
++DELAI_CONSERVATION_JOURS = 90
++
++
++def infos_expiration(atelier):
++    """Retourne le statut effectif d'une boutique et ses échéances."""
++    aujourdhui = date.today()
++    abonnement = getattr(atelier, 'abonnement', None)
++
++    if abonnement is None:
++        reference = atelier.date_creation.date()
++        statut = 'SANS_ABONNEMENT'
++        date_fin = None
++    else:
++        date_fin = abonnement.date_fin
++        reference = date_fin
++        if abonnement.statut == 'SUSPENDU':
++            statut = 'SUSPENDU'
++        elif date_fin >= aujourdhui:
++            statut = 'ACTIF'
++        else:
++            statut = 'EXPIRE'
++
++    if statut == 'ACTIF' and not atelier.est_actif:
++        statut = 'SUSPENDU'
++
++    echeance = reference + timedelta(days=DELAI_CONSERVATION_JOURS)
++    return {
++        'statut': statut,
++        'date_fin': date_fin,
++        'echeance': echeance,
++        'jours_restants': (echeance - aujourdhui).days,
++        'supprimable': aujourdhui > echeance,
++        'fonctionnelle': statut == 'ACTIF' and atelier.est_actif,
++    }
+diff --git a/core/middleware.py b/core/middleware.py
+index c9c7d01..8649a05 100644
+--- a/core/middleware.py
++++ b/core/middleware.py
+@@ -49,4 +49,35 @@ class TenantMiddleware:
+             # Nettoyage systématique, même en cas d'erreur ou d'exception dans la vue
+             _thread_locals.atelier = None
+ 
+-        return response
+\ No newline at end of file
++        return response
++
++
++class AbonnementExpireMiddleware:
++    """
++    Bloque l'accès des boutiques non fonctionnelles (abonnement expiré,
++    suspendu ou absent) : toutes les routes renvoient vers la page
++    d'information, sauf celles nécessaires pour lire l'information,
++    changer de langue ou se déconnecter. Les données restent intactes.
++    """
++    EXEMPTS = (
++        '/abonnement-bloque',
++        '/langue/',
++        '/deconnexion/',
++        '/static/',
++        '/media/',
++    )
++
++    def __init__(self, get_response):
++        self.get_response = get_response
++
++    def __call__(self, request):
++        user = getattr(request, 'user', None)
++        atelier = getattr(request, 'atelier', None)
++        if (user is not None and user.is_authenticated
++                and not user.is_superuser and atelier is not None):
++            from .expiration import infos_expiration
++            if not infos_expiration(atelier)['fonctionnelle']:
++                if not request.path.startswith(self.EXEMPTS):
++                    from django.shortcuts import redirect
++                    return redirect('core:abonnement_bloque')
++        return self.get_response(request)
+diff --git a/core/templates/core/abonnement_bloque.html b/core/templates/core/abonnement_bloque.html
+new file mode 100644
+index 0000000..22324b1
+--- /dev/null
++++ b/core/templates/core/abonnement_bloque.html
+@@ -0,0 +1,46 @@
++{% extends "base.html" %}
++{% load static %}
++{% load trad %}
++
++{% block title %}Abonnement expiré — {{ atelier.nom }}{% endblock %}
++
++{% block content %}
++<div class="row justify-content-center">
++    <div class="col-lg-7 col-xl-6">
++        <div class="card border-0 shadow-sm mt-4">
++            <div class="card-body p-4 p-md-5 text-center">
++                <div class="mx-auto mb-3 d-flex align-items-center justify-content-center"
++                     style="width:64px;height:64px;border-radius:18px;background:linear-gradient(135deg,var(--primary-color),var(--accent-color));">
++                    <i class="bi bi-clock-history text-white" style="font-size:1.7rem;"></i>
++                </div>
++                <h4 class="fw-bold mb-2">{% tr "Boutique suspendue" %}</h4>
++                <p class="text-muted mb-4">
++                    {% if infos and infos.statut == 'SANS_ABONNEMENT' %}
++                        {% tr "Aucun abonnement n'est actif pour cette boutique." %}
++                    {% else %}
++                        {% tr "L'abonnement de cette boutique a expiré le" %}
++                        <strong>{{ infos.date_fin|date:"d/m/Y" }}</strong>.
++                    {% endif %}
++                    <br>
++                    {% tr "Vos données sont conservées en sécurité jusqu'au" %}
++                    <strong>{{ infos.echeance|date:"d/m/Y" }}</strong>
++                    {% if infos and infos.jours_restants > 0 %}
++                        ({% tr "encore" %} {{ infos.jours_restants }} {% tr "jours" %}).
++                    {% else %}
++                        .
++                    {% endif %}
++                </p>
++                <div class="alert alert-light border small text-start">
++                    <i class="bi bi-info-circle me-1 text-primary"></i>
++                    {% tr "Pour réactiver la boutique avec toutes ses anciennes données, contactez le gestionnaire de la plateforme avant cette date : un nouvel abonnement peut être activé à tout moment pendant la période de conservation." %}
++                </div>
++                <div class="d-flex justify-content-center gap-2">
++                    <a href="{% url 'core:deconnexion' %}" class="btn btn-outline-secondary">
++                        <i class="bi bi-box-arrow-right me-1"></i> {% tr "Se déconnecter" %}
++                    </a>
++                </div>
++            </div>
++        </div>
++    </div>
++</div>
++{% endblock %}
+diff --git a/core/templates/saas_admin/liste_boutiques.html b/core/templates/saas_admin/liste_boutiques.html
+index 6e86acd..59016fe 100644
+--- a/core/templates/saas_admin/liste_boutiques.html
++++ b/core/templates/saas_admin/liste_boutiques.html
+@@ -31,26 +31,91 @@
+     {% endfor %}
+ {% endif %}
+ 
+-<div class="card shadow-sm">
++<!-- ===== KPI ===== -->
++<div class="row g-3 mb-4">
++    <div class="col-6 col-xl-3">
++        <div class="card border-0 shadow-sm h-100">
++            <div class="card-body d-flex align-items-center gap-3">
++                <div class="d-flex align-items-center justify-content-center rounded-3" style="width:44px;height:44px;background:linear-gradient(135deg,#2b59c3,#2563eb);">
++                    <i class="bi bi-shop text-white"></i>
++                </div>
++                <div>
++                    <div class="text-muted small">Boutiques</div>
++                    <div class="fs-4 fw-bold lh-1">{{ kpi.total }}</div>
++                </div>
++            </div>
++        </div>
++    </div>
++    <div class="col-6 col-xl-3">
++        <div class="card border-0 shadow-sm h-100">
++            <div class="card-body d-flex align-items-center gap-3">
++                <div class="d-flex align-items-center justify-content-center rounded-3" style="width:44px;height:44px;background:linear-gradient(135deg,#10b981,#059669);">
++                    <i class="bi bi-check-circle text-white"></i>
++                </div>
++                <div>
++                    <div class="text-muted small">Fonctionnelles</div>
++                    <div class="fs-4 fw-bold lh-1">{{ kpi.actives }}</div>
++                </div>
++            </div>
++        </div>
++    </div>
++    <div class="col-6 col-xl-3">
++        <div class="card border-0 shadow-sm h-100">
++            <div class="card-body d-flex align-items-center gap-3">
++                <div class="d-flex align-items-center justify-content-center rounded-3" style="width:44px;height:44px;background:linear-gradient(135deg,#f59e0b,#ea580c);">
++                    <i class="bi bi-clock-history text-white"></i>
++                </div>
++                <div>
++                    <div class="text-muted small">Expirées (conservation)</div>
++                    <div class="fs-4 fw-bold lh-1">{{ kpi.expirees }}</div>
++                </div>
++            </div>
++        </div>
++    </div>
++    <div class="col-6 col-xl-3">
++        <div class="card border-0 shadow-sm h-100">
++            <div class="card-body d-flex align-items-center gap-3">
++                <div class="d-flex align-items-center justify-content-center rounded-3" style="width:44px;height:44px;background:linear-gradient(135deg,#f43f5e,#e11d48);">
++                    <i class="bi bi-trash3 text-white"></i>
++                </div>
++                <div>
++                    <div class="text-muted small">Supprimables</div>
++                    <div class="fs-4 fw-bold lh-1">{{ kpi.supprimables }}</div>
++                </div>
++            </div>
++        </div>
++    </div>
++</div>
++
++<!-- ===== TABLEAU ===== -->
++<div class="card border-0 shadow-sm">
+     <div class="table-responsive">
+         <table class="table table-hover align-middle mb-0">
+             <thead class="table-light">
+                 <tr>
+-                    <th>Boutique</th>
++                    <th class="ps-3">Boutique</th>
+                     <th>Propriétaire</th>
+                     <th class="text-center">Membres</th>
+-                    <th>Abonnement</th>
++                    <th>Formule</th>
+                     <th>Statut</th>
+-                    <th>Expiration</th>
+-                    <th class="text-end">Actions</th>
++                    <th>Échéance</th>
++                    <th class="text-end pe-3">Actions</th>
+                 </tr>
+             </thead>
+             <tbody>
+                 {% for boutique in boutiques %}
+                 <tr>
+-                    <td>
+-                        <div class="fw-semibold">{{ boutique.nom }}</div>
+-                        <small class="text-muted">Créée le {{ boutique.date_creation|date:"d/m/Y" }}</small>
++                    <td class="ps-3">
++                        <div class="d-flex align-items-center gap-2">
++                            <div class="d-flex align-items-center justify-content-center rounded-3 fw-bold text-white"
++                                 style="width:36px;height:36px;background:linear-gradient(135deg,#2b59c3,#2563eb);font-size:.85rem;">
++                                {{ boutique.nom|slice:":1" }}
++                            </div>
++                            <div>
++                                <div class="fw-semibold">{{ boutique.nom }}</div>
++                                <small class="text-muted">Créée le {{ boutique.date_creation|date:"d/m/Y" }}</small>
++                            </div>
++                        </div>
+                     </td>
+                     <td>
+                         {% if boutique.proprietaire_user %}
+@@ -61,23 +126,57 @@
+                         {% endif %}
+                     </td>
+                     <td class="text-center"><span class="badge bg-light text-dark border">{{ boutique.nb_membres }}</span></td>
+-                    <td>{{ boutique.abonnement.plan.nom|default:"Aucun plan" }}</td>
++                    <td class="small">{{ boutique.abonnement.plan.nom|default:"Aucun plan" }}</td>
+                     <td>
+-                        {% if not boutique.abonnement %}
+-                            <span class="badge bg-secondary">Sans abonnement</span>
+-                        {% elif boutique.abonnement.statut == 'SUSPENDU' %}
+-                            <span class="badge bg-danger">Suspendu</span>
+-                        {% elif boutique.abonnement.date_fin < today %}
+-                            <span class="badge bg-warning text-dark">Expiré</span>
++                        {% if boutique.infos_exp.fonctionnelle %}
++                            <span class="badge bg-success">Fonctionnelle</span>
++                        {% elif boutique.infos_exp.supprimable %}
++                            <span class="badge bg-danger">Supprimable</span>
++                            <small class="text-muted d-block">délai de 3 mois écoulé</small>
++                        {% elif boutique.infos_exp.statut == 'SUSPENDU' %}
++                            <span class="badge bg-secondary">Suspendue</span>
+                         {% else %}
+-                            <span class="badge bg-success">Actif</span>
++                            <span class="badge bg-warning text-dark">Expirée</span>
++                            <small class="text-muted d-block">données conservées</small>
++                        {% endif %}
++                    </td>
++                    <td class="small">
++                        {% if boutique.infos_exp.date_fin %}
++                            Fin : {{ boutique.infos_exp.date_fin|date:"d/m/Y" }}<br>
++                        {% endif %}
++                        {% if not boutique.infos_exp.fonctionnelle %}
++                            {% if boutique.infos_exp.supprimable %}
++                                <span class="text-danger">Conservation échue le {{ boutique.infos_exp.echeance|date:"d/m/Y" }}</span>
++                            {% else %}
++                                Conservation jusqu'au {{ boutique.infos_exp.echeance|date:"d/m/Y" }}
++                                <span class="badge bg-light text-dark border">J-{{ boutique.infos_exp.jours_restants }}</span>
++                            {% endif %}
+                         {% endif %}
+                     </td>
+-                    <td>{{ boutique.abonnement.date_fin|date:"d/m/Y"|default:"—" }}</td>
+-                    <td class="text-end">
++                    <td class="text-end pe-3 text-nowrap">
+                         <a href="{% url 'saas_admin:detail_boutique' boutique.id %}" class="btn btn-sm btn-outline-primary">
+                             <i class="bi bi-eye me-1"></i>Gérer
+                         </a>
++                        {% if not boutique.infos_exp.fonctionnelle %}
++                        <form method="POST" class="d-inline" action="{% url 'saas_admin:reactiver_boutique' boutique.id %}"
++                              onsubmit="return confirm('Activer un nouvel abonnement de 30 jours pour cette boutique ?');">
++                            {% csrf_token %}
++                            <button type="submit" class="btn btn-sm btn-outline-success"
++                                    title="La boutique redevient fonctionnelle avec ses anciennes données">
++                                <i class="bi bi-arrow-repeat me-1"></i>Réactiver
++                            </button>
++                        </form>
++                        {% endif %}
++                        <form method="POST" class="d-inline" action="{% url 'saas_admin:supprimer_boutique' boutique.id %}"
++                              onsubmit="return confirm('SUPPRIMER TOTALEMENT cette boutique et toutes ses données ? Action irréversible.');">
++                            {% csrf_token %}
++                            <input type="hidden" name="confirmation" value="SUPPRIMER">
++                            <button type="submit" class="btn btn-sm btn-outline-danger"
++                                    {% if not boutique.infos_exp.supprimable %}disabled
++                                    title="Suppression possible seulement après le délai de conservation de 3 mois ({{ boutique.infos_exp.echeance|date:'d/m/Y' }})"{% endif %}>
++                                <i class="bi bi-trash me-1"></i>Supprimer
++                            </button>
++                        </form>
+                     </td>
+                 </tr>
+                 {% empty %}
+@@ -92,6 +191,14 @@
+         </table>
+     </div>
+ </div>
++
++<div class="alert alert-light border small mt-3 mb-0">
++    <i class="bi bi-shield-exclamation me-1 text-warning"></i>
++    Règle des 3 mois : une boutique expirée est bloquée mais ses données sont conservées
++    90 jours. Pendant ce délai, « Réactiver » active un nouvel abonnement de 30 jours et la
++    boutique reprend avec toutes ses anciennes données. Passé ce délai, la boutique devient
++    « Supprimable » : la suppression efface alors totalement la boutique et ses données.
++</div>
+ {% endblock %}
+ 
+ {% block modals %}
+diff --git a/core/traduction.py b/core/traduction.py
+index d0bca71..a20e3f3 100644
+--- a/core/traduction.py
++++ b/core/traduction.py
+@@ -86,6 +86,16 @@ EN = {
+     "Je comprends que les données actuelles seront remplacées.": "I understand current data will be replaced.",
+     "Restaurer": "Restore",
+ 
++    # --- Page abonnement expiré ---
++    "Boutique suspendue": "Shop suspended",
++    "Aucun abonnement n'est actif pour cette boutique.": "No subscription is active for this shop.",
++    "L'abonnement de cette boutique a expiré le": "The subscription of this shop expired on",
++    "Vos données sont conservées en sécurité jusqu'au": "Your data is safely kept until",
++    "encore": "another",
++    "jours": "days",
++    "Pour réactiver la boutique avec toutes ses anciennes données, contactez le gestionnaire de la plateforme avant cette date : un nouvel abonnement peut être activé à tout moment pendant la période de conservation.": "To reactivate the shop with all its old data, contact the platform manager before this date: a new subscription can be activated at any time during the retention period.",
++    "Se déconnecter": "Sign out",
++
+ }
+ 
+ 
+diff --git a/core/urls.py b/core/urls.py
+index 4266865..d06a1f0 100644
+--- a/core/urls.py
++++ b/core/urls.py
+@@ -11,6 +11,7 @@ urlpatterns = [
+     path('', views.landing, name='accueil'),
+     path('connexion/', views.connexion, name='connexion'),
+     path('langue/', views.changer_langue, name='changer_langue'),
++    path('abonnement-bloque/', views.abonnement_bloque, name='abonnement_bloque'),
+     path('deconnexion/', views.deconnexion, name='deconnexion'),
+     path('inscription/', views.inscription_saas, name='inscription_saas'),
+ 
+diff --git a/core/views.py b/core/views.py
+index c518b1c..1eb5d20 100644
+--- a/core/views.py
++++ b/core/views.py
+@@ -22,6 +22,7 @@ from .models import (
+     Paie, Paiement, PlanAbonnement, Profil,
+ )
+ from .decorators import droit_requis
++from .expiration import infos_expiration
+ from .sauvegarde import (
+     chemin_sauvegarde, creer_sauvegarde, lister_sauvegardes,
+     restaurer_sauvegarde, supprimer_sauvegarde,
+@@ -2857,6 +2858,16 @@ def calendrier(request):
+     })
+ 
+ 
++def abonnement_bloque(request):
++    """Page d'information des boutiques bloquées (abonnement expiré)."""
++    atelier = get_user_atelier(request.user)
++    infos = infos_expiration(atelier) if atelier else None
++    return render(request, 'core/abonnement_bloque.html', {
++        'atelier': atelier,
++        'infos': infos,
++    })
++
++
+ def changer_langue(request):
+     """Bascule la langue de l'interface (fr / en) pour la session."""
+     langue = request.GET.get('lang', 'fr')
+diff --git a/saas_admin/views.py b/saas_admin/views.py
+index 74fd7f8..a885c92 100644
+--- a/saas_admin/views.py
++++ b/saas_admin/views.py
+@@ -10,6 +10,7 @@ from core.validators import generer_mot_de_passe_temporaire
+ from django.core.paginator import Paginator
+ from django.db import transaction
+ from django.db.models import Q, Sum, Count
++from core.expiration import infos_expiration
+ from core.sauvegarde import (
+     chemin_sauvegarde_systeme, creer_sauvegarde_systeme,
+     lister_sauvegardes_systeme, supprimer_sauvegarde_systeme,
+@@ -109,13 +110,22 @@ def superadmin_liste_boutiques(request):
+             atelier__in=[b.id for b in boutiques], est_fondateur=True,
+         ).select_related('user')
+     }
++    kpi = {'total': len(boutiques), 'actives': 0, 'expirees': 0, 'supprimables': 0}
+     for boutique in boutiques:
+         boutique.proprietaire_user = fondateurs.get(boutique.id)
++        boutique.infos_exp = infos_expiration(boutique)
++        if boutique.infos_exp['fonctionnelle']:
++            kpi['actives'] += 1
++        elif boutique.infos_exp['supprimable']:
++            kpi['supprimables'] += 1
++        else:
++            kpi['expirees'] += 1
+     return render(request, 'saas_admin/liste_boutiques.html', {
+         'boutiques': boutiques,
+         'q': q,
+         'today': date.today(),
+         'plans': PlanAbonnement.objects.all().order_by('prix_mensuel'),
++        'kpi': kpi,
+     })
+ 
+ 
+@@ -242,13 +252,25 @@ def suspendre_boutique(request, boutique_id):
+ def reactiver_boutique(request, boutique_id):
+     atelier = get_object_or_404(Atelier, id=boutique_id)
+     if request.method == 'POST':
++        aujourdhui = date.today()
+         abonnement = getattr(atelier, 'abonnement', None)
+-        if abonnement:
++        if abonnement is None:
++            jusquau = aujourdhui + timedelta(days=30)
++            Abonnement.objects.create(
++                atelier=atelier, plan=None, statut='ACTIF', date_fin=jusquau)
++        else:
++            base = max(abonnement.date_fin, aujourdhui)
++            abonnement.date_fin = base + timedelta(days=30)
+             abonnement.statut = 'ACTIF'
+             abonnement.save()
++            jusquau = abonnement.date_fin
+         atelier.est_actif = True
+         atelier.save()
+-        messages.success(request, f"La boutique {atelier.nom} est réactivée.")
++        messages.success(
++            request,
++            f"Nouvel abonnement activé : la boutique {atelier.nom} est "
++            f"fonctionnelle jusqu'au {jusquau:%d/%m/%Y} avec toutes ses "
++            f"anciennes données.")
+     return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
+ 
+ 
+@@ -256,21 +278,27 @@ def reactiver_boutique(request, boutique_id):
+ def supprimer_boutique(request, boutique_id):
+     atelier = get_object_or_404(Atelier, id=boutique_id)
+     if request.method == 'POST':
+-        nb = atelier.clients.count() + atelier.commandes.count() + atelier.depenses.count()
+-        if nb:
++        infos = infos_expiration(atelier)
++        if not infos['supprimable']:
+             messages.error(
+                 request,
+-                f"Suppression refusée : la boutique contient des données "
+-                f"({nb} enregistrements clients/commandes/dépenses). "
+-                f"Suspendez-la plutôt.")
+-        else:
+-            nom = atelier.nom
+-            users = list(atelier.membres.values_list('user_id', flat=True))
+-            atelier.delete()
+-            # Les comptes devenus orphelins (plus aucun profil) partent aussi
+-            User.objects.filter(id__in=users, profil__isnull=True).delete()
+-            messages.success(request, f"Boutique « {nom} » supprimée.")
+-            return redirect('saas_admin:superadmin_liste_boutiques')
++                f"Suppression refusée : les données de {atelier.nom} sont "
++                f"conservées jusqu'au {infos['echeance']:%d/%m/%Y} (3 mois "
++                f"sans abonnement). Activez un abonnement pour la "
++                f"réactiver, ou revenez après cette date.")
++            return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
++        if request.POST.get('confirmation') != 'SUPPRIMER':
++            messages.error(request, "Confirmation requise : tapez SUPPRIMER.")
++            return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
++        nom = atelier.nom
++        users = list(atelier.membres.values_list('user_id', flat=True))
++        atelier.delete()
++        User.objects.filter(id__in=users, profil__isnull=True).delete()
++        messages.success(
++            request,
++            f"Boutique « {nom} » supprimée totalement (données comprises) "
++            f"après la fin du délai de conservation.")
++        return redirect('saas_admin:superadmin_liste_boutiques')
+     return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
+ 
+ 
+diff --git a/tailleur_gestion/settings.py b/tailleur_gestion/settings.py
+index 8ea6c3d..54a4cdb 100644
+--- a/tailleur_gestion/settings.py
++++ b/tailleur_gestion/settings.py
+@@ -100,6 +100,7 @@ MIDDLEWARE = [
+     'django.contrib.messages.middleware.MessageMiddleware',
+     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+     'core.middleware.TenantMiddleware',
++    'core.middleware.AbonnementExpireMiddleware',
+ ]
+ 
+ ROOT_URLCONF = 'tailleur_gestion.urls'
+-- 
+2.47.3
+
