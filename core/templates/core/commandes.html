@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% block title %}Commandes{% endblock %}
 
 {% block extra_css %}
@@ -60,7 +61,7 @@
 
             <button type="button" class="btn btn-primary"
                 data-bs-toggle="modal" data-bs-target="#modalNouvelleCommande">
-                <i class="bi bi-plus-lg me-1"></i> Nouvelle commande
+                <i class="bi bi-plus-lg me-1"></i> {% tr "Nouvelle commande" %}
             </button>
         </div>
     </div>
@@ -124,7 +125,7 @@
             <div class="card border-0 shadow-sm rounded-3">
                 <div class="card-body p-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <span class="text-muted small d-block">En retard</span>
+                        <span class="text-muted small d-block">{% tr "En retard" %}</span>
                         <span class="h5 mb-0 fw-bold text-warning">{{ nb_en_retard }}</span>
                     </div>
                     <div class="rounded-circle bg-warning bg-opacity-10 text-warning p-2">
@@ -145,7 +146,7 @@
                         placeholder="Code, client, téléphone…" value="{{ q }}">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small fw-medium text-muted">Statut</label>
+                    <label class="form-label small fw-medium text-muted">{% tr "Statut" %}</label>
                     <select name="statut" class="form-select form-select-sm">
                         <option value="">Tous</option>
                         {% for value, label in statuts %}
@@ -248,8 +249,8 @@
                             <span class="fw-medium small text-dark">{{ r.c.date_livraison_prevue|date:"d/m/Y" }}</span>
                         {% endif %}
                         <div class="mt-1">
-                            {% if r.c.statut == 'EN_ATTENTE' %}<span class="pill p-att">En attente</span>
-                            {% elif r.c.statut == 'EN_COURS' %}<span class="pill p-enc">En cours</span>
+                            {% if r.c.statut == 'EN_ATTENTE' %}<span class="pill p-att">{% tr "En attente" %}</span>
+                            {% elif r.c.statut == 'EN_COURS' %}<span class="pill p-enc">{% tr "En cours" %}</span>
                             {% elif r.c.statut == 'PRET' %}<span class="pill p-pret">Prêt</span>
                             {% elif r.c.statut == 'LIVRE' %}<span class="pill p-liv">Livré</span>
                             {% elif r.c.statut == 'ANNULE' %}<span class="pill p-ann">Annulé</span>
@@ -318,9 +319,9 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light"><tr>
-                            <th class="ps-3">Commande</th><th>Client</th><th>Couturier</th>
-                            <th>Livraison</th><th>Statut</th><th>Total</th>
-                            <th class="text-end pe-3">Actions</th>
+                            <th class="ps-3">Commande</th><th>{% tr "Client" %}</th><th>Couturier</th>
+                            <th>Livraison</th><th>{% tr "Statut" %}</th><th>{% tr "Total" %}</th>
+                            <th class="text-end pe-3">{% tr "Actions" %}</th>
                         </tr></thead>
                         <tbody>
                         {% for r in rows %}
@@ -330,7 +331,7 @@
                                     <div class="cmd-meta">{{ r.c.client.telephone }}</div></td>
                                 <td class="small">{{ r.nom_employes|default:"—" }}</td>
                                 <td class="small">{% if r.c.est_en_retard %}<span class="pill p-late"><i class="bi bi-clock"></i> {{ r.c.date_livraison_prevue|date:"d/m/Y" }}</span>{% else %}{{ r.c.date_livraison_prevue|date:"d/m/Y" }}{% endif %}</td>
-                                <td>{% if r.c.statut == 'EN_ATTENTE' %}<span class="pill p-att">En attente</span>{% elif r.c.statut == 'EN_COURS' %}<span class="pill p-enc">En cours</span>{% elif r.c.statut == 'PRET' %}<span class="pill p-pret">Prêt</span>{% elif r.c.statut == 'LIVRE' %}<span class="pill p-liv">Livré</span>{% elif r.c.statut == 'ANNULE' %}<span class="pill p-ann">Annulé</span>{% endif %}</td>
+                                <td>{% if r.c.statut == 'EN_ATTENTE' %}<span class="pill p-att">{% tr "En attente" %}</span>{% elif r.c.statut == 'EN_COURS' %}<span class="pill p-enc">{% tr "En cours" %}</span>{% elif r.c.statut == 'PRET' %}<span class="pill p-pret">Prêt</span>{% elif r.c.statut == 'LIVRE' %}<span class="pill p-liv">Livré</span>{% elif r.c.statut == 'ANNULE' %}<span class="pill p-ann">Annulé</span>{% endif %}</td>
                                 <td class="fw-bold">{{ r.c.prix_net|floatformat:0 }} {{ atelier.devise }}
                                     <div class="cmd-meta">{% if r.c.est_soldee %}Soldée{% else %}Reste {{ r.c.reste_a_payer|floatformat:0 }}{% endif %}</div></td>
                                 <td class="text-end pe-3">
@@ -387,7 +388,7 @@
     <div class="modal-content border-0 shadow">
       <div class="modal-header bg-danger text-white py-2">
         <h6 class="modal-title fw-bold text-white">
-          <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmer la suppression
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>{% tr "Confirmer la suppression" %}
         </h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
@@ -402,7 +403,7 @@
           </div>
         </div>
         <div class="modal-footer border-0 py-2">
-          <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Annuler</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
           <button type="submit" class="btn btn-sm btn-danger px-3">
             <i class="bi bi-trash me-1"></i>Supprimer
           </button>

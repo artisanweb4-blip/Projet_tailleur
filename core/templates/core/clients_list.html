@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load trad %}
 {% block title %}Clients — {{ atelier.nom }}{% endblock %}
 
 {% block extra_css %}
@@ -100,7 +101,7 @@
             </div>
             <button type="button" class="btn btn-primary shadow-sm"
                     data-bs-toggle="modal" data-bs-target="#modalAjoutClient">
-                <i class="bi bi-person-plus-fill me-1"></i> Nouveau client
+                <i class="bi bi-person-plus-fill me-1"></i> {% tr "Nouveau client" %}
             </button>
         </div>
     </div>
@@ -303,7 +304,7 @@
                     <div class="mt-3">
                         <button type="button" class="btn btn-primary"
                                 data-bs-toggle="modal" data-bs-target="#modalAjoutClient">
-                            <i class="bi bi-person-plus-fill me-1"></i>Nouveau client
+                            <i class="bi bi-person-plus-fill me-1"></i>{% tr "Nouveau client" %}
                         </button>
                     </div>
                 </div>
@@ -319,7 +320,7 @@
                 <table class="table table-hover align-middle mb-0">
                     <thead>
                         <tr>
-                            <th class="ps-3">Client</th>
+                            <th class="ps-3">{% tr "Client" %}</th>
                             <th>Contact</th>
                             <th>Genre</th>
                             <th>Origine</th>
@@ -327,7 +328,7 @@
                             <th class="text-center">Mesures</th>
                             <th class="text-end">Total payé</th>
                             <th>Ajouté le</th>
-                            <th class="text-end pe-3">Actions</th>
+                            <th class="text-end pe-3">{% tr "Actions" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -464,7 +465,7 @@
                 {% csrf_token %}
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title fw-bold">
-                        <i class="bi bi-person-plus-fill me-2"></i>Nouveau client
+                        <i class="bi bi-person-plus-fill me-2"></i>{% tr "Nouveau client" %}
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -475,7 +476,7 @@
                                placeholder="Ex : Adama Traoré">
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label fw-semibold">Téléphone <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Téléphone" %} <span class="text-danger">*</span></label>
                         <input type="tel" name="telephone" class="form-control" required
                                placeholder="+223 00 00 00 00">
                     </div>
@@ -496,7 +497,7 @@
                         </select>
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Email</label>
+                        <label class="form-label fw-semibold">{% tr "Email" %}</label>
                         <input type="email" name="email" class="form-control" placeholder="exemple@mail.com">
                     </div>
                     <div class="col-12">
@@ -506,9 +507,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-save me-1"></i>Enregistrer
+                        <i class="bi bi-save me-1"></i>{% tr "Enregistrer" %}
                     </button>
                 </div>
             </form>
@@ -534,7 +535,7 @@
                         <input type="text" name="nom" id="e_nom" class="form-control" required>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="form-label fw-semibold">Téléphone <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Téléphone" %} <span class="text-danger">*</span></label>
                         <input type="tel" name="telephone" id="e_tel" class="form-control" required>
                     </div>
                     <div class="col-12 col-md-6">
@@ -554,7 +555,7 @@
                         </select>
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Email</label>
+                        <label class="form-label fw-semibold">{% tr "Email" %}</label>
                         <input type="email" name="email" id="e_email" class="form-control">
                     </div>
                     <div class="col-12">
@@ -563,9 +564,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                        <i class="bi bi-check-circle me-1"></i>{% tr "Mettre à jour" %}
                     </button>
                 </div>
             </form>
@@ -587,14 +588,14 @@
                 </div>
                 <div class="modal-body py-3 text-center">
                     <i class="bi bi-person-x text-danger fs-1 mb-2 d-block"></i>
-                    Supprimer définitivement<br>
+                    {% tr "Supprimer définitivement" %}<br>
                     <strong id="suppr_nom"></strong> ?
                     <p class="text-muted small mt-2 mb-0">
                         Ses mensurations et commandes seront également supprimées.
                     </p>
                 </div>
                 <div class="modal-footer py-2 justify-content-center gap-2">
-                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-danger px-4">
                         <i class="bi bi-trash me-1"></i>Supprimer
                     </button>

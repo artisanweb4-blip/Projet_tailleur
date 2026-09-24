@@ -54,6 +54,7 @@
     }
     .t-admin { background:#f5f3ff; color:var(--primary-color); border:1px solid #ddd6fe; }
     .t-gest  { background:#eff6ff; color:#0284c7; border:1px solid #bae6fd; }
+    .t-compta { background:#ecfdf5; color:#059669; border:1px solid #a7f3d0; }
     .t-off   { background:#f3f4f6; color:#6b7280; border:1px solid #e5e7eb; }
 
     .carte-moi {
@@ -89,7 +90,7 @@
         </div>
         {% if est_admin %}
         <button type="submit" form="formAtelier" class="btn btn-primary shadow-sm">
-            <i class="bi bi-check-lg me-1"></i> Enregistrer
+            <i class="bi bi-check-lg me-1"></i> {% tr "Enregistrer" %}
         </button>
         {% endif %}
     </div>
@@ -97,7 +98,7 @@
     {% if not est_admin %}
     <div class="alert alert-info border-0 shadow-sm">
         <i class="bi bi-info-circle me-2"></i>
-        Vous êtes connecté en <strong>Gestionnaire</strong>.
+        Vous êtes connecté en <strong>{% tr "Gestionnaire" %}</strong>.
         Seul l'administrateur peut modifier les paramètres et gérer les utilisateurs.
     </div>
     {% endif %}
@@ -120,7 +121,7 @@
                             data-bs-target="#tab-users" type="button">
                         <span class="nav-ic"><i class="bi bi-shield-lock"></i></span>
                         <span>
-                            <span class="nav-titre d-block">Utilisateurs</span>
+                            <span class="nav-titre d-block">{% tr "Utilisateurs" %}</span>
                             <span class="nav-sub">{{ nb_membres }} compte{{ nb_membres|pluralize }}</span>
                         </span>
                     </button>
@@ -192,7 +193,7 @@
                                                {% if not est_admin %}disabled{% endif %} required>
                                     </div>
                                     <div class="col-md-6">
-                                        <label class="form-label fw-semibold">Téléphone</label>
+                                        <label class="form-label fw-semibold">{% tr "Téléphone" %}</label>
                                         <input type="tel" class="form-control" name="telephone"
                                                value="{{ atelier.telephone|default:'' }}"
                                                placeholder="+223 00 00 00 00"
@@ -241,7 +242,7 @@
                             {% if est_admin %}
                             <button type="button" class="btn btn-sm btn-primary"
                                     data-bs-toggle="modal" data-bs-target="#modalAjoutUser">
-                                <i class="bi bi-person-plus-fill me-1"></i> Ajouter
+                                <i class="bi bi-person-plus-fill me-1"></i> {% tr "Ajouter" %}
                             </button>
                             {% endif %}
                         </div>
@@ -273,16 +274,20 @@
                             <div class="d-none d-md-block text-center" style="min-width:130px;">
                                 {% if r.m.role == 'ADMIN' %}
                                     <span class="tag t-admin">
-                                        <i class="bi bi-shield-check"></i>Administrateur
+                                        <i class="bi bi-shield-check"></i>{% tr "Administrateur" %}
+                                    </span>
+                                {% elif r.m.role == 'COMPTABLE' %}
+                                    <span class="tag t-compta">
+                                        <i class="bi bi-calculator"></i>{% tr "Comptable" %}
                                     </span>
                                 {% else %}
                                     <span class="tag t-gest">
-                                        <i class="bi bi-briefcase"></i>Gestionnaire
+                                        <i class="bi bi-briefcase"></i>{% tr "Gestionnaire" %}
                                     </span>
                                 {% endif %}
                                 {% if not r.m.actif %}
                                 <div class="mt-1">
-                                    <span class="tag t-off">Désactivé</span>
+                                    <span class="tag t-off">{% tr "Désactivé" %}</span>
                                 </div>
                                 {% endif %}
                             </div>
@@ -334,7 +339,7 @@
                             <div class="col-md-6">
                                 <div class="role-help">
                                     <span class="tag t-admin mb-2">
-                                        <i class="bi bi-shield-check"></i>Administrateur
+                                        <i class="bi bi-shield-check"></i>{% tr "Administrateur" %}
                                     </span>
                                     <div>{{ descriptions_roles.ADMIN }}</div>
                                 </div>
@@ -342,7 +347,7 @@
                             <div class="col-md-6">
                                 <div class="role-help">
                                     <span class="tag t-gest mb-2">
-                                        <i class="bi bi-briefcase"></i>Gestionnaire
+                                        <i class="bi bi-briefcase"></i>{% tr "Gestionnaire" %}
                                     </span>
                                     <div>{{ descriptions_roles.GESTIONNAIRE }}</div>
                                 </div>
@@ -432,7 +437,7 @@
                                 {% if est_admin %}
                                 <div class="mt-4 pt-3 border-top">
                                     <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-check-lg me-1"></i>Enregistrer
+                                        <i class="bi bi-check-lg me-1"></i>{% tr "Enregistrer" %}
                                     </button>
                                 </div>
                                 {% endif %}
@@ -554,11 +559,11 @@
                 <div class="modal-body row g-3">
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Prénom <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Prénom" %} <span class="text-danger">*</span></label>
                         <input type="text" name="first_name" class="form-control" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Nom</label>
+                        <label class="form-label fw-semibold">{% tr "Nom" %}</label>
                         <input type="text" name="last_name" class="form-control">
                     </div>
                     <div class="col-md-6">
@@ -569,26 +574,31 @@
                                placeholder="Pour la connexion">
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Téléphone</label>
+                        <label class="form-label fw-semibold">{% tr "Téléphone" %}</label>
                         <input type="tel" name="telephone" class="form-control">
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Email</label>
+                        <label class="form-label fw-semibold">{% tr "Email" %}</label>
                         <input type="email" name="email" class="form-control">
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Rôle <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Rôle" %} <span class="text-danger">*</span></label>
                         <div class="btn-group w-100" role="group">
                             <input type="radio" class="btn-check" name="role"
                                    id="r_gest" value="GESTIONNAIRE" checked>
                             <label class="btn btn-outline-primary" for="r_gest">
-                                <i class="bi bi-briefcase me-1"></i>Gestionnaire
+                                <i class="bi bi-briefcase me-1"></i>{% tr "Gestionnaire" %}
+                            </label>
+                            <input type="radio" class="btn-check" name="role"
+                                   id="r_compta" value="COMPTABLE">
+                            <label class="btn btn-outline-success" for="r_compta">
+                                <i class="bi bi-calculator me-1"></i>{% tr "Comptable" %}
                             </label>
                             <input type="radio" class="btn-check" name="role"
                                    id="r_admin" value="ADMIN">
                             <label class="btn btn-outline-danger" for="r_admin">
-                                <i class="bi bi-shield-check me-1"></i>Administrateur
+                                <i class="bi bi-shield-check me-1"></i>{% tr "Administrateur" %}
                             </label>
                         </div>
                         <div class="role-help mt-2" id="aide_role">
@@ -598,14 +608,14 @@
 
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
-                            Mot de passe <span class="text-danger">*</span>
+                            {% tr "Mot de passe" %} <span class="text-danger">*</span>
                         </label>
                         <input type="password" name="password" class="form-control"
                                minlength="6" required placeholder="6 caractères minimum">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
-                            Confirmer <span class="text-danger">*</span>
+                            {% tr "Confirmer" %} <span class="text-danger">*</span>
                         </label>
                         <input type="password" name="password2" class="form-control"
                                minlength="6" required>
@@ -613,7 +623,7 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
                         <i class="bi bi-person-check me-1"></i>Créer le compte
                     </button>
@@ -638,11 +648,11 @@
                 <div class="modal-body row g-3">
 
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Prénom</label>
+                        <label class="form-label fw-semibold">{% tr "Prénom" %}</label>
                         <input type="text" name="first_name" id="e_first" class="form-control" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Nom</label>
+                        <label class="form-label fw-semibold">{% tr "Nom" %}</label>
                         <input type="text" name="last_name" id="e_last" class="form-control">
                     </div>
                     <div class="col-md-6">
@@ -650,16 +660,16 @@
                         <input type="text" name="username" id="e_username" class="form-control" required>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Téléphone</label>
+                        <label class="form-label fw-semibold">{% tr "Téléphone" %}</label>
                         <input type="tel" name="telephone" id="e_tel" class="form-control">
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Email</label>
+                        <label class="form-label fw-semibold">{% tr "Email" %}</label>
                         <input type="email" name="email" id="e_email" class="form-control">
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Rôle</label>
+                        <label class="form-label fw-semibold">{% tr "Rôle" %}</label>
                         <select name="role" id="e_role" class="form-select">
                             {% for code, label in roles %}
                             <option value="{{ code }}">{{ label }}</option>
@@ -689,9 +699,9 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                        <i class="bi bi-check-circle me-1"></i>{% tr "Mettre à jour" %}
                     </button>
                 </div>
             </form>
@@ -720,7 +730,7 @@
                     </p>
                 </div>
                 <div class="modal-footer py-2 justify-content-center gap-2">
-                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-danger px-4">
                         <i class="bi bi-trash me-1"></i>Supprimer
                     </button>
@@ -735,7 +745,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     const DESCRIPTIONS = {
         'ADMIN': "{{ descriptions_roles.ADMIN|escapejs }}",
-        'GESTIONNAIRE': "{{ descriptions_roles.GESTIONNAIRE|escapejs }}"
+        'GESTIONNAIRE': "{{ descriptions_roles.GESTIONNAIRE|escapejs }}",
+        'COMPTABLE': "{{ descriptions_roles.COMPTABLE|escapejs }}"
     };
 
     /* ===== Onglet mémorisé ===== */

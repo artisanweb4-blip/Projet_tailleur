@@ -1,3 +1,4 @@
+{% load trad %}
 {% load static %}
 <!DOCTYPE html>
 <html lang="fr">
@@ -188,7 +189,7 @@
 
     <div class="info-client">
         <div>
-            <strong>Client</strong>
+            <strong>{% tr "Client" %}</strong>
             {{ commande.client.nom }}{% if commande.client.prenom %} {{ commande.client.prenom }}{% endif %}
             {% if commande.client.telephone %}<br>{{ commande.client.telephone }}{% endif %}
         </div>
@@ -206,7 +207,7 @@
                 <th>Article</th>
                 <th class="text-end">Qté</th>
                 <th class="text-end">Prix unit.</th>
-                <th class="text-end">Total</th>
+                <th class="text-end">{% tr "Total" %}</th>
             </tr>
         </thead>
         <tbody>
@@ -254,7 +255,7 @@
             </div>
             {% if paiement %}
             <div>
-                <span>Payé</span>
+                <span>{% tr "Payé" %}</span>
                 <span>{{ paiement.montant|floatformat:0 }} {{ atelier.devise }}</span>
             </div>
             {% endif %}
@@ -271,7 +272,7 @@
 
     {% if not pdf %}
     <div class="btn-actions">
-        <button class="btn-print" onclick="window.print()">Imprimer</button>
+        <button class="btn-print" onclick="window.print()">{% tr "Imprimer" %}</button>
         <a href="{% url 'core:recu_caisse_pdf' commande.pk %}" class="btn-print pdf">Télécharger en PDF</a>
     </div>
     {% endif %}

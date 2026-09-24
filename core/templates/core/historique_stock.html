@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% load static %}
 {% block title %}Historique du stock — {{ atelier.nom }}{% endblock %}
 
@@ -206,11 +207,11 @@
                     <tr>
                         <th style="width:34%">Article</th>
                         <th>Type</th>
-                        <th class="text-center">Quantité</th>
+                        <th class="text-center">{% tr "Quantité" %}</th>
                         <th class="hs-hide-sm">Stock avant → après</th>
                         <th class="hs-hide-sm">Commande</th>
                         <th class="hs-hide-sm">Auteur</th>
-                        <th class="text-end">Date</th>
+                        <th class="text-end">{% tr "Date" %}</th>
                     </tr>
                 </thead>
                 <tbody>

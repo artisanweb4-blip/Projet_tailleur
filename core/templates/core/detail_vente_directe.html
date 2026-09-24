@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% block title %}Vente {{ commande.code }}{% endblock %}
 {% block content %}
 <div class="container-fluid py-4 px-md-4">
@@ -9,7 +10,7 @@
             <h2 class="h4 mb-0 fw-bold text-dark">
                 Vente {{ commande.code }}
                 {% if commande.statut == 'ANNULE' %}
-                    <span class="badge bg-danger ms-2">Annulée</span>
+                    <span class="badge bg-danger ms-2">{% tr "Annulée" %}</span>
                 {% endif %}
             </h2>
             <p class="text-muted small mb-0">
@@ -19,7 +20,7 @@
         </div>
         <div class="d-flex gap-2">
             <a href="{% url 'core:liste_ventes_directes' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Retour
+                <i class="bi bi-arrow-left me-1"></i> {% tr "Retour" %}
             </a>
             <button type="button" class="btn btn-outline-info"
                 data-url-view="{% url 'core:recu_caisse' commande.pk %}"
@@ -146,10 +147,10 @@
                 <table class="table align-middle mb-0">
                     <thead class="table-light">
                         <tr>
-                            <th class="ps-4">Date</th>
+                            <th class="ps-4">{% tr "Date" %}</th>
                             <th>Mode</th>
                             <th>Référence</th>
-                            <th class="text-end pe-4">Montant</th>
+                            <th class="text-end pe-4">{% tr "Montant" %}</th>
                         </tr>
                     </thead>
                     <tbody>

@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% block title %}Plan de charge — {{ atelier.nom }}{% endblock %}
 
 {% block extra_css %}
@@ -141,7 +142,7 @@
         <div class="col-6 col-lg-3">
             <div class="kpi-pc d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="lbl">En retard</div>
+                    <div class="lbl">{% tr "En retard" %}</div>
                     <div class="val {% if total_retards %}text-danger{% endif %}">
                         {{ total_retards }}
                     </div>
@@ -247,7 +248,7 @@
                             {% if t.l.etat_travail == 'TERMINE' %}
                                 <span class="pill p-done">Terminé</span>
                             {% elif t.l.etat_travail == 'EN_COURS' %}
-                                <span class="pill p-prog">En cours</span>
+                                <span class="pill p-prog">{% tr "En cours" %}</span>
                             {% else %}
                                 <span class="pill p-todo">À faire</span>
                             {% endif %}
@@ -354,7 +355,7 @@
                             <input type="radio" class="btn-check" name="etat_travail"
                                    id="et_prog" value="EN_COURS">
                             <label class="btn btn-outline-primary" for="et_prog">
-                                <i class="bi bi-hourglass-split me-1"></i>En cours
+                                <i class="bi bi-hourglass-split me-1"></i>{% tr "En cours" %}
                             </label>
                             <input type="radio" class="btn-check" name="etat_travail"
                                    id="et_done" value="TERMINE">
@@ -369,9 +370,9 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-check-circle me-1"></i>Enregistrer
+                        <i class="bi bi-check-circle me-1"></i>{% tr "Enregistrer" %}
                     </button>
                 </div>
             </form>

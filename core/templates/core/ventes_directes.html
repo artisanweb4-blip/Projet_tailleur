@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% block title %}Ventes directes{% endblock %}
 
 {% block extra_css %}
@@ -207,7 +208,7 @@
                         placeholder="Code, client, téléphone…" value="{{ q }}">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small fw-medium text-muted">Statut</label>
+                    <label class="form-label small fw-medium text-muted">{% tr "Statut" %}</label>
                     <select name="statut" class="form-select form-select-sm">
                         <option value="">Toutes</option>
                         <option value="VALIDE" {% if statut_filter == 'VALIDE' %}selected{% endif %}>Validées</option>
@@ -267,9 +268,9 @@
 
             <div class="col-6 col-lg-2">
                 {% if r.annulee %}
-                    <span class="pill p-ko">Annulée</span>
+                    <span class="pill p-ko">{% tr "Annulée" %}</span>
                 {% else %}
-                    <span class="pill p-ok"><i class="bi bi-check-lg"></i> Payée</span>
+                    <span class="pill p-ok"><i class="bi bi-check-lg"></i> {% tr "Payée" %}</span>
                 {% endif %}
             </div>
 
@@ -287,7 +288,7 @@
                             data-bs-toggle="dropdown"></button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{% url 'core:recu_caisse' r.v.pk %}" target="_blank">
-                            <i class="bi bi-printer me-2"></i>Imprimer le reçu</a></li>
+                            <i class="bi bi-printer me-2"></i>{% tr "Imprimer le reçu" %}</a></li>
                         <li><a class="dropdown-item" href="{% url 'core:recu_caisse_pdf' r.v.pk %}">
                             <i class="bi bi-file-pdf me-2"></i>Télécharger PDF</a></li>
                         {% if not r.annulee %}
@@ -460,7 +461,7 @@
         </div><!-- /caisse-body -->
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
           <button type="submit" class="btn btn-success btn-lg px-4 fw-bold" id="btn_valider" disabled>
             <i class="bi bi-check2-circle me-1"></i>Encaisser
           </button>

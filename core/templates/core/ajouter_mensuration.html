@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% block title %}Détail - {{ client.nom }}{% endblock %}
 
 {% block content %}
@@ -38,7 +39,7 @@
         <div class="card-header bg-gradient-success text-white d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #198754, #157347);">
             <h5 class="mb-0"><i class="bi bi-rulers me-2"></i>Mensurations</h5>
             <button type="button" class="btn btn-sm btn-light rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#mensurationModal">
-                <i class="bi bi-plus-circle me-1"></i> Ajouter
+                <i class="bi bi-plus-circle me-1"></i> {% tr "Ajouter" %}
             </button>
         </div>
         <div class="card-body">
@@ -46,7 +47,7 @@
                 <div class="table-responsive">
                     <table class="table table-hover align-middle">
                         <thead class="table-light">
-                            <tr><th>Date</th><th>Mesures</th><th>Actions</th></tr>
+                            <tr><th>{% tr "Date" %}</th><th>Mesures</th><th>{% tr "Actions" %}</th></tr>
                         </thead>
                         <tbody>
                             {% for m in mensurations %}
@@ -63,7 +64,7 @@
                                  </p>
                                 <td>
                                     <a href="{% url 'core:modifier_mensuration' m.id %}" class="btn btn-sm btn-outline-warning rounded-pill">
-                                        <i class="bi bi-pencil"></i> Modifier
+                                        <i class="bi bi-pencil"></i> {% tr "Modifier" %}
                                     </a>
                                  </p>
                             </tr>
@@ -92,9 +93,9 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Date commande</th>
-                                <th>Description</th>
+                                <th>{% tr "Description" %}</th>
                                 <th>Prix total</th>
-                                <th>Statut</th>
+                                <th>{% tr "Statut" %}</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
@@ -106,9 +107,9 @@
                                 <td><strong>{{ cmd.prix_total }} FCFA</strong></td>
                                 <td>
                                     {% if cmd.statut == 'attente' %}
-                                        <span class="badge bg-warning rounded-pill">En attente</span>
+                                        <span class="badge bg-warning rounded-pill">{% tr "En attente" %}</span>
                                     {% elif cmd.statut == 'encours' %}
-                                        <span class="badge bg-primary rounded-pill">En cours</span>
+                                        <span class="badge bg-primary rounded-pill">{% tr "En cours" %}</span>
                                     {% elif cmd.statut == 'termine' %}
                                         <span class="badge bg-success rounded-pill">Terminé</span>
                                     {% elif cmd.statut == 'livre' %}
@@ -134,7 +135,7 @@
                 </div>
             {% endif %}
             <a href="{% url 'core:creer_commande' %}?client={{ client.id }}" class="btn btn-primary mt-3 rounded-pill shadow-sm">
-                <i class="bi bi-plus-lg"></i> Nouvelle commande
+                <i class="bi bi-plus-lg"></i> {% tr "Nouvelle commande" %}
             </a>
         </div>
     </div>
@@ -316,10 +317,10 @@
 
                     <div class="modal-footer border-0 pt-3">
                         <button type="button" class="btn btn-secondary rounded-pill px-4" data-bs-dismiss="modal">
-                            <i class="bi bi-x-lg me-1"></i>Annuler
+                            <i class="bi bi-x-lg me-1"></i>{% tr "Annuler" %}
                         </button>
                         <button type="submit" class="btn btn-success rounded-pill px-4 shadow-sm">
-                            <i class="bi bi-check-lg me-1"></i>Enregistrer
+                            <i class="bi bi-check-lg me-1"></i>{% tr "Enregistrer" %}
                         </button>
                     </div>
                 </form>

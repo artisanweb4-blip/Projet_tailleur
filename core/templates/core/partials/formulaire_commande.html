@@ -1,3 +1,4 @@
+{% load trad %}
 <style>
     /* ===== MODAL SCROLLABLE (chaîne flex complète) ===== */
     #modalNouvelleCommande .modal-dialog {
@@ -116,7 +117,7 @@
               </div>
 
               <div class="col-md-6">
-                <label class="form-label fw-semibold">Statut</label>
+                <label class="form-label fw-semibold">{% tr "Statut" %}</label>
                 <select name="statut" class="form-select">
                   {% for val, lbl in form_commande.statut.field.choices %}
                     <option value="{{ val }}" {% if val == 'EN_ATTENTE' %}selected{% endif %}>{{ lbl }}</option>
@@ -224,9 +225,9 @@
         </div><!-- /modal-body -->
 
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
           <button type="submit" class="btn btn-primary fw-bold">
-            <i class="bi bi-save me-1"></i>Enregistrer la commande
+            <i class="bi bi-save me-1"></i>{% tr "Enregistrer la commande" %}
           </button>
         </div>
 
@@ -246,7 +247,7 @@
         <small class="text-muted">Elle sera retirée du formulaire, puis définitivement supprimée à l'enregistrement.</small>
       </div>
       <div class="modal-footer justify-content-center border-0 pt-0">
-        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
         <button type="button" class="btn btn-sm btn-danger fw-semibold" id="btn_confirmer_suppr_ligne">
           <i class="bi bi-trash me-1"></i>Supprimer
         </button>
@@ -370,7 +371,7 @@
             <i class="bi bi-bag me-1 text-secondary"></i>Accessoires liés à cette couture
           </label>
           <button type="button" class="btn btn-sm btn-outline-secondary btn-ajouter-acc-ligne">
-            <i class="bi bi-plus-sm me-1"></i> Ajouter
+            <i class="bi bi-plus-sm me-1"></i> {% tr "Ajouter" %}
           </button>
         </div>
         <div class="conteneur-acc-ligne"></div>

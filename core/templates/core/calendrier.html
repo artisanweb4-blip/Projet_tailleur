@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% load static %}
 {% block title %}Agenda des livraisons{% endblock %}
 
@@ -151,7 +152,7 @@
         <div class="col-6 col-lg-3">
             <div class="kpi-a d-flex justify-content-between align-items-start">
                 <div>
-                    <div class="lbl">En retard</div>
+                    <div class="lbl">{% tr "En retard" %}</div>
                     <div class="val {% if nb_retard %}text-danger{% endif %}">{{ nb_retard }}</div>
                 </div>
                 <div class="kpi-ic ic-r"><i class="bi bi-exclamation-triangle-fill"></i></div>
@@ -210,10 +211,10 @@
 
                 <div class="p-3 border-top">
                     <div class="legende">
-                        <span><span class="lg-dot" style="background:#fde68a;"></span>En attente</span>
-                        <span><span class="lg-dot" style="background:#c7d2fe;"></span>En cours</span>
+                        <span><span class="lg-dot" style="background:#fde68a;"></span>{% tr "En attente" %}</span>
+                        <span><span class="lg-dot" style="background:#c7d2fe;"></span>{% tr "En cours" %}</span>
                         <span><span class="lg-dot" style="background:#a7f3d0;"></span>Prêt</span>
-                        <span><span class="lg-dot" style="background:#fecdd3;"></span>En retard</span>
+                        <span><span class="lg-dot" style="background:#fecdd3;"></span>{% tr "En retard" %}</span>
                     </div>
                 </div>
             </div>

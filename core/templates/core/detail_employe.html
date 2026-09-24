@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% block title %}{{ emp.nom_complet }} — Employé{% endblock %}
 
 {% block extra_css %}
@@ -94,11 +95,11 @@
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-sm btn-outline-dark"
                     data-bs-toggle="modal" data-bs-target="#modalEditEmploye">
-                <i class="bi bi-pencil me-1"></i>Modifier
+                <i class="bi bi-pencil me-1"></i>{% tr "Modifier" %}
             </button>
             <button type="button" class="btn btn-sm btn-primary"
                     data-bs-toggle="modal" data-bs-target="#modalPaie">
-                <i class="bi bi-cash-coin me-1"></i>Enregistrer une paie
+                <i class="bi bi-cash-coin me-1"></i>{% tr "Enregistrer une paie" %}
             </button>
         </div>
     </div>
@@ -192,7 +193,7 @@
                     <li class="nav-item">
                         <button class="nav-link active" data-bs-toggle="tab"
                                 data-bs-target="#tab-cours" type="button">
-                            <i class="bi bi-hourglass-split me-1"></i>En cours
+                            <i class="bi bi-hourglass-split me-1"></i>{% tr "En cours" %}
                             <span class="badge bg-primary ms-1">{{ nb_en_cours }}</span>
                         </button>
                     </li>
@@ -233,7 +234,7 @@
                                 {% if t.l.etat_travail == 'TERMINE' %}
                                     <span class="pill p-done">Terminé</span>
                                 {% elif t.l.etat_travail == 'EN_COURS' %}
-                                    <span class="pill p-info">En cours</span>
+                                    <span class="pill p-info">{% tr "En cours" %}</span>
                                 {% else %}
                                     <span class="pill p-ok">À faire</span>
                                 {% endif %}
@@ -316,7 +317,7 @@
                                     {{ p.net_a_payer|floatformat:0 }} {{ atelier.devise }}
                                 </div>
                                 {% if p.statut == 'PAYEE' %}
-                                    <span class="pill p-done">Payée</span>
+                                    <span class="pill p-done">{% tr "Payée" %}</span>
                                 {% else %}
                                     <span class="pill p-soon">Brouillon</span>
                                 {% endif %}
@@ -407,7 +408,7 @@
                     <i class="bi bi-person-vcard me-1 text-primary"></i>Coordonnées
                 </p>
                 <div class="info-row">
-                    <span class="info-lbl">Téléphone</span>
+                    <span class="info-lbl">{% tr "Téléphone" %}</span>
                     <span class="info-val">
                         <a href="tel:{{ emp.telephone }}" class="text-decoration-none">{{ emp.telephone }}</a>
                     </span>
@@ -420,7 +421,7 @@
                 {% endif %}
                 {% if emp.adresse %}
                 <div class="info-row">
-                    <span class="info-lbl">Adresse</span>
+                    <span class="info-lbl">{% tr "Adresse" %}</span>
                     <span class="info-val">{{ emp.adresse }}</span>
                 </div>
                 {% endif %}
@@ -460,7 +461,7 @@
                         data-bs-toggle="modal" data-bs-target="#supprimerEmployeModal"
                         data-suppr-url="{% url 'core:supprimer_employe' emp.pk %}"
                         data-suppr-nom="{{ emp.nom_complet }}">
-                    <i class="bi bi-trash me-1"></i>Supprimer cet employé
+                    <i class="bi bi-trash me-1"></i>{% tr "Supprimer cet employé" %}
                 </button>
             </div>
 
@@ -490,15 +491,15 @@
                     </h6>
                     <div class="row g-3 mb-4">
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">{% tr "Nom" %} <span class="text-danger">*</span></label>
                             <input type="text" name="nom" class="form-control" required value="{{ emp.nom }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Prénom</label>
+                            <label class="form-label fw-semibold">{% tr "Prénom" %}</label>
                             <input type="text" name="prenom" class="form-control" value="{{ emp.prenom }}">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label fw-semibold">Téléphone <span class="text-danger">*</span></label>
+                            <label class="form-label fw-semibold">{% tr "Téléphone" %} <span class="text-danger">*</span></label>
                             <input type="tel" name="telephone" class="form-control" required value="{{ emp.telephone }}">
                         </div>
                         <div class="col-md-6">
@@ -516,7 +517,7 @@
                             <small class="text-muted">Laissez vide pour conserver l'actuelle.</small>
                         </div>
                         <div class="col-12">
-                            <label class="form-label fw-semibold">Adresse</label>
+                            <label class="form-label fw-semibold">{% tr "Adresse" %}</label>
                             <textarea name="adresse" class="form-control" rows="2">{{ emp.adresse }}</textarea>
                         </div>
                     </div>
@@ -534,7 +535,7 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label class="form-label fw-semibold">Statut</label>
+                            <label class="form-label fw-semibold">{% tr "Statut" %}</label>
                             <select name="statut" class="form-select">
                                 {% for code, label in emp.STATUTS %}
                                 <option value="{{ code }}" {% if emp.statut == code %}selected{% endif %}>{{ label }}</option>
@@ -599,9 +600,9 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                        <i class="bi bi-check-circle me-1"></i>{% tr "Mettre à jour" %}
                     </button>
                 </div>
             </form>
@@ -617,7 +618,7 @@
                 {% csrf_token %}
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title fw-bold text-white">
-                        <i class="bi bi-cash-coin me-2"></i>Enregistrer une paie
+                        <i class="bi bi-cash-coin me-2"></i>{% tr "Enregistrer une paie" %}
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -667,9 +668,9 @@
 
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-check2-circle me-1"></i>Valider le paiement
+                        <i class="bi bi-check2-circle me-1"></i>{% tr "Valider le paiement" %}
                     </button>
                 </div>
             </form>
@@ -683,7 +684,7 @@
         <div class="modal-content border-0 shadow">
             <div class="modal-header bg-danger text-white py-2">
                 <h6 class="modal-title fw-bold text-white">
-                    <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmer la suppression
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>{% tr "Confirmer la suppression" %}
                 </h6>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -698,7 +699,7 @@
                 </div>
                 <div class="modal-footer border-0 py-2">
                     <button type="button" class="btn btn-sm btn-outline-secondary px-3"
-                            data-bs-dismiss="modal">Annuler</button>
+                            data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-sm btn-danger px-3">
                         <i class="bi bi-trash me-1"></i>Supprimer
                     </button>

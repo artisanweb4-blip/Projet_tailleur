@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 
 {% block content %}
 <div class="container-fluid py-4">
@@ -33,8 +34,8 @@
                 <div class="col-md-3">
                     <select name="statut" class="form-select bg-light">
                         <option value="">Tous les statuts</option>
-                        <option value="actif" {% if request.GET.statut == 'actif' %}selected{% endif %}>Actif</option>
-                        <option value="inactif" {% if request.GET.statut == 'inactif' %}selected{% endif %}>Inactif</option>
+                        <option value="actif" {% if request.GET.statut == 'actif' %}selected{% endif %}>{% tr "Actif" %}</option>
+                        <option value="inactif" {% if request.GET.statut == 'inactif' %}selected{% endif %}>{% tr "Inactif" %}</option>
                     </select>
                 </div>
                 <div class="col-md-2 d-flex gap-2">
@@ -55,11 +56,11 @@
                     <thead class="table-light">
                         <tr>
                             <th class="ps-4">Nom & Prenom</th>
-                            <th>Email</th>
+                            <th>{% tr "Email" %}</th>
                             <th>Telephone</th>
                             <th>Type</th>
-                            <th>Statut</th>
-                            <th class="text-end pe-4">Actions</th>
+                            <th>{% tr "Statut" %}</th>
+                            <th class="text-end pe-4">{% tr "Actions" %}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -77,9 +78,9 @@
                             </td>
                             <td>
                                 {% if client.statut == 'actif' %}
-                                    <span class="badge bg-success-subtle text-success rounded-pill px-2">Actif</span>
+                                    <span class="badge bg-success-subtle text-success rounded-pill px-2">{% tr "Actif" %}</span>
                                 {% else %}
-                                    <span class="badge bg-danger-subtle text-danger rounded-pill px-2">Inactif</span>
+                                    <span class="badge bg-danger-subtle text-danger rounded-pill px-2">{% tr "Inactif" %}</span>
                                 {% endif %}
                             </td>
                             <td class="text-end pe-4">
@@ -171,7 +172,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label for="nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                        <label for="nom" class="form-label">{% tr "Nom" %} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="nom" name="nom" required>
                     </div>
                     <div class="mb-3">
@@ -179,7 +180,7 @@
                         <input type="text" class="form-control" id="prenom" name="prenom">
                     </div>
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+                        <label for="email" class="form-label">{% tr "Email" %} <span class="text-danger">*</span></label>
                         <input type="email" class="form-control" id="email" name="email" required>
                     </div>
                     <div class="mb-3">
@@ -195,17 +196,17 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="statut" class="form-label">Statut</label>
+                            <label for="statut" class="form-label">{% tr "Statut" %}</label>
                             <select class="form-select" id="statut" name="statut">
-                                <option value="actif">Actif</option>
-                                <option value="inactif">Inactif</option>
+                                <option value="actif">{% tr "Actif" %}</option>
+                                <option value="inactif">{% tr "Inactif" %}</option>
                             </select>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
-                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
+                    <button type="submit" class="btn btn-primary">{% tr "Enregistrer" %}</button>
                 </div>
             </form>
         </div>
@@ -225,7 +226,7 @@
                 <div class="modal-body">
                     <input type="hidden" id="edit_client_id" name="client_id">
                     <div class="mb-3">
-                        <label for="edit_nom" class="form-label">Nom <span class="text-danger">*</span></label>
+                        <label for="edit_nom" class="form-label">{% tr "Nom" %} <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="edit_nom" name="nom" required>
                     </div>
                     <div class="mb-3">
@@ -233,7 +234,7 @@
                         <input type="text" class="form-control" id="edit_prenom" name="prenom">
                     </div>
                     <div class="mb-3">
-                        <label for="edit_email" class="form-label">Email <span class="text-danger">*</span></label>
+                        <label for="edit_email" class="form-label">{% tr "Email" %} <span class="text-danger">*</span></label>
                         <input type="email" class="form-control" id="edit_email" name="email" required>
                     </div>
                     <div class="mb-3">
@@ -249,16 +250,16 @@
                             </select>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="edit_statut" class="form-label">Statut</label>
+                            <label for="edit_statut" class="form-label">{% tr "Statut" %}</label>
                             <select class="form-select" id="edit_statut" name="statut">
-                                <option value="actif">Actif</option>
-                                <option value="inactif">Inactif</option>
+                                <option value="actif">{% tr "Actif" %}</option>
+                                <option value="inactif">{% tr "Inactif" %}</option>
                             </select>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary">Mettre a jour</button>
                 </div>
             </form>
@@ -281,7 +282,7 @@
                     Cette action est irreversible.
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-danger">Supprimer</button>
                 </div>
             </form>

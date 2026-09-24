@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% block title %}Commande {{ commande.code }} - {{ commande.client.nom }}{% endblock %}
 
 {% block extra_css %}
@@ -40,9 +41,9 @@
             <div class="d-flex align-items-center gap-2 mb-1">
                 <h2 class="h4 mb-0 fw-bold text-dark">Commande {{ commande.code }}</h2>
                 {% if commande.statut == 'EN_ATTENTE' %}
-                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-3 py-1">En attente</span>
+                    <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-3 py-1">{% tr "En attente" %}</span>
                 {% elif commande.statut == 'EN_COURS' %}
-                    <span class="badge rounded-pill px-3 py-1" style="background:#e8efff;color:#2b59c3;border:1px solid #c7d7f8;">En cours</span>
+                    <span class="badge rounded-pill px-3 py-1" style="background:#e8efff;color:#2b59c3;border:1px solid #c7d7f8;">{% tr "En cours" %}</span>
                 {% elif commande.statut == 'PRET' %}
                     <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-3 py-1">Prêt</span>
                 {% elif commande.statut == 'LIVRE' %}
@@ -59,7 +60,7 @@
 
         <div class="d-flex gap-2 flex-wrap">
             <a href="{% url 'core:liste_commandes' %}" class="btn btn-outline-secondary">
-                <i class="bi bi-arrow-left me-1"></i> Retour
+                <i class="bi bi-arrow-left me-1"></i> {% tr "Retour" %}
             </a>
             <button type="button" class="btn btn-outline-dark"
                 data-bs-toggle="modal" data-bs-target="#modalNouvelleCommande"
@@ -67,7 +68,7 @@
                 data-client-id="{{ commande.client_id }}"
                 data-client-nom="{{ commande.client.nom }}{% if commande.client.prenom %} {{ commande.client.prenom }}{% endif %}"
                 data-client-tel="{{ commande.client.telephone|default:'' }}"
-                <i class="bi bi-pencil me-1"></i> Modifier
+                <i class="bi bi-pencil me-1"></i> {% tr "Modifier" %}
             </button>
             <a href="{% url 'core:fiche_atelier_pdf' commande.pk %}" class="btn btn-outline-primary">
                 <i class="bi bi-rulers me-1"></i> Fiche atelier
@@ -101,7 +102,7 @@
                         <span class="badge bg-primary ms-1">{{ lignes|length }}</span>
                     </h6>
                     <button type="button" class="btn btn-sm btn-outline-primary" id="btn_ouvrir_ajout">
-                        <i class="bi bi-plus-lg me-1"></i>Ajouter
+                        <i class="bi bi-plus-lg me-1"></i>{% tr "Ajouter" %}
                     </button>
                 </div>
                 <div class="card-body">
@@ -262,10 +263,10 @@
                     <table class="table table-sm table-hover align-middle mb-0">
                         <thead class="table-light">
                             <tr>
-                                <th class="ps-3">Date</th>
+                                <th class="ps-3">{% tr "Date" %}</th>
                                 <th>Mode</th>
                                 <th>Référence</th>
-                                <th class="text-end pe-3">Montant</th>
+                                <th class="text-end pe-3">{% tr "Montant" %}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -589,9 +590,9 @@
 
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
           <button type="submit" class="btn btn-success fw-bold">
-            <i class="bi bi-check2-circle me-1"></i>Confirmer
+            <i class="bi bi-check2-circle me-1"></i>{% tr "Confirmer" %}
           </button>
         </div>
       </form>

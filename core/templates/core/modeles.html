@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% block title %}Catalogue — Modèles, Prêt-à-porter & Accessoires{% endblock %}
 
 {% block extra_css %}
@@ -264,9 +265,9 @@
                     <table class="table table-hover align-middle mb-0">
                         <thead class="table-light"><tr>
                             <th>Modèle</th>
-                            <th>Description</th>
-                            <th>Prix</th>
-                            <th class="text-end pe-3">Actions</th>
+                            <th>{% tr "Description" %}</th>
+                            <th>{% tr "Prix" %}</th>
+                            <th class="text-end pe-3">{% tr "Actions" %}</th>
                         </tr></thead>
                         <tbody>
                         {% for m in modeles_couture %}
@@ -403,8 +404,8 @@
                             <th>Article</th>
                             <th>Taille / Couleur</th>
                             <th>Stock</th>
-                            <th>Prix</th>
-                            <th class="text-end pe-3">Actions</th>
+                            <th>{% tr "Prix" %}</th>
+                            <th class="text-end pe-3">{% tr "Actions" %}</th>
                         </tr></thead>
                         <tbody>
                         {% for m in modeles_pap %}
@@ -492,11 +493,11 @@
                             <thead class="table-light">
                                 <tr>
                                     <th class="ps-4">Accessoire</th>
-                                    <th>Catégorie</th>
-                                    <th>Prix unitaire</th>
+                                    <th>{% tr "Catégorie" %}</th>
+                                    <th>{% tr "Prix unitaire" %}</th>
                                     <th>Unité</th>
                                     <th>Stock</th>
-                                    <th class="text-end pe-4">Actions</th>
+                                    <th class="text-end pe-4">{% tr "Actions" %}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -611,7 +612,7 @@
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title fw-bold">
                         <i class="bi bi-plus-circle me-2"></i>
-                        <span id="titre_ajout">Nouveau modèle</span>
+                        <span id="titre_ajout">{% tr "Nouveau modèle" %}</span>
                     </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
@@ -634,7 +635,7 @@
                     </div>
 
                     <div class="col-md-8">
-                        <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Nom" %} <span class="text-danger">*</span></label>
                         <input type="text" name="nom" class="form-control" required
                             placeholder="Ex: Boubou brodé, Chemise lin blanche…">
                     </div>
@@ -662,7 +663,7 @@
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Description</label>
+                        <label class="form-label fw-semibold">{% tr "Description" %}</label>
                         <textarea name="description" class="form-control" rows="3"
                             placeholder="Tissu, finitions, délai moyen, occasions…"></textarea>
                     </div>
@@ -672,9 +673,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-save me-1"></i>Enregistrer
+                        <i class="bi bi-save me-1"></i>{% tr "Enregistrer" %}
                     </button>
                 </div>
             </form>
@@ -711,7 +712,7 @@
                     </div>
 
                     <div class="col-md-8">
-                        <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Nom" %} <span class="text-danger">*</span></label>
                         <input type="text" name="nom" id="e_nom" class="form-control" required>
                     </div>
                     <div class="col-md-4">
@@ -734,7 +735,7 @@
                     </div>
 
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Description</label>
+                        <label class="form-label fw-semibold">{% tr "Description" %}</label>
                         <textarea name="description" id="e_description" class="form-control" rows="3"></textarea>
                     </div>
                     <div class="col-12">
@@ -744,9 +745,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                        <i class="bi bi-check-circle me-1"></i>{% tr "Mettre à jour" %}
                     </button>
                 </div>
             </form>
@@ -768,12 +769,12 @@
                 </div>
                 <div class="modal-body py-3 text-center">
                     <i class="bi bi-trash3 text-danger fs-1 mb-2 d-block"></i>
-                    Supprimer définitivement<br>
+                    {% tr "Supprimer définitivement" %}<br>
                     <strong id="suppr_modele_nom"></strong> ?
                     <p class="text-muted small mt-2 mb-0">Cette action est irréversible.</p>
                 </div>
                 <div class="modal-footer py-2 justify-content-center gap-2">
-                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-danger px-4">
                         <i class="bi bi-trash me-1"></i>Supprimer
                     </button>
@@ -797,12 +798,12 @@
                 </div>
                 <div class="modal-body row g-3">
                     <div class="col-md-8">
-                        <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Nom" %} <span class="text-danger">*</span></label>
                         <input type="text" name="nom" class="form-control" required
                             placeholder="Ex: Boutons dorés 4 trous, Fermeture invisible 20cm…">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">Catégorie <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Catégorie" %} <span class="text-danger">*</span></label>
                         <select name="categorie" class="form-select" required>
                             {% for code, label in categories_acc %}
                             <option value="{{ code }}">{{ label }}</option>
@@ -829,7 +830,7 @@
                         <input type="number" name="stock_disponible" class="form-control" min="0" value="0">
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Description</label>
+                        <label class="form-label fw-semibold">{% tr "Description" %}</label>
                         <textarea name="description" class="form-control" rows="2"
                             placeholder="Couleur, taille, référence fournisseur…"></textarea>
                     </div>
@@ -839,9 +840,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-save me-1"></i>Enregistrer
+                        <i class="bi bi-save me-1"></i>{% tr "Enregistrer" %}
                     </button>
                 </div>
             </form>
@@ -863,11 +864,11 @@
                 </div>
                 <div class="modal-body row g-3">
                     <div class="col-md-8">
-                        <label class="form-label fw-semibold">Nom <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Nom" %} <span class="text-danger">*</span></label>
                         <input type="text" name="nom" id="ea_nom" class="form-control" required>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">Catégorie</label>
+                        <label class="form-label fw-semibold">{% tr "Catégorie" %}</label>
                         <select name="categorie" id="ea_categorie" class="form-select">
                             {% for code, label in categories_acc %}
                             <option value="{{ code }}">{{ label }}</option>
@@ -892,7 +893,7 @@
                         <input type="number" name="stock_disponible" id="ea_stock" class="form-control" min="0">
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Description</label>
+                        <label class="form-label fw-semibold">{% tr "Description" %}</label>
                         <textarea name="description" id="ea_description" class="form-control" rows="2"></textarea>
                     </div>
                     <div class="col-12">
@@ -902,9 +903,9 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                        <i class="bi bi-check-circle me-1"></i>{% tr "Mettre à jour" %}
                     </button>
                 </div>
             </form>
@@ -926,12 +927,12 @@
                 </div>
                 <div class="modal-body py-3 text-center">
                     <i class="bi bi-trash3 text-danger fs-1 mb-2 d-block"></i>
-                    Supprimer définitivement<br>
+                    {% tr "Supprimer définitivement" %}<br>
                     <strong id="suppr_acc_nom"></strong> ?
                     <p class="text-muted small mt-2 mb-0">Cette action est irréversible.</p>
                 </div>
                 <div class="modal-footer py-2 justify-content-center gap-2">
-                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-danger px-4">
                         <i class="bi bi-trash me-1"></i>Supprimer
                     </button>

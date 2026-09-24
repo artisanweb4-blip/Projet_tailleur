@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% load static %}
 {% block title %}Dépenses — {{ atelier.nom }}{% endblock %}
 
@@ -91,7 +92,7 @@
         </div>
         <button type="button" class="btn btn-primary shadow-sm"
                 data-bs-toggle="modal" data-bs-target="#modalAjoutDepense">
-            <i class="bi bi-plus-lg me-1"></i> Nouvelle dépense
+            <i class="bi bi-plus-lg me-1"></i> {% tr "Nouvelle dépense" %}
         </button>
     </div>
 
@@ -224,7 +225,7 @@
                         </select>
                     </div>
                     <div class="col-6 col-md-3">
-                        <label class="form-label small fw-medium text-muted">Catégorie</label>
+                        <label class="form-label small fw-medium text-muted">{% tr "Catégorie" %}</label>
                         <select name="categorie" class="form-select form-select-sm"
                                 onchange="this.form.submit()">
                             <option value="">Toutes</option>
@@ -300,7 +301,7 @@
                     <div class="mt-3">
                         <button type="button" class="btn btn-primary"
                                 data-bs-toggle="modal" data-bs-target="#modalAjoutDepense">
-                            <i class="bi bi-plus-lg me-1"></i>Nouvelle dépense
+                            <i class="bi bi-plus-lg me-1"></i>{% tr "Nouvelle dépense" %}
                         </button>
                     </div>
                 </div>
@@ -363,7 +364,7 @@
         <div class="modal-content shadow">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title fw-bold">
-                    <i class="bi bi-plus-circle me-2"></i>Nouvelle dépense
+                    <i class="bi bi-plus-circle me-2"></i>{% tr "Nouvelle dépense" %}
                 </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
@@ -371,7 +372,7 @@
                 {% csrf_token %}
                 <div class="modal-body row g-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Date" %} <span class="text-danger">*</span></label>
                         <input type="date" name="date" id="aj_date" class="form-control" required>
                     </div>
                     <div class="col-md-6">
@@ -382,7 +383,7 @@
                                step="any" min="0" placeholder="0" required>
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Catégorie <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Catégorie" %} <span class="text-danger">*</span></label>
                         <select name="categorie" class="form-select" required>
                             {% for code, label in categories %}
                             <option value="{{ code }}">{{ label }}</option>
@@ -390,15 +391,15 @@
                         </select>
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
+                        <label class="form-label fw-semibold">{% tr "Description" %} <span class="text-danger">*</span></label>
                         <input type="text" name="libelle" class="form-control"
                                placeholder="Ex : Achat tissu wax, facture électricité…" required>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-save me-1"></i>Enregistrer
+                        <i class="bi bi-save me-1"></i>{% tr "Enregistrer" %}
                     </button>
                 </div>
             </form>
@@ -420,7 +421,7 @@
                 {% csrf_token %}
                 <div class="modal-body row g-3">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Date</label>
+                        <label class="form-label fw-semibold">{% tr "Date" %}</label>
                         <input type="date" name="date" id="ed_date" class="form-control" required>
                     </div>
                     <div class="col-md-6">
@@ -429,7 +430,7 @@
                                step="any" min="0" required>
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Catégorie</label>
+                        <label class="form-label fw-semibold">{% tr "Catégorie" %}</label>
                         <select name="categorie" id="ed_categorie" class="form-select" required>
                             {% for code, label in categories %}
                             <option value="{{ code }}">{{ label }}</option>
@@ -437,14 +438,14 @@
                         </select>
                     </div>
                     <div class="col-12">
-                        <label class="form-label fw-semibold">Description</label>
+                        <label class="form-label fw-semibold">{% tr "Description" %}</label>
                         <input type="text" name="libelle" id="ed_libelle" class="form-control" required>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="bi bi-check-circle me-1"></i>Mettre à jour
+                        <i class="bi bi-check-circle me-1"></i>{% tr "Mettre à jour" %}
                     </button>
                 </div>
             </form>
@@ -466,7 +467,7 @@
                 </div>
                 <div class="modal-body py-3 text-center">
                     <i class="bi bi-trash3 text-danger fs-1 mb-2 d-block"></i>
-                    Supprimer définitivement<br>
+                    {% tr "Supprimer définitivement" %}<br>
                     <strong id="sup_libelle"></strong><br>
                     <span class="text-muted small">
                         <span id="sup_montant"></span> {{ atelier.devise }}
@@ -474,7 +475,7 @@
                     <p class="text-muted small mt-2 mb-0">Cette action est irréversible.</p>
                 </div>
                 <div class="modal-footer py-2 justify-content-center gap-2">
-                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-light px-4" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
                     <button type="submit" class="btn btn-danger px-4">
                         <i class="bi bi-trash me-1"></i>Supprimer
                     </button>

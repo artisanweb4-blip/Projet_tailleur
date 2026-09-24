@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% block title %}Détail - {{ client.nom }}{% endblock %}
 
 {% block extra_css %}
@@ -93,10 +94,10 @@
 
     <div class="d-flex gap-2 flex-wrap">
       <a href="{% url 'core:liste_clients' %}" class="btn btn-light border">
-        <i class="bi bi-arrow-left me-1"></i> Retour
+        <i class="bi bi-arrow-left me-1"></i> {% tr "Retour" %}
       </a>
       <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modifierClientModal">
-        <i class="bi bi-pencil me-1"></i> Modifier
+        <i class="bi bi-pencil me-1"></i> {% tr "Modifier" %}
       </button>
       <button type="button" class="btn btn-light border text-danger" data-bs-toggle="modal" data-bs-target="#supprimerClientModal">
         <i class="bi bi-trash me-1"></i> Supprimer
@@ -116,15 +117,15 @@
         </div>
         <div class="card-body">
           <div class="mb-3">
-            <label class="text-muted small d-block">Téléphone</label>
+            <label class="text-muted small d-block">{% tr "Téléphone" %}</label>
             <span class="fw-medium text-dark"><i class="bi bi-telephone me-2 text-secondary"></i>{{ client.telephone }}</span>
           </div>
           <div class="mb-3">
-            <label class="text-muted small d-block">Email</label>
+            <label class="text-muted small d-block">{% tr "Email" %}</label>
             <span class="fw-medium text-dark"><i class="bi bi-envelope me-2 text-secondary"></i>{{ client.email|default:"Non renseigné" }}</span>
           </div>
           <div class="mb-0">
-            <label class="text-muted small d-block">Adresse</label>
+            <label class="text-muted small d-block">{% tr "Adresse" %}</label>
             <span class="fw-medium text-dark"><i class="bi bi-geo-alt me-2 text-secondary"></i>{{ client.adresse|linebreaksbr|default:"Non renseignée" }}</span>
           </div>
         </div>
@@ -158,7 +159,7 @@
               <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
                 <strong class="text-dark">{{ g.nom }}</strong>
                 {% if g.est_client %}
-                  <span class="badge rounded-pill px-2" style="background:#e8efff;color:#2b59c3;border:1px solid #c7d7f8;">Client</span>
+                  <span class="badge rounded-pill px-2" style="background:#e8efff;color:#2b59c3;border:1px solid #c7d7f8;">{% tr "Client" %}</span>
                 {% else %}
                   <span class="badge bg-info bg-opacity-10 text-info border border-info rounded-pill px-2">{{ g.lien }}</span>
                 {% endif %}
@@ -224,7 +225,7 @@
                   data-client-id="{{ client.id }}"
                   data-client-nom="{{ client.nom }}{% if client.prenom %} {{ client.prenom }}{% endif %}"
                   data-client-tel="{{ client.telephone|default:'' }}">
-            <i class="bi bi-plus-lg me-1"></i> Nouvelle commande
+            <i class="bi bi-plus-lg me-1"></i> {% tr "Nouvelle commande" %}
           </button>
           {% endif %}
         </div>
@@ -234,12 +235,12 @@
               <table class="table table-hover align-middle mb-0">
                 <thead class="table-light border-0">
                   <tr>
-                    <th class="ps-4">Date</th>
-                    <th>Code</th>
+                    <th class="ps-4">{% tr "Date" %}</th>
+                    <th>{% tr "Code" %}</th>
                     <th>Articles</th>
                     <th>Total net</th>
-                    <th>Statut</th>
-                    <th class="text-end pe-4">Actions</th>
+                    <th>{% tr "Statut" %}</th>
+                    <th class="text-end pe-4">{% tr "Actions" %}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -253,9 +254,9 @@
                     </td>
                     <td>
                       {% if cmd.statut == 'EN_ATTENTE' %}
-                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-2">En attente</span>
+                        <span class="badge bg-warning bg-opacity-10 text-warning border border-warning rounded-pill px-2">{% tr "En attente" %}</span>
                       {% elif cmd.statut == 'EN_COURS' %}
-                        <span class="badge rounded-pill px-2" style="background:#e8efff;color:#2b59c3;border:1px solid #c7d7f8;">En cours</span>
+                        <span class="badge rounded-pill px-2" style="background:#e8efff;color:#2b59c3;border:1px solid #c7d7f8;">{% tr "En cours" %}</span>
                       {% elif cmd.statut == 'PRET' %}
                         <span class="badge bg-success bg-opacity-10 text-success border border-success rounded-pill px-2">Prêt</span>
                       {% elif cmd.statut == 'LIVRE' %}
@@ -294,7 +295,7 @@
     <div class="modal-content border-0 shadow">
       <div class="modal-header bg-danger text-white py-2">
         <h6 class="modal-title fw-bold">
-          <i class="bi bi-exclamation-triangle-fill me-2"></i>Confirmer la suppression
+          <i class="bi bi-exclamation-triangle-fill me-2"></i>{% tr "Confirmer la suppression" %}
         </h6>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
@@ -306,7 +307,7 @@
           <div class="text-muted small mt-2">Cette action est irréversible.</div>
         </div>
         <div class="modal-footer border-0 py-2">
-          <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">Annuler</button>
+          <button type="button" class="btn btn-sm btn-outline-secondary px-3" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
           <button type="submit" class="btn btn-sm btn-danger px-3">
             <i class="bi bi-trash me-1"></i>Supprimer
           </button>
@@ -493,9 +494,9 @@
             <strong id="totalMesures">0</strong> mesure(s) remplie(s)
           </span>
           <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Annuler</button>
+            <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
             <button type="submit" class="btn btn-primary px-4">
-              <i class="bi bi-save me-1"></i>Enregistrer
+              <i class="bi bi-save me-1"></i>{% tr "Enregistrer" %}
             </button>
           </div>
         </div>
@@ -521,11 +522,11 @@
             <input type="text" name="nom" class="form-control" value="{{ client.nom }}" required>
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-medium">Email</label>
+            <label class="form-label small fw-medium">{% tr "Email" %}</label>
             <input type="email" name="email" class="form-control" value="{{ client.email|default:'' }}">
           </div>
           <div class="mb-3">
-            <label class="form-label small fw-medium">Téléphone</label>
+            <label class="form-label small fw-medium">{% tr "Téléphone" %}</label>
             <input type="text" name="telephone" class="form-control" value="{{ client.telephone }}" required>
           </div>
           <div class="mb-3">
@@ -545,13 +546,13 @@
             </select>
           </div>
           <div class="mb-0">
-            <label class="form-label small fw-medium">Adresse</label>
+            <label class="form-label small fw-medium">{% tr "Adresse" %}</label>
             <textarea name="adresse" class="form-control" rows="3">{{ client.adresse|default:'' }}</textarea>
           </div>
         </div>
         <div class="modal-footer border-0 pt-0">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-          <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
+          <button type="submit" class="btn btn-primary">{% tr "Enregistrer les modifications" %}</button>
         </div>
       </form>
     </div>
@@ -565,7 +566,7 @@
     <div class="modal-content border-0 shadow">
       <div class="modal-header border-bottom py-3">
         <h5 class="modal-title fw-bold text-danger">
-          <i class="bi bi-exclamation-triangle me-2"></i>Confirmer la suppression
+          <i class="bi bi-exclamation-triangle me-2"></i>{% tr "Confirmer la suppression" %}
         </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
@@ -575,10 +576,10 @@
         (y compris celles de ses proches).
       </div>
       <div class="modal-footer border-0 pt-0">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{% tr "Annuler" %}</button>
         <form method="post" action="{% url 'core:supprimer_client' client.id %}" class="d-inline">
           {% csrf_token %}
-          <button type="submit" class="btn btn-danger">Supprimer définitivement</button>
+          <button type="submit" class="btn btn-danger">{% tr "Supprimer définitivement" %}</button>
         </form>
       </div>
     </div>

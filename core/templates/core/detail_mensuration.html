@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load trad %}
 {% block title %}Mensurations - {{ mensuration.client.nom }}{% endblock %}
 
 {% block content %}
@@ -10,7 +11,7 @@
                 <span class="badge bg-white text-dark">{{ mensuration.date_prise|date:"d/m/Y" }}</span>
                 <a href="{% url 'core:detail_client' mensuration.client.id %}"
                    class="btn btn-sm btn-light fw-semibold">
-                    <i class="bi bi-arrow-left me-1"></i>Retour
+                    <i class="bi bi-arrow-left me-1"></i>{% tr "Retour" %}
                 </a>
             </span>
         </div>

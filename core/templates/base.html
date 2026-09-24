@@ -390,27 +390,35 @@
                 <div class="dropdown">
                     <button class="btn btn-sm position-relative rounded-circle p-2 d-flex align-items-center justify-content-center topbar-cloche" style="width: 38px; height: 38px;" type="button" data-bs-toggle="dropdown">
                         <i class="bi bi-bell"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
-                            <span class="visually-hidden">Nouvelles notifications</span>
-                        </span>
+                        {% if notifications %}
+                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle"></span>
+                        {% endif %}
+                        <span class="visually-hidden">{% tr "Notifications" %}</span>
                     </button>
-                    <div class="dropdown-menu dropdown-menu-end shadow-sm p-0" style="width: 300px;">
+                    <div class="dropdown-menu dropdown-menu-end shadow-sm p-0" style="width: 320px;">
                         <div class="p-3 border-bottom d-flex align-items-center justify-content-between">
-                            <h6 class="fw-bold m-0">Notifications</h6>
-                            <span class="badge bg-primary rounded-pill">3 nouvelles</span>
+                            <h6 class="fw-bold m-0">{% tr "Notifications" %}</h6>
+                            {% if notifications %}
+                            <span class="badge bg-danger rounded-pill">{{ notifications|length }}</span>
+                            {% endif %}
                         </div>
-                        <div class="list-group list-group-flush small">
-                            <a href="#" class="list-group-item list-group-item-action p-3">
-                                <div class="fw-semibold text-danger">⚠️ Livraison en retard</div>
-                                <div class="text-secondary small">La commande du client Diallo est en retard.</div>
+                        <div class="list-group list-group-flush small" style="max-height: 320px; overflow-y: auto;">
+                            {% for ic, coul, titre, txt, url in notifications %}
+                            <a href="{{ url }}" class="list-group-item list-group-item-action p-3">
+                                <div class="d-flex gap-2 align-items-start">
+                                    <i class="bi {{ ic }} {{ coul }} mt-1 flex-shrink-0"></i>
+                                    <div class="min-w-0">
+                                        <div class="fw-semibold text-dark">{{ titre }}</div>
+                                        <div class="text-secondary small text-wrap">{{ txt }}</div>
+                                    </div>
+                                </div>
                             </a>
-                            <a href="#" class="list-group-item list-group-item-action p-3">
-                                <div class="fw-semibold text-dark">📅 Essayage prévu</div>
-                                <div class="text-secondary small">Rendez-vous à 15h00 aujourd'hui.</div>
-                            </a>
-                        </div>
-                        <div class="p-2 text-center border-top">
-                            <a href="#" class="text-primary text-decoration-none small fw-semibold">Voir tout</a>
+                            {% empty %}
+                            <div class="p-4 text-center text-secondary">
+                                <i class="bi bi-check-circle fs-4 d-block mb-2 text-success"></i>
+                                {% tr "Aucune notification" %}
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>
