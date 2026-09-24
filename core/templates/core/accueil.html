@@ -26,6 +26,21 @@
         cursor: pointer;
     }
     .hero-select option { color: #1f2937; }
+    .hero-mois { display: flex; align-items: center; gap: .4rem; }
+    .hero-nav {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 34px; height: 34px; border-radius: 10px;
+        background: rgba(255,255,255,.55); border: 1px solid rgba(0,0,0,.12);
+        color: #363333; font-size: 1.1rem; line-height: 1; text-decoration: none;
+    }
+    .hero-nav:hover { background: rgba(255,255,255,.85); color: #111; }
+    .hero-actuel {
+        padding: .45rem .8rem; border-radius: 10px;
+        background: rgba(255,255,255,.75); border: 1px solid rgba(0,0,0,.14);
+        color: #363333; font-size: .82rem; font-weight: 600; text-decoration: none;
+        white-space: nowrap;
+    }
+    .hero-actuel:hover { background: #fff; color: #111; }
 
     /* ===== KPI ===== */
     .kpi-card {
@@ -152,14 +167,23 @@
                 {{ nb_en_retard }} en retard
             </div>
         </div>
-        <form method="get">
+        <form method="get" class="hero-mois">
+            <a class="hero-nav" href="?mois={{ mois_precedent }}"
+               title="{% tr "Mois précédent" %}" aria-label="{% tr "Mois précédent" %}">&lt;</a>
             <select name="mois" class="hero-select" onchange="this.form.submit()">
                 {% for m in mois_options %}
                     <option value="{{ m.valeur }}" {% if m.valeur == mois_selectionne %}selected{% endif %}>
-                        {{ m.label }}
+                        {% tr m.label %}
                     </option>
                 {% endfor %}
             </select>
+            <a class="hero-nav" href="?mois={{ mois_suivant }}"
+               title="{% tr "Mois suivant" %}" aria-label="{% tr "Mois suivant" %}">&gt;</a>
+            {% if not est_mois_courant %}
+            <a class="hero-actuel" href="?mois={{ mois_actuel }}">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>{% tr "Mois actuel" %}
+            </a>
+            {% endif %}
         </form>
     </div>
 

@@ -100,6 +100,15 @@ EN = {
     "Gestion d'ateliers de couture": "Tailoring shop management",
     "Boutique": "Shop",
 
+    # --- Tableau de bord : navigation par mois (0036) ---
+    'Janvier': 'January', 'Février': 'February', 'Mars': 'March',
+    'Avril': 'April', 'Mai': 'May', 'Juin': 'June', 'Juillet': 'July',
+    'Août': 'August', 'Septembre': 'September', 'Octobre': 'October',
+    'Novembre': 'November', 'Décembre': 'December',
+    'Mois précédent': 'Previous month',
+    'Mois suivant': 'Next month',
+    'Mois actuel': 'Current month',
+
     # ================= Vocabulaire commun (0035 — traduction générale) =================
     # Actions
     'Retour': 'Back',

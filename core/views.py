@@ -346,18 +346,15 @@ def dashboard(request):
     aujourdhui = timezone.now().date()
 
     # ---------- Sélecteur de mois ----------
-    mois_options = []
-    for i in range(12):
-        annee, mois_num = aujourdhui.year, aujourdhui.month - i
-        while mois_num <= 0:
-            mois_num += 12
-            annee -= 1
-        mois_options.append({
-            "valeur": f"{annee}-{mois_num:02d}",
-            "label": f"{MOIS_FR[mois_num - 1]} {annee}",
-        })
+    # Tous les mois de l'année en cours, toute l'année précédente et toute
+    # l'année suivante (ex. décembre 2026 -> janvier 2027 automatiquement),
+    # triés du plus récent au plus ancien.
+    valeurs = []
+    for annee in (aujourdhui.year + 1, aujourdhui.year, aujourdhui.year - 1):
+        for mois_num in range(12, 0, -1):
+            valeurs.append(f"{annee}-{mois_num:02d}")
 
-    mois_selectionne = request.GET.get('mois') or mois_options[0]['valeur']
+    mois_selectionne = request.GET.get('mois') or f"{aujourdhui.year}-{aujourdhui.month:02d}"
     try:
         annee_sel, mois_sel = (int(x) for x in mois_selectionne.split('-'))
         if not 1 <= mois_sel <= 12:
@@ -366,6 +363,21 @@ def dashboard(request):
         annee_sel, mois_sel = aujourdhui.year, aujourdhui.month
         mois_selectionne = f"{annee_sel}-{mois_sel:02d}"
     mois_annee_fr = f"{MOIS_FR[mois_sel - 1]} {annee_sel}"
+
+    mois_options = [{
+        "valeur": v,
+        "label": f"{MOIS_FR[int(v.split('-')[1]) - 1]} {v.split('-')[0]}",
+    } for v in valeurs]
+
+    # Navigation ‹ › : mois précédent / suivant (basculera d'année auto).
+    mois_pred_num = mois_sel - 1 or 12
+    annee_pred = annee_sel if mois_sel > 1 else annee_sel - 1
+    mois_suiv_num = mois_sel % 12 + 1
+    annee_suiv = annee_sel if mois_sel < 12 else annee_sel + 1
+    mois_precedent = f"{annee_pred}-{mois_pred_num:02d}"
+    mois_suivant = f"{annee_suiv}-{mois_suiv_num:02d}"
+    mois_actuel = f"{aujourdhui.year}-{aujourdhui.month:02d}"
+    est_mois_courant = (mois_selectionne == mois_actuel)
 
     commandes = Commande.objects.filter(atelier=atelier).select_related(
         'client'
@@ -513,6 +525,10 @@ def dashboard(request):
         'mois_annee_fr': mois_annee_fr,
         'mois_options': mois_options,
         'mois_selectionne': mois_selectionne,
+        'mois_precedent': mois_precedent,
+        'mois_suivant': mois_suivant,
+        'mois_actuel': mois_actuel,
+        'est_mois_courant': est_mois_courant,
         'chiffre_affaires': chiffre_affaires,
         'total_encaisse': total_encaisse,
         'pct_encaisse': pct_encaisse,
