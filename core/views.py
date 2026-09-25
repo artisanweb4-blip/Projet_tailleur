@@ -345,29 +345,30 @@ def dashboard(request):
 
     aujourdhui = timezone.now().date()
 
-    # ---------- Sélecteur de mois ----------
-    # Tous les mois de l'année en cours, toute l'année précédente et toute
-    # l'année suivante (ex. décembre 2026 -> janvier 2027 automatiquement),
-    # triés du plus récent au plus ancien.
+    # ---------- Sélecteur de mois : années 2026-2027 + « Tous les mois » ----------
     valeurs = []
-    for annee in (aujourdhui.year + 1, aujourdhui.year, aujourdhui.year - 1):
+    for annee in (aujourdhui.year + 1, aujourdhui.year):
         for mois_num in range(12, 0, -1):
             valeurs.append(f"{annee}-{mois_num:02d}")
-
-    mois_selectionne = request.GET.get('mois') or f"{aujourdhui.year}-{aujourdhui.month:02d}"
-    try:
-        annee_sel, mois_sel = (int(x) for x in mois_selectionne.split('-'))
-        if not 1 <= mois_sel <= 12:
-            raise ValueError
-    except (ValueError, TypeError):
-        annee_sel, mois_sel = aujourdhui.year, aujourdhui.month
-        mois_selectionne = f"{annee_sel}-{mois_sel:02d}"
-    mois_annee_fr = f"{MOIS_FR[mois_sel - 1]} {annee_sel}"
-
-    mois_options = [{
+    mois_options = [{"valeur": "TOUT", "label": "Tous les mois"}] + [{
         "valeur": v,
         "label": f"{MOIS_FR[int(v.split('-')[1]) - 1]} {v.split('-')[0]}",
     } for v in valeurs]
+
+    mois_selectionne = request.GET.get('mois') or f"{aujourdhui.year}-{aujourdhui.month:02d}"
+    vue_tout = (mois_selectionne == 'TOUT')
+    if vue_tout:
+        annee_sel, mois_sel = aujourdhui.year, aujourdhui.month
+        mois_annee_fr = 'Tous les mois'
+    else:
+        try:
+            annee_sel, mois_sel = (int(x) for x in mois_selectionne.split('-'))
+            if not 1 <= mois_sel <= 12:
+                raise ValueError
+        except (ValueError, TypeError):
+            annee_sel, mois_sel = aujourdhui.year, aujourdhui.month
+            mois_selectionne = f"{annee_sel}-{mois_sel:02d}"
+        mois_annee_fr = f"{MOIS_FR[mois_sel - 1]} {annee_sel}"
 
     # Navigation ‹ › : mois précédent / suivant (basculera d'année auto).
     mois_pred_num = mois_sel - 1 or 12
@@ -377,7 +378,7 @@ def dashboard(request):
     mois_precedent = f"{annee_pred}-{mois_pred_num:02d}"
     mois_suivant = f"{annee_suiv}-{mois_suiv_num:02d}"
     mois_actuel = f"{aujourdhui.year}-{aujourdhui.month:02d}"
-    est_mois_courant = (mois_selectionne == mois_actuel)
+    est_mois_courant = (not vue_tout) and (mois_selectionne == mois_actuel)
 
     commandes = Commande.objects.filter(atelier=atelier).select_related(
         'client'
@@ -386,24 +387,56 @@ def dashboard(request):
         'lignes__employe', 'paiements'
     )
 
-    # ---------- KPI globaux ----------
-    chiffre_affaires = sum((c.prix_net for c in commandes), Decimal('0'))
-    total_encaisse = Paiement.objects.filter(atelier=atelier).aggregate(
-        Sum('montant'))['montant__sum'] or Decimal('0')
+    # ---------- Agrégats de référence (mois vs global) ----------
+    revenus_mois = Paiement.objects.filter(
+        atelier=atelier,
+        date_paiement__year=annee_sel,
+        date_paiement__month=mois_sel,
+    ).aggregate(Sum('montant'))['montant__sum'] or Decimal('0')
+    depenses_mois = Depense.objects.filter(
+        atelier=atelier,
+        date__year=annee_sel,
+        date__month=mois_sel,
+    ).aggregate(Sum('montant'))['montant__sum'] or Decimal('0')
+
+    # ---------- KPI (filtrés par le mois ; globaux si « Tous les mois ») ----------
+    if vue_tout:
+        commandes_periode = commandes
+        chiffre_affaires = sum((c.prix_net for c in commandes), Decimal('0'))
+        total_encaisse = Paiement.objects.filter(atelier=atelier).aggregate(
+            Sum('montant'))['montant__sum'] or Decimal('0')
+        depenses_periode = Depense.objects.filter(atelier=atelier).aggregate(
+            Sum('montant'))['montant__sum'] or Decimal('0')
+        revenus_mois, depenses_mois = total_encaisse, depenses_periode
+        total_clients = Client.objects.filter(atelier=atelier).count()
+        livraisons_semaine = commandes.filter(
+            statut__in=['EN_ATTENTE', 'EN_COURS', 'PRET'],
+            date_livraison_prevue__gte=aujourdhui,
+            date_livraison_prevue__lte=aujourdhui + timedelta(days=7),
+        ).count()
+    else:
+        commandes_periode = commandes.filter(
+            date_commande__year=annee_sel, date_commande__month=mois_sel)
+        chiffre_affaires = sum((c.prix_net for c in commandes_periode), Decimal('0'))
+        total_encaisse = revenus_mois
+        total_clients = Client.objects.filter(
+            atelier=atelier,
+            date_creation__year=annee_sel, date_creation__month=mois_sel,
+        ).count()
+        livraisons_semaine = commandes.filter(
+            statut__in=['EN_ATTENTE', 'EN_COURS', 'PRET'],
+            date_livraison_prevue__year=annee_sel,
+            date_livraison_prevue__month=mois_sel,
+        ).count()
+
+    resultat_mois = revenus_mois - depenses_mois
     reste_a_recouvrer = max(Decimal('0'), chiffre_affaires - total_encaisse)
     pct_encaisse = int(total_encaisse * 100 / chiffre_affaires) if chiffre_affaires > 0 else 0
 
-    total_clients = Client.objects.filter(atelier=atelier).count()
-    nb_commandes = commandes.count()
-    commandes_en_cours = commandes.filter(statut='EN_COURS').count()
-    commandes_livrees = commandes.filter(statut='LIVRE').count()
+    nb_commandes = commandes_periode.count()
+    commandes_en_cours = commandes_periode.filter(statut='EN_COURS').count()
+    commandes_livrees = commandes_periode.filter(statut='LIVRE').count()
     nb_en_retard = sum(1 for c in commandes if c.est_en_retard())
-
-    livraisons_semaine = commandes.filter(
-        statut__in=['EN_ATTENTE', 'EN_COURS', 'PRET'],
-        date_livraison_prevue__gte=aujourdhui,
-        date_livraison_prevue__lte=aujourdhui + timedelta(days=7),
-    ).count()
 
     # ---------- Alertes stock ----------
     pap_rupture = CatalogueModele.objects.filter(
@@ -432,21 +465,6 @@ def dashboard(request):
         employe__isnull=True,
         commande__statut__in=['EN_ATTENTE', 'EN_COURS', 'PRET'],
     ).count()
-
-    # ---------- Résultat du mois ----------
-    revenus_mois = Paiement.objects.filter(
-        atelier=atelier,
-        date_paiement__year=annee_sel,
-        date_paiement__month=mois_sel,
-    ).aggregate(Sum('montant'))['montant__sum'] or Decimal('0')
-
-    depenses_mois = Depense.objects.filter(
-        atelier=atelier,
-        date__year=annee_sel,
-        date__month=mois_sel,
-    ).aggregate(Sum('montant'))['montant__sum'] or Decimal('0')
-
-    resultat_mois = revenus_mois - depenses_mois
 
     # ---------- Graphique 6 derniers mois ----------
     chart_data = []
@@ -480,7 +498,7 @@ def dashboard(request):
     total_stat = max(nb_commandes, 1)
     repartition = []
     for code, label in Commande.STATUTS:
-        n = commandes.filter(statut=code).count()
+        n = commandes_periode.filter(statut=code).count()
         pct = int(n * 100 / total_stat)
         couleur = COULEURS_STATUT.get(code, '#6b7280')
         repartition.append({
@@ -529,6 +547,7 @@ def dashboard(request):
         'mois_suivant': mois_suivant,
         'mois_actuel': mois_actuel,
         'est_mois_courant': est_mois_courant,
+        'vue_tout': vue_tout,
         'chiffre_affaires': chiffre_affaires,
         'total_encaisse': total_encaisse,
         'pct_encaisse': pct_encaisse,

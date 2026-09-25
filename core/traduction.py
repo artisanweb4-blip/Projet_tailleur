@@ -108,6 +108,11 @@ EN = {
     'Mois précédent': 'Previous month',
     'Mois suivant': 'Next month',
     'Mois actuel': 'Current month',
+    'Tous les mois': 'All months',
+    'Livraisons du mois': "Deliveries this month",
+    'Période': 'Period',
+    'Commandes créées': 'Orders created',
+    'Nouveaux clients': 'New clients',
 
     # ================= Vocabulaire commun (0035 — traduction générale) =================
     # Actions

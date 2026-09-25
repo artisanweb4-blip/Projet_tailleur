@@ -164,7 +164,8 @@
             <div class="hero-sub">
                 {{ total_clients }} client{{ total_clients|pluralize }} ·
                 {{ nb_commandes }} commande{{ nb_commandes|pluralize }} ·
-                {{ nb_en_retard }} en retard
+                {{ nb_en_retard }} en retard ·
+                {% tr "Période" %} : {% tr mois_annee_fr %}
             </div>
         </div>
         <form method="get" class="hero-mois">
@@ -196,7 +197,7 @@
                     <div class="kpi-icon ic-violet"><i class="bi bi-piggy-bank-fill"></i></div>
                 </div>
                 <div class="kpi-value">{{ chiffre_affaires|floatformat:0 }} {{ atelier.devise }}</div>
-                <div class="kpi-hint">{% tr "Toutes commandes" %}</div>
+                <div class="kpi-hint">{% if vue_tout %}{% tr "Toutes commandes" %}{% else %}{% tr mois_annee_fr %}{% endif %}</div>
             </div>
         </div>
         <div class="col-6 col-xl-3">
@@ -216,7 +217,7 @@
                     <div class="kpi-icon ic-orange"><i class="bi bi-hourglass-split"></i></div>
                 </div>
                 <div class="kpi-value">{{ reste_a_recouvrer|floatformat:0 }} {{ atelier.devise }}</div>
-                <div class="kpi-hint">{% tr "Créances clients" %}</div>
+                <div class="kpi-hint">{% if vue_tout %}{% tr "Créances clients" %}{% else %}{% tr mois_annee_fr %}{% endif %}</div>
             </div>
         </div>
         <div class="col-6 col-xl-3">
@@ -274,7 +275,7 @@
             <a href="{% url 'core:calendrier' %}" class="text-decoration-none">
                 <div class="kpi-card">
                     <div class="d-flex justify-content-between align-items-start mb-2">
-                        <span class="kpi-label">{% tr "Livraisons 7 j" %}</span>
+                        <span class="kpi-label">{% if vue_tout %}{% tr "Livraisons 7 j" %}{% else %}{% tr "Livraisons du mois" %}{% endif %}</span>
                         <div class="kpi-icon ic-blue"><i class="bi bi-truck"></i></div>
                     </div>
                     <div class="kpi-value">{{ livraisons_semaine }}</div>
