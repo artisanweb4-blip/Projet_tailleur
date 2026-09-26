@@ -238,17 +238,28 @@ def _alerter_stock(request, atelier, besoins):
 def inscription_saas(request):
     if request.user.is_authenticated:
         return redirect('core:dashboard')
+    # Offre choisie sur la landing : ?plan=<id> (GET) ou champ caché (POST)
+    plan_id = request.POST.get('plan') or request.GET.get('plan')
+    plan_choisi = None
+    if plan_id:
+        plan_choisi = PlanAbonnement.objects.filter(
+            pk=plan_id, actif=True).first()
     if request.method == 'POST':
         form = InscriptionSaaSForm(request.POST)
         if form.is_valid():
-            user, atelier = form.save()
-            login(request, user)
+            user, atelier = form.save(plan=plan_choisi)
             messages.success(
-                request, f"Bienvenue chez {atelier.nom} ! Votre espace est prêt.")
-            return redirect('core:dashboard')
+                request,
+                f"Votre atelier « {atelier.nom} » a été créé avec succès. "
+                "Connectez-vous pour accéder à votre espace.")
+            # Pas de connexion automatique : on passe d'abord par la page
+            # de connexion, puis la session donne accès à la boutique.
+            return redirect('core:connexion')
     else:
         form = InscriptionSaaSForm()
-    return render(request, 'core/inscription_saas.html', {'form': form})
+    return render(request, 'core/inscription_saas.html', {
+        'form': form, 'plan_choisi': plan_choisi,
+    })
 
 
 def connexion(request):

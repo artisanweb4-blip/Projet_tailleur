@@ -101,7 +101,7 @@ class InscriptionSaaSForm(forms.Form):
         return cleaned_data
 
     @transaction.atomic
-    def save(self):
+    def save(self, plan=None):
         user = User.objects.create_user(
             username=self.cleaned_data['username'],
             email=self.cleaned_data['email'],
@@ -125,11 +125,11 @@ class InscriptionSaaSForm(forms.Form):
             est_fondateur=True,
         )
 
-        # Essai gratuit : sans abonnement, la boutique est considérée comme
-        # expirée. Sur une base neuve aucun PlanAbonnement n'existe, donc la
-        # promesse des « 14 jours d'essai gratuit » affichée par le formulaire
-        # n'était jamais tenue. On crée le plan d'essai s'il manque.
-        plan_essai = (
+        # Abonnement initial : si l'utilisateur a choisi une offre sur la
+        # landing, sa durée est appliquée (essai = 14 jours, N mois = N×30 j) ;
+        # sinon on garde la promesse des 14 jours d'essai (plan Starter).
+        # Sur une base neuve aucun PlanAbonnement n'existe, on le crée.
+        plan_essai = plan or (
             PlanAbonnement.objects.filter(nom__icontains='Starter').first()
             or PlanAbonnement.objects.first()
             or PlanAbonnement.objects.create(
@@ -140,10 +140,15 @@ class InscriptionSaaSForm(forms.Form):
                 support_prioritaire=False,
             )
         )
+        if plan is not None:
+            duree = getattr(plan, 'duree_mois', 0) or 0
+            jours = 14 if duree == 0 else 30 * duree
+        else:
+            jours = 14
         Abonnement.objects.create(
             atelier=atelier,
             plan=plan_essai,
-            date_fin=timezone.now().date() + timedelta(days=14),
+            date_fin=timezone.now().date() + timedelta(days=jours),
             statut='ACTIF',
         )
         return user, atelier

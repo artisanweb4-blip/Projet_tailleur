@@ -187,6 +187,59 @@
             transform: translateY(-4px);
         }
         ::selection { background: rgba(37, 99, 235, 0.25); }
+
+        /* ===== Améliorations pro (0040) ===== */
+        .reveal { opacity: 0; transform: translateY(26px); transition: opacity .6s ease, transform .6s ease; }
+        .reveal.visible { opacity: 1; transform: none; }
+        .hero-section .reveal { opacity: 1; transform: none; }
+
+        .trust-strip {
+            background: #ffffff;
+            border-inline: 1px solid #e2e8f0;
+            box-shadow: 0 20px 40px -24px rgba(15, 23, 42, 0.18);
+        }
+        .trust-item { display: flex; align-items: center; gap: 12px; padding: 14px 18px; }
+        .trust-item i { font-size: 1.4rem; color: var(--accent-color); }
+
+        .step-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            padding: 36px 28px;
+            height: 100%;
+            position: relative;
+            transition: all .3s ease;
+        }
+        .step-card:hover { transform: translateY(-5px); box-shadow: 0 20px 30px -12px rgba(37, 99, 235, 0.15); border-color: #bfdbfe; }
+        .step-num {
+            width: 52px; height: 52px; border-radius: 14px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: #fff; font-weight: 800; font-size: 1.35rem;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 10px 18px -8px rgba(37, 99, 235, 0.55);
+            margin-bottom: 20px;
+        }
+        .step-arrow { position: absolute; right: -18px; top: 50%; transform: translateY(-50%);
+            color: #93c5fd; font-size: 1.6rem; z-index: 2; }
+        @media (max-width: 991px) { .step-arrow { display: none; } }
+
+        .cta-band {
+            background: linear-gradient(135deg, #0b1220 0%, #10234a 55%, #1e3a8a 100%);
+            color: #fff; border-radius: 24px; padding: 56px 48px;
+            position: relative; overflow: hidden;
+        }
+        .cta-band::before {
+            content: ""; position: absolute; inset: 0;
+            background: radial-gradient(420px 240px at 80% 20%, rgba(96,165,250,.25), transparent 60%);
+            pointer-events: none;
+        }
+        .cta-band .badge { background: rgba(96,165,250,.18); border: 1px solid rgba(147,197,253,.35); color: #bfdbfe; }
+
+        .footer-rich { background: #0b1220; color: #94a3b8; }
+        .footer-rich h6 { color: #e2e8f0; letter-spacing: .4px; }
+        .footer-rich a { color: #94a3b8; text-decoration: none; transition: color .2s ease; }
+        .footer-rich a:hover { color: #bfdbfe; }
+        .footer-brand { color: #ffffff; font-weight: 800; font-size: 1.25rem; }
     </style>
 </head>
 <body>
@@ -217,7 +270,7 @@
     <!-- Hero Section -->
     <section class="hero-section">
         <div class="container">
-            <div class="row align-items-center gy-5">
+            <div class="row align-items-center gy-5 reveal">
                 <div class="col-lg-6">
                     <span class="hero-badge">
                         <i class="bi bi-stars me-1"></i> Solution N°1 pour la couture
@@ -278,17 +331,43 @@
         </div>
     </section>
 
+    <!-- Bande de confiance -->
+    <section class="py-4 trust-strip">
+        <div class="container">
+            <div class="row g-2 justify-content-center">
+                <div class="col-12 col-md-4 reveal">
+                    <div class="trust-item justify-content-md-center">
+                        <i class="bi bi-shield-check"></i>
+                        <div><strong>Sans engagement</strong><div class="text-muted small">14 jours d'essai, libre d'arrêter quand vous voulez</div></div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4 reveal">
+                    <div class="trust-item justify-content-md-center">
+                        <i class="bi bi-cloud-arrow-up"></i>
+                        <div><strong>Données sauvegardées</strong><div class="text-muted small">Vos carnets et la comptabilité à l'abri, export Excel</div></div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4 reveal">
+                    <div class="trust-item justify-content-md-center">
+                        <i class="bi bi-headset"></i>
+                        <div><strong>Support réactif</strong><div class="text-muted small">Une équipe disponible pour vous accompagner au démarrage</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Features Section -->
     <section id="features" class="py-5 bg-light">
         <div class="container py-5">
-            <div class="text-center max-width-600 mx-auto mb-5">
+            <div class="text-center max-width-600 mx-auto mb-5 reveal">
                 <span class="text-primary fw-bold text-uppercase">Fonctionnalités</span>
                 <h2 class="fw-bold fs-1 mt-2">Conçu spécialement pour la couture moderne</h2>
                 <p class="text-muted">Dites adieu aux carnets papier perdus ou détériorés.</p>
             </div>
 
             <div class="row g-4">
-                <div class="col-md-4">
+                <div class="col-md-4 reveal">
                     <div class="feature-card">
                         <div class="icon-box">
                             <i class="bi bi-journal-bookmark"></i>
@@ -300,7 +379,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-md-4 reveal">
                     <div class="feature-card">
                         <div class="icon-box">
                             <i class="bi bi-kanban"></i>
@@ -312,7 +391,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-md-4 reveal">
                     <div class="feature-card">
                         <div class="icon-box">
                             <i class="bi bi-wallet2"></i>
@@ -327,10 +406,51 @@
         </div>
     </section>
 
+    <!-- Comment ça marche -->
+    <section id="fonctionnement" class="py-5">
+        <div class="container py-5">
+            <div class="text-center max-width-600 mx-auto mb-5 reveal">
+                <span class="text-primary fw-bold text-uppercase">Démarrage express</span>
+                <h2 class="fw-bold fs-1 mt-2">Votre atelier en ligne en 3 étapes</h2>
+                <p class="text-muted">Pas de formation compliquée : la plateforme se prend en main en quelques minutes.</p>
+            </div>
+            <div class="row g-4 position-relative">
+                <div class="col-md-4 reveal">
+                    <div class="step-card">
+                        <div class="step-num">1</div>
+                        <h5 class="fw-bold mb-2">Créez votre atelier</h5>
+                        <p class="text-muted mb-0">Inscrivez-vous en moins de 5 minutes : nom de l'atelier, devise, c'est parti avec 14 jours d'essai offerts.</p>
+                        <i class="bi bi-arrow-right step-arrow"></i>
+                    </div>
+                </div>
+                <div class="col-md-4 reveal">
+                    <div class="step-card">
+                        <div class="step-num">2</div>
+                        <h5 class="fw-bold mb-2">Enregistrez clients & mesures</h5>
+                        <p class="text-muted mb-0">Ouvrez une fiche par client avec ses mensurations exactes, retrouvez-la en une recherche.</p>
+                        <i class="bi bi-arrow-right step-arrow"></i>
+                    </div>
+                </div>
+                <div class="col-md-4 reveal">
+                    <div class="step-card">
+                        <div class="step-num">3</div>
+                        <h5 class="fw-bold mb-2">Suivez commandes & paiements</h5>
+                        <p class="text-muted mb-0">Avances, soldes, retards de livraison : tout est sous contrôle depuis le tableau de bord.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-5 reveal">
+                <a href="{% url 'core:inscription_saas' %}" class="btn btn-custom-primary">
+                    Lancer mon atelier maintenant <i class="bi bi-arrow-right ms-2"></i>
+                </a>
+            </div>
+        </div>
+    </section>
+
     <!-- Pricing Section -->
     <section id="tarifs" class="py-5">
         <div class="container py-5">
-            <div class="text-center mb-5">
+            <div class="text-center mb-5 reveal">
                 <span class="text-primary fw-bold text-uppercase">Tarification</span>
                 <h2 class="fw-bold fs-1 mt-2">Des abonnements adaptés à votre atelier</h2>
                 <p class="text-muted">Choisissez l'offre qui correspond à la taille de votre activité.</p>
@@ -339,7 +459,7 @@
             <div class="row g-4 align-items-center justify-content-center">
                 {% for plan in plans %}
                 <!-- Offre configurée depuis le back-office plateforme -->
-                <div class="col-lg-4 col-md-6">
+                <div class="col-lg-4 col-md-6 reveal">
                     <div class="pricing-card {% if plan.est_populaire %}featured{% endif %}">
                         {% if plan.est_populaire %}<span class="popular-badge">Populaire</span>{% endif %}
                         <h4 class="fw-bold mb-2">{{ plan.nom }}</h4>
@@ -369,7 +489,7 @@
                             <li class="mb-3 text-muted"><i class="bi bi-x text-secondary me-2"></i> {{ f }}</li>
                             {% endfor %}
                         </ul>
-                        <a href="{% url 'core:inscription_saas' %}" class="btn {% if plan.est_populaire %}btn-primary fw-bold{% else %}btn-outline-primary{% endif %} w-100 py-2">
+                        <a href="{% url 'core:inscription_saas' %}?plan={{ plan.id }}" class="btn {% if plan.est_populaire %}btn-primary fw-bold{% else %}btn-outline-primary{% endif %} w-100 py-2">
                             {% if plan.prix_mensuel == 0 %}Commencer l'essai gratuit{% else %}Choisir cette offre{% endif %}
                         </a>
                     </div>
@@ -379,6 +499,28 @@
                     <p class="text-muted">Nos offres seront publiées très bientôt.</p>
                 </div>
                 {% endfor %}
+            </div>
+        </div>
+    </section>
+
+    <!-- Bandeau CTA -->
+    <section class="py-5">
+        <div class="container py-3 reveal">
+            <div class="cta-band text-center">
+                <span class="badge rounded-pill px-3 py-2 mb-3"><i class="bi bi-rocket-takeoff me-1"></i>Rejoignez les ateliers déjà numérisés</span>
+                <h2 class="fw-bold fs-1 mb-3">Prêt à dire adieu aux carnets perdus ?</h2>
+                <p class="fs-5 mb-4" style="color:#cbd5e1;">Essayez TailleurPro gratuitement pendant 14 jours.<br class="d-none d-md-block"> Votre compte est créé en moins de 5 minutes.</p>
+                <div class="d-flex flex-wrap gap-3 justify-content-center">
+                    <a href="{% url 'core:inscription_saas' %}" class="btn btn-custom-primary btn-lg px-4">
+                        Commencer l'essai gratuit <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                    <a href="{% url 'core:connexion' %}" class="btn btn-outline-light btn-lg px-4">J'ai déjà un compte</a>
+                </div>
+                <div class="mt-4 small" style="color:#94a3b8;">
+                    <i class="bi bi-check-circle-fill me-1"></i>Sans carte bancaire
+                    <span class="mx-2">·</span>
+                    <i class="bi bi-check-circle-fill me-1"></i>Annulable à tout moment
+                </div>
             </div>
         </div>
     </section>
@@ -484,18 +626,59 @@
     </section>
 
     <!-- Footer -->
-    <footer class="bg-dark text-white py-4 border-top border-secondary">
-        <div class="container text-center text-md-between d-flex flex-column flex-md-row align-items-center">
-            <p class="mb-0 text-muted">&copy; 2026 TailleurPro. Tous droits réservés.</p>
-            <div class="mt-3 mt-md-0">
-                <a href="#" class="text-muted me-3 text-decoration-none">Confidentialité</a>
-                <a href="#" class="text-muted me-3 text-decoration-none">Conditions d'utilisation</a>
-                <a href="#contact" class="text-muted text-decoration-none">Support</a>
+    <footer class="footer-rich pt-5 pb-3">
+        <div class="container">
+            <div class="row g-4 pb-4">
+                <div class="col-12 col-md-5">
+                    <div class="footer-brand mb-2"><i class="bi bi-scissors text-primary me-2"></i>TailleurPro</div>
+                    <p class="small mb-3">La plateforme de gestion pensée pour les ateliers de couture : mesures, commandes, paiements et finances, en un seul endroit.</p>
+                    <small class="d-block text-secondary">Essai gratuit 14 jours — sans engagement.</small>
+                </div>
+                <div class="col-6 col-md-3">
+                    <h6 class="fw-bold mb-3">Produit</h6>
+                    <ul class="list-unstyled small d-grid gap-2 mb-0">
+                        <li><a href="#features">Fonctionnalités</a></li>
+                        <li><a href="#fonctionnement">Comment ça marche</a></li>
+                        <li><a href="#tarifs">Tarifs</a></li>
+                        <li><a href="{% url 'core:inscription_saas' %}">Créer un compte</a></li>
+                    </ul>
+                </div>
+                <div class="col-6 col-md-4">
+                    <h6 class="fw-bold mb-3">Aide</h6>
+                    <ul class="list-unstyled small d-grid gap-2 mb-0">
+                        <li><a href="#contact">Nous contacter</a></li>
+                        <li><a href="{% url 'core:connexion' %}">Se connecter</a></li>
+                        <li><a href="#">Conditions d'utilisation</a></li>
+                        <li><a href="#">Confidentialité</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="border-top border-secondary-subtle pt-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-2">
+                <small class="text-secondary">&copy; 2026 TailleurPro. Tous droits réservés.</small>
+                <small class="text-secondary"><i class="bi bi-heart-fill text-danger me-1"></i>Conçu avec soin pour les artisans de la mode</small>
             </div>
         </div>
     </footer>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Apparition douce au défilement (dégradé gracieux : visible sans JS si non supporté)
+        (function () {
+            if (!('IntersectionObserver' in window)) {
+                document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('visible'); });
+                return;
+            }
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (e) {
+                    if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+                });
+            }, { threshold: 0.12 });
+            document.querySelectorAll('.reveal').forEach(function (el, i) {
+                el.style.transitionDelay = (i % 3) * 90 + 'ms';
+                io.observe(el);
+            });
+        })();
+    </script>
 </body>
 </html>

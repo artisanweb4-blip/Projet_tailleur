@@ -90,6 +90,16 @@
             padding: 0.35rem 0.75rem;
             border-radius: 50rem;
         }
+        .plan-choisi {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: #ffffff;
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.45rem 1.1rem;
+            border-radius: 50rem;
+            box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3);
+        }
+        .plan-choisi small { color: rgba(255,255,255,0.8); font-weight: 500; }
     </style>
 </head>
 <body>
@@ -112,8 +122,19 @@
                     
                     <!-- En-tête -->
                     <div class="text-center mb-4">
+                        {% if plan_choisi %}
+                        <div class="plan-choisi d-inline-flex align-items-center gap-2 mb-2">
+                            <i class="fa-solid fa-tags"></i>
+                            <span>Offre choisie : <strong>{{ plan_choisi.nom }}</strong>
+                                <small class="text-muted d-none d-sm-inline">
+                                    — {% if plan_choisi.prix_mensuel == 0 %}Gratuit{% else %}{{ plan_choisi.prix_mensuel|floatformat:0 }} FCFA/mois{% endif %}
+                                    · {{ plan_choisi.duree_libelle }}
+                                </small>
+                            </span>
+                        </div>
+                        {% endif %}
                         <span class="badge-trial d-inline-block mb-2">
-                            <i class="fa-solid fa-gift me-1"></i> 14 jours d'essai gratuit
+                            <i class="fa-solid fa-gift me-1"></i> 14 jours d'essai gratuit inclus
                         </span>
                         <h2 class="fw-bold text-dark h3">Lancer mon Atelier en Ligne</h2>
                         <p class="text-muted small">Créez votre espace de gestion personnalisé en quelques secondes.</p>
@@ -132,6 +153,7 @@
                     <!-- Formulaire -->
                     <form method="post" novalidate>
                         {% csrf_token %}
+                        {% if plan_choisi %}<input type="hidden" name="plan" value="{{ plan_choisi.id }}">{% endif %}
 
                         <!-- Section 1: Informations de l'Atelier -->
                         <div class="section-header">
