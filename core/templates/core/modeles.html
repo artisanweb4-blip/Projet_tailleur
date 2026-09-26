@@ -292,7 +292,19 @@
                                 </td>
                             </tr>
                         {% empty %}
-                            <tr><td colspan="4" class="text-center text-muted py-4">Aucun modèle.</td></tr>
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="bi bi-scissors display-5 d-block mb-2 opacity-50"></i>
+                                    <span class="fw-semibold">Aucun modèle de couture</span><br>
+                                    <small>Créez vos modèles pour les proposer lors des commandes sur mesure.</small>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                            data-bs-toggle="modal" data-bs-target="#modalAjoutModele" data-type="COUTURE">
+                                            <i class="bi bi-plus-lg me-1"></i>Créer un modèle
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
                         {% endfor %}
                         </tbody>
                     </table>
@@ -387,7 +399,7 @@
                         <span class="fw-semibold text-dark">Aucun article prêt-à-porter</span><br>
                         <small>Ajoutez vos articles déjà confectionnés pour les vendre en caisse.</small>
                         <div class="mt-3">
-                            <button type="button" class="btn btn-info text-white btn-sm"
+                            <button type="button" class="btn btn-primary btn-sm"
                                 data-bs-toggle="modal" data-bs-target="#modalAjoutModele" data-type="PRET_A_PORTER">
                                 <i class="bi bi-plus-lg me-1"></i>Ajouter un article
                             </button>
@@ -431,7 +443,19 @@
                                 </td>
                             </tr>
                         {% empty %}
-                            <tr><td colspan="5" class="text-center text-muted py-4">Aucun article.</td></tr>
+                            <tr>
+                                <td colspan="5" class="text-center py-5 text-muted">
+                                    <i class="bi bi-bag display-5 d-block mb-2 opacity-50"></i>
+                                    <span class="fw-semibold">Aucun article prêt-à-porter</span><br>
+                                    <small>Ajoutez vos articles déjà confectionnés pour les vendre en caisse.</small>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm"
+                                            data-bs-toggle="modal" data-bs-target="#modalAjoutModele" data-type="PRET_A_PORTER">
+                                            <i class="bi bi-plus-lg me-1"></i>Ajouter un article
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
                         {% endfor %}
                         </tbody>
                     </table>
@@ -481,7 +505,19 @@
                         </div>
                     </div>
                     {% empty %}
-                    <div class="col-12 text-center text-muted py-4">Aucun accessoire.</div>
+                    <div class="col-12">
+                        <div class="item-card empty-state">
+                            <i class="bi bi-gem display-5 d-block mb-2 opacity-50"></i>
+                            <span class="fw-semibold text-dark">Aucun accessoire</span><br>
+                            <small>Boutons, fermetures, broderies, doublures… Ajoutez-les pour les vendre en caisse.</small>
+                            <div class="mt-3">
+                                <button type="button" class="btn btn-primary btn-sm"
+                                    data-bs-toggle="modal" data-bs-target="#modalAjoutAccessoire">
+                                    <i class="bi bi-plus-lg me-1"></i>Ajouter un accessoire
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     {% endfor %}
                 </div>
             </div>
