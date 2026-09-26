@@ -164,6 +164,29 @@
             font-size: 1.25rem;
             flex-shrink: 0;
         }
+
+        /* Finitions professionnelles (0038) */
+        html { scroll-behavior: smooth; }
+        .navbar.fixed-top {
+            box-shadow: 0 10px 30px -10px rgba(2, 6, 23, 0.45);
+        }
+        .hero-section::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(600px 300px at 15% 20%, rgba(37, 99, 235, 0.25), transparent 60%),
+                radial-gradient(500px 280px at 85% 70%, rgba(59, 130, 246, 0.18), transparent 60%);
+            pointer-events: none;
+        }
+        .hero-section .container { position: relative; }
+        .icon-box i { transition: transform 0.3s ease; }
+        .feature-card:hover .icon-box i { transform: scale(1.12); }
+        .pricing-card:hover {
+            box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.18);
+            transform: translateY(-4px);
+        }
+        ::selection { background: rgba(37, 99, 235, 0.25); }
     </style>
 </head>
 <body>
@@ -329,11 +352,22 @@
                                 <span class="price-number">{{ plan.prix_mensuel|floatformat:0 }}</span>
                                 <span class="text-muted">FCFA / mois</span>
                             {% endif %}
+                            <div class="mt-2">
+                                <span class="badge bg-light text-primary border fw-semibold">
+                                    <i class="bi bi-calendar3 me-1"></i>Durée : {{ plan.duree_libelle }}
+                                </span>
+                            </div>
                         </div>
                         <ul class="list-unstyled mb-4">
                             <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> {% if plan.max_commandes_mois >= 99999 %}Commandes illimitées{% else %}Jusqu'à {{ plan.max_commandes_mois }} commandes / mois{% endif %}</li>
                             <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> {{ plan.max_utilisateurs }} utilisateur{{ plan.max_utilisateurs|pluralize }}</li>
                             <li class="mb-3 {% if not plan.support_prioritaire %}text-muted{% endif %}"><i class="bi bi-{% if plan.support_prioritaire %}check2 text-primary{% else %}x text-secondary{% endif %} me-2"></i> Support prioritaire</li>
+                            {% for f in plan.get_incluses_list %}
+                            <li class="mb-3"><i class="bi bi-check2 text-primary me-2"></i> {{ f }}</li>
+                            {% endfor %}
+                            {% for f in plan.get_exclues_list %}
+                            <li class="mb-3 text-muted"><i class="bi bi-x text-secondary me-2"></i> {{ f }}</li>
+                            {% endfor %}
                         </ul>
                         <a href="{% url 'core:inscription_saas' %}" class="btn {% if plan.est_populaire %}btn-primary fw-bold{% else %}btn-outline-primary{% endif %} w-100 py-2">
                             {% if plan.prix_mensuel == 0 %}Commencer l'essai gratuit{% else %}Choisir cette offre{% endif %}

@@ -52,6 +52,11 @@ def superadmin_dashboard(request):
 
     # Revenu Mensuel Récurrent (MRR) des abonnements actifs non expirés
     mrr = actifs.aggregate(total=Sum('plan__prix_mensuel'))['total'] or 0
+
+    # Montant global encaissé (tous les paiements d'abonnements enregistrés)
+    from .models import PaiementAbonnement
+    montant_global_abonnements = PaiementAbonnement.objects.aggregate(
+        total=Sum('montant'))['total'] or 0
     expirations_proches = actifs.filter(
         date_fin__range=[aujourdhui, dans_7_jours]).count()
 
@@ -65,6 +70,7 @@ def superadmin_dashboard(request):
         'boutiques_essai': boutiques_essai,
         'boutiques_suspendues': boutiques_suspendues,
         'mrr': mrr,
+        'montant_global_abonnements': montant_global_abonnements,
         'expirations_proches': expirations_proches,
         'taux_conversion': taux_conversion,
         'today': aujourdhui,
@@ -211,6 +217,13 @@ def modifier_boutique(request, boutique_id):
     return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
 
 
+def _int_or_none(valeur):
+    try:
+        return int(valeur)
+    except (TypeError, ValueError):
+        return None
+
+
 @superadmin_required
 def changer_plan_boutique(request, boutique_id):
     """Attribue (ou change) l'abonnement : nouveau plan, statut actif et
@@ -219,13 +232,17 @@ def changer_plan_boutique(request, boutique_id):
     if request.method == 'POST':
         plan = get_object_or_404(PlanAbonnement, id=request.POST.get('plan_id'))
         try:
-            mois = max(1, int(request.POST.get('mois', 1)))
+            mois = int(request.POST.get('mois', plan.duree_mois or 3))
+            if mois < 0:
+                mois = 0
         except ValueError:
-            mois = 1
+            mois = plan.duree_mois or 3
         abonnement, _ = Abonnement.objects.get_or_create(atelier=atelier)
         abonnement.plan = plan
         abonnement.statut = 'ACTIF'
-        abonnement.date_fin = date.today() + timedelta(days=30 * mois)
+        # Durée 0 = période d'essai (14 jours) ; sinon 30 jours par mois.
+        nb_jours = 14 if mois == 0 else 30 * mois
+        abonnement.date_fin = date.today() + timedelta(days=nb_jours)
         abonnement.save()
         messages.success(
             request,
@@ -393,6 +410,12 @@ def liste_abonnements(request):
 @superadmin_required
 def ajouter_abonnement(request):
     if request.method == 'POST':
+        try:
+            duree = int(request.POST.get('duree_mois') or 3)
+        except ValueError:
+            duree = 3
+        if duree not in dict(PlanAbonnement.DUREE_CHOICES):
+            duree = 3
         PlanAbonnement.objects.create(
             nom=request.POST.get('nom') or 'Nouvelle offre',
             description=request.POST.get('description', ''),
@@ -402,6 +425,9 @@ def ajouter_abonnement(request):
             support_prioritaire=request.POST.get('support_prioritaire') == 'on',
             est_populaire=request.POST.get('est_populaire') == 'on',
             actif=request.POST.get('actif') == 'on',
+            duree_mois=duree,
+            fonctionnalites_incluses=request.POST.get('fonctionnalites_incluses', ''),
+            fonctionnalites_exclues=request.POST.get('fonctionnalites_exclues', ''),
         )
         messages.success(request, "L'offre d'abonnement a été créée.")
     return redirect('saas_admin:abonnements')
@@ -421,6 +447,16 @@ def modifier_abonnement(request, formule_id):
         formule.support_prioritaire = request.POST.get('support_prioritaire') == 'on'
         formule.est_populaire = request.POST.get('est_populaire') == 'on'
         formule.actif = request.POST.get('actif') == 'on'
+        try:
+            duree = int(request.POST.get('duree_mois') or formule.duree_mois)
+        except ValueError:
+            duree = formule.duree_mois
+        if duree in dict(PlanAbonnementDuree := PlanAbonnement.DUREE_CHOICES):
+            formule.duree_mois = duree
+        formule.fonctionnalites_incluses = request.POST.get(
+            'fonctionnalites_incluses', formule.fonctionnalites_incluses)
+        formule.fonctionnalites_exclues = request.POST.get(
+            'fonctionnalites_exclues', formule.fonctionnalites_exclues)
         formule.save()
         messages.success(request, "L'offre d'abonnement a été mise à jour.")
     return redirect('saas_admin:abonnements')
@@ -576,11 +612,19 @@ def superadmin_parametres(request):
 @superadmin_required
 def sauvegardes_systeme(request):
     if request.method == 'POST':
+        choix = (request.POST.get('boutique') or 'TOUTES').strip()
+        if choix and choix != 'TOUTES':
+            atelier = get_object_or_404(Atelier, id=_int_or_none(choix))
+            nom = creer_sauvegarde_systeme(atelier=atelier)
+            messages.success(
+                request, f"Sauvegarde de la boutique « {atelier.nom} » créée : {nom}")
+            return redirect('saas_admin:sauvegardes_systeme')
         nom = creer_sauvegarde_systeme()
-        messages.success(request, f"Sauvegarde système créée : {nom}")
+        messages.success(request, f"Sauvegarde système (toutes boutiques) créée : {nom}")
         return redirect('saas_admin:sauvegardes_systeme')
     return render(request, 'saas_admin/sauvegardes_systeme.html', {
         'sauvegardes': lister_sauvegardes_systeme(),
+        'boutiques': Atelier.objects.all().order_by('nom'),
     })
 
 

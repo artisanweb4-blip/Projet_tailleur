@@ -79,6 +79,11 @@
                     <small class="text-muted fs-6">/ mois</small>
                 </h1>
                 {% if plan.description %}<p class="text-muted small mt-2 mb-3">{{ plan.description }}</p>{% endif %}
+                <div class="mb-3">
+                    <span class="badge bg-light text-primary border">
+                        <i class="bi bi-calendar3 me-1"></i>{{ plan.duree_libelle }}
+                    </span>
+                </div>
                 <ul class="list-unstyled mt-3 mb-4 text-start mx-auto small">
                     <li class="mb-1">
                         ✅ {% if plan.max_commandes_mois >= 99999 %}Commandes illimitées{% else %}{{ plan.max_commandes_mois }} commandes / mois{% endif %}
@@ -87,6 +92,12 @@
                     <li class="mb-1">
                         {% if plan.support_prioritaire %}✅ Support prioritaire{% else %}➖ Support standard{% endif %}
                     </li>
+                    {% for f in plan.get_incluses_list %}
+                    <li class="mb-1">✅ {{ f }}</li>
+                    {% endfor %}
+                    {% for f in plan.get_exclues_list %}
+                    <li class="mb-1 text-muted">❌ {{ f }}</li>
+                    {% endfor %}
                 </ul>
                 <div class="mt-auto">
                     {% if peut.parametres %}

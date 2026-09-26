@@ -289,8 +289,11 @@ def dossier_systeme():
     return dossier
 
 
-def creer_sauvegarde_systeme():
-    """Classeur Excel de TOUTES les données de la plateforme (archivage)."""
+def creer_sauvegarde_systeme(atelier=None):
+    """Classeur Excel des données — toute la plateforme (atelier=None) ou
+    une seule boutique (atelier fourni). Les modèles communs de la plateforme
+    (formules d'abonnement) sont toujours exportés intégralement ; les
+    modèles locataires sont filtrés par atelier le cas échéant."""
     from django.contrib.auth.models import User
     from .models import Atelier, Abonnement, PlanAbonnement, Profil
 
@@ -298,7 +301,7 @@ def creer_sauvegarde_systeme():
     wb.remove(wb.active)
     infos = wb.create_sheet('Informations')
     infos.append(['Application', 'Projet_tailleur'])
-    infos.append(['Portée', 'Plateforme complète (toutes boutiques)'])
+    infos.append(['Portée', atelier.nom + ' (boutique unique)' if atelier else 'Plateforme complète (toutes boutiques)'])
     infos.append(['Créée le', datetime.now().strftime('%d/%m/%Y %H:%M')])
 
     def nettoie(valeur):
@@ -314,29 +317,46 @@ def creer_sauvegarde_systeme():
         return ws
 
     for nom in MODELES_SAUVEGARDES:
-        qs = list(_modele(nom).objects.all().order_by('pk'))
-        contenu = json.loads(serializers.serialize('json', qs))
+        qs = _modele(nom).objects.all().order_by('pk')
+        if atelier is not None:
+            champs_modele = {f.name for f in _modele(nom)._meta.get_fields()}
+            if 'atelier' in champs_modele:
+                qs = qs.filter(atelier=atelier)
+        contenu = json.loads(serializers.serialize('json', list(qs)))
         _ecrire_classeur_systeme(wb, nom, contenu, _modele(nom))
 
+    qs_ateliers = Atelier.objects.all().order_by('pk')
+    qs_abos = Abonnement.objects.all().order_by('pk')
+    qs_profils = Profil.objects.all().order_by('pk')
+    qs_users = User.objects.all().order_by('pk')
+    if atelier is not None:
+        qs_ateliers = qs_ateliers.filter(pk=atelier.pk)
+        qs_abos = qs_abos.filter(atelier=atelier)
+        qs_profils = qs_profils.filter(atelier=atelier)
+        qs_users = qs_users.filter(profil__atelier=atelier)
     feuille('Ateliers', ['ID', 'Nom', 'Ville', 'Créé le', 'Actif'],
             [[a.id, a.nom, getattr(a, 'ville', ''), a.date_creation, a.est_actif]
-             for a in Atelier.objects.all().order_by('pk')])
+             for a in qs_ateliers])
     feuille('Abonnements', ['ID', 'Atelier', 'Plan', 'Statut', 'Début', 'Fin'],
             [[ab.id, str(ab.atelier), ab.plan.nom if ab.plan else '', ab.statut,
               ab.date_debut, ab.date_fin]
-             for ab in Abonnement.objects.all().order_by('pk')])
-    feuille('Formules', ['ID', 'Nom', 'Prix mensuel'],
-            [[p.id, p.nom, float(p.prix_mensuel)]
+             for ab in qs_abos])
+    feuille('Formules', ['ID', 'Nom', 'Prix mensuel', 'Durée'],
+            [[p.id, p.nom, float(p.prix_mensuel), p.duree_libelle]
              for p in PlanAbonnement.objects.all().order_by('pk')])
     feuille('Profils', ['ID', 'Utilisateur', 'Rôle', 'Atelier', 'Fondateur'],
             [[p.id, p.user.username, p.role,
               p.atelier.nom if p.atelier else '', p.est_fondateur]
-             for p in Profil.objects.all().order_by('pk')])
+             for p in qs_profils])
     feuille('Comptes', ['ID', 'Nom d’utilisateur', 'Courriel', 'Prénom', 'Nom', 'Actif'],
             [[u.id, u.username, u.email, u.first_name, u.last_name, u.is_active]
-             for u in User.objects.all().order_by('pk')])
+             for u in qs_users])
 
-    nom = f"sauvegarde_systeme_{datetime.now():%Y%m%d-%H%M%S}.xlsx"
+    if atelier is not None:
+        slug = re.sub(r'[^A-Za-z0-9_-]+', '-', atelier.nom)[:30].strip('-') or 'boutique'
+        nom = f"sauvegarde_boutique_{slug}_{datetime.now():%Y%m%d-%H%M%S}.xlsx"
+    else:
+        nom = f"sauvegarde_systeme_{datetime.now():%Y%m%d-%H%M%S}.xlsx"
     wb.save(dossier_systeme() / nom)
     return nom
 

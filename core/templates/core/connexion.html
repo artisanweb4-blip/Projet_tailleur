@@ -10,8 +10,12 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     
     <style>
+        :root {
+            --primary-color: #2b59c3;
+            --accent-color: #2563eb;
+        }
         body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #312e81 100%);
+            background: linear-gradient(160deg, #0b1220 0%, #10234a 55%, #1e3a8a 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -31,8 +35,8 @@
             transition: all 0.2s ease-in-out;
         }
         .form-control:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
         }
         .input-group-text {
             background-color: #f8fafc;
@@ -50,12 +54,12 @@
             padding: 0.875rem 1.5rem;
             font-weight: 600;
             letter-spacing: 0.3px;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
             transition: all 0.2s ease;
         }
         .btn-primary-custom:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(79, 70, 229, 0.45);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
             background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
         }
     </style>
@@ -69,7 +73,7 @@
 <div class="text-center text-white mb-4">
     <a href="{% url 'core:connexion' %}" class="text-white text-decoration-none d-inline-flex align-items-center gap-2 mb-2">
         <i class="fa-solid fa-scissors fa-2x text-warning"></i>
-        <span class="h3 fw-bold m-0">Atelier Tailleur</span>
+        <span class="h3 fw-bold m-0">TailleurPro</span>
     </a>
 </div>
 

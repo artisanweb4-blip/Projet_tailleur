@@ -228,6 +228,13 @@ class Profil(models.Model):
 # 3. ABONNEMENTS SAAS
 # ==========================================
 class PlanAbonnement(models.Model):
+    DUREE_CHOICES = (
+        (0, "Période d'essai (14 jours)"),
+        (3, "3 mois"),
+        (6, "6 mois"),
+        (12, "12 mois (annuel)"),
+    )
+
     nom = models.CharField(max_length=50)
     prix_mensuel = models.DecimalField(max_digits=10, decimal_places=2)
     max_commandes_mois = models.PositiveIntegerField(default=50)
@@ -240,9 +247,33 @@ class PlanAbonnement(models.Model):
         default=True,
         help_text="Décocher pour masquer l'offre de la landing et de l'application.",
     )
+    # Durée standard de la formule (utilisée par défaut lors de l'attribution)
+    duree_mois = models.PositiveSmallIntegerField(
+        default=3, choices=DUREE_CHOICES,
+        help_text="Période d'essai (14 jours), 3, 6 ou 12 mois.",
+    )
+    # Fonctionnalités affichées sur les cartes d'offres (une par ligne)
+    fonctionnalites_incluses = models.TextField(
+        blank=True, default='',
+        help_text="Fonctionnalités PERMISES, une par ligne.",
+    )
+    fonctionnalites_exclues = models.TextField(
+        blank=True, default='',
+        help_text="Fonctionnalités NON permises, une par ligne.",
+    )
 
     def __str__(self):
         return f"{self.nom} - {self.prix_mensuel}"
+
+    def get_incluses_list(self):
+        return [f.strip() for f in self.fonctionnalites_incluses.splitlines() if f.strip()]
+
+    def get_exclues_list(self):
+        return [f.strip() for f in self.fonctionnalites_exclues.splitlines() if f.strip()]
+
+    @property
+    def duree_libelle(self):
+        return dict(self.DUREE_CHOICES).get(self.duree_mois, f'{self.duree_mois} mois')
 
 
 class Abonnement(models.Model):

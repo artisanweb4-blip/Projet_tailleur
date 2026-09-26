@@ -10,8 +10,12 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
+        :root {
+            --primary-color: #2b59c3;
+            --accent-color: #2563eb;
+        }
         body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #312e81 100%);
+            background: linear-gradient(160deg, #0b1220 0%, #10234a 55%, #1e3a8a 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
         }
@@ -25,7 +29,7 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            color: #4f46e5;
+            color: var(--primary-color);
             font-weight: 700;
             margin-top: 1.5rem;
             margin-bottom: 1.25rem;
@@ -33,8 +37,8 @@
             border-bottom: 2px solid #f1f5f9;
         }
         .section-badge {
-            background: #e0e7ff;
-            color: #4f46e5;
+            background: #dbeafe;
+            color: var(--primary-color);
             width: 28px;
             height: 28px;
             border-radius: 50%;
@@ -51,8 +55,8 @@
             transition: all 0.2s ease-in-out;
         }
         .form-control:focus, .form-select:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
         }
         .input-group-text {
             background-color: #f8fafc;
@@ -70,12 +74,12 @@
             padding: 0.875rem 1.5rem;
             font-weight: 600;
             letter-spacing: 0.3px;
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
             transition: all 0.2s ease;
         }
         .btn-primary-custom:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(79, 70, 229, 0.45);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
             background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
         }
         .badge-trial {
@@ -98,7 +102,7 @@
             <div class="text-center text-white mb-4">
                 <a href="{% url 'core:connexion' %}" class="text-white text-decoration-none d-inline-flex align-items-center gap-2 mb-2">
                     <i class="fa-solid fa-scissors fa-2x text-warning"></i>
-                    <span class="h3 fw-bold m-0">Atelier Tailleur</span>
+                    <span class="h3 fw-bold m-0">TailleurPro</span>
                 </a>
             </div>
 
@@ -175,6 +179,30 @@
                         <div class="section-header">
                             <span class="section-badge">2</span>
                             <span class="h6 mb-0 text-uppercase fw-bold">Compte Administrateur</span>
+                        </div>
+
+                        <!-- Prénom & Nom -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-secondary small">{{ form.first_name.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa-solid fa-id-card"></i></span>
+                                    {{ form.first_name }}
+                                </div>
+                                {% if form.first_name.errors %}
+                                    <div class="text-danger small mt-1"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.first_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-semibold text-secondary small">{{ form.last_name.label }}</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fa-solid fa-id-card"></i></span>
+                                    {{ form.last_name }}
+                                </div>
+                                {% if form.last_name.errors %}
+                                    <div class="text-danger small mt-1"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.last_name.errors.0 }}</div>
+                                {% endif %}
+                            </div>
                         </div>
 
                         <!-- Nom d'utilisateur -->

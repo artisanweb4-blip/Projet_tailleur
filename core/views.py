@@ -3152,8 +3152,8 @@ def souscrire_plan(request, plan_id):
     """Souscrire (ou renouveler) un abonnement pour l'atelier — ADMIN seul.
 
     Règles :
-      * plan gratuit (essai)      -> 14 jours, comme à l'inscription ;
-      * plan payant               -> 30 jours ;
+      * durée 0 (période d'essai) -> 14 jours, comme à l'inscription ;
+      * durée N mois              -> N × 30 jours (30 jours si durée manquante) ;
       * même plan encore actif    -> la date de fin est repoussée (renouvellement) ;
       * changement de plan / expiré -> la période repart d'aujourd'hui.
 
@@ -3165,7 +3165,11 @@ def souscrire_plan(request, plan_id):
     plan = get_object_or_404(PlanAbonnement, pk=plan_id)
     atelier = request.atelier
     aujourdhui = timezone.now().date()
-    jours = 14 if plan.prix_mensuel == 0 else 30
+    duree = getattr(plan, 'duree_mois', None)
+    if duree is None:
+        jours = 14 if plan.prix_mensuel == 0 else 30
+    else:
+        jours = 14 if duree == 0 else 30 * duree
 
     abonnement = getattr(atelier, 'abonnement', None)
     if abonnement is None:

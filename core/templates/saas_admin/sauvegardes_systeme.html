@@ -7,12 +7,19 @@
 <div class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-3">
     <div>
         <h4 class="fw-bold mb-0">Sauvegardes système</h4>
-        <small class="text-muted">Archives Excel de toutes les données de la plateforme</small>
+        <small class="text-muted">Archives Excel — toute la plateforme ou une seule boutique</small>
     </div>
-    <form method="POST" class="d-inline">
+    <form method="POST" class="d-flex align-items-center gap-2 flex-wrap">
         {% csrf_token %}
+        <select name="boutique" class="form-select form-select-sm" style="min-width:240px;" required
+                title="Périmètre de la sauvegarde">
+            <option value="TOUTES" selected>Toutes les boutiques (sauvegarde globale)</option>
+            {% for b in boutiques %}
+            <option value="{{ b.id }}">Atelier « {{ b.nom }} » uniquement</option>
+            {% endfor %}
+        </select>
         <button type="submit" class="btn btn-primary btn-sm fw-semibold">
-            <i class="bi bi-database-add me-1"></i> Créer une sauvegarde système
+            <i class="bi bi-database-add me-1"></i> Créer la sauvegarde
         </button>
     </form>
 </div>
