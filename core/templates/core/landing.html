@@ -170,6 +170,52 @@
         .navbar.fixed-top {
             box-shadow: 0 10px 30px -10px rgba(2, 6, 23, 0.45);
         }
+
+        /* ===== Barre de navigation (0041) : marque à gauche, boutons à l'extrême droite ===== */
+        .navbar-pro {
+            background: rgba(11, 18, 32, 0.92);
+            -webkit-backdrop-filter: blur(12px);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        .navbar-brand-pro { letter-spacing: .2px; }
+        .navbar-pro .brand-icon {
+            width: 34px; height: 34px; border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            display: inline-flex; align-items: center; justify-content: center;
+            color: #ffffff; font-size: 1rem;
+            box-shadow: 0 6px 14px -6px rgba(37, 99, 235, 0.6);
+        }
+        .nav-link-pro {
+            color: #cbd5e1 !important; font-weight: 500; position: relative;
+            padding: .55rem .85rem !important; transition: color .2s ease;
+        }
+        .nav-link-pro:hover { color: #ffffff !important; }
+        .nav-link-pro::after {
+            content: ""; position: absolute; left: .85rem; right: .85rem; bottom: 3px; height: 2px;
+            background: linear-gradient(90deg, var(--accent-color), #60a5fa);
+            border-radius: 2px; transform: scaleX(0);
+            transform-origin: left; transition: transform .25s ease;
+        }
+        .nav-link-pro:hover::after { transform: scaleX(1); }
+        .btn-ghost-pro {
+            color: #f1f5f9; border: 1px solid rgba(255,255,255,.28); background: transparent;
+            transition: all .2s ease;
+        }
+        .btn-ghost-pro:hover {
+            color: #ffffff; background: rgba(255,255,255,.08);
+            border-color: rgba(255,255,255,.45);
+        }
+        .btn-nav-cta {
+            background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
+            color: #ffffff; border: none;
+            box-shadow: 0 8px 18px -8px rgba(37, 99, 235, 0.75);
+            transition: all .2s ease;
+        }
+        .btn-nav-cta:hover {
+            color: #ffffff; transform: translateY(-1px);
+            box-shadow: 0 12px 22px -8px rgba(37, 99, 235, 0.85);
+        }
         .hero-section::before {
             content: "";
             position: absolute;
@@ -245,23 +291,24 @@
 <body>
 
     <!-- Navigation Bar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark py-3 fixed-top">
-        <div class="container">
-            <a class="navbar-brand fw-bold fs-4" href="{% url 'core:accueil' %}">
-                <i class="bi bi-scissors text-primary me-2"></i>TailleurPro
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-pro py-2 fixed-top">
+        <div class="container-fluid px-3 px-lg-5">
+            <a class="navbar-brand navbar-brand-pro fw-bold fs-4 d-flex align-items-center gap-2" href="{% url 'core:accueil' %}">
+                <span class="brand-icon"><i class="bi bi-scissors"></i></span>TailleurPro
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto me-4">
-                    <li class="nav-item"><a class="nav-link" href="#features">Fonctionnalités</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#tarifs">Tarifs</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#contact">Contact</a></li>
+                <ul class="navbar-nav mx-auto my-3 my-lg-0">
+                    <li class="nav-item"><a class="nav-link nav-link-pro" href="#features">Fonctionnalités</a></li>
+                    <li class="nav-item"><a class="nav-link nav-link-pro" href="#fonctionnement">Comment ça marche</a></li>
+                    <li class="nav-item"><a class="nav-link nav-link-pro" href="#tarifs">Tarifs</a></li>
+                    <li class="nav-item"><a class="nav-link nav-link-pro" href="#contact">Contact</a></li>
                 </ul>
-                <div class="d-flex gap-2">
-                    <a href="{% url 'core:connexion' %}" class="btn btn-outline-light px-4">Connexion</a>
-                    <a href="{% url 'core:inscription_saas' %}" class="btn btn-primary px-4 fw-semibold">Créer un compte</a>
+                <div class="d-flex gap-2 mb-3 mb-lg-0">
+                    <a href="{% url 'core:connexion' %}" class="btn btn-ghost-pro px-4">Connexion</a>
+                    <a href="{% url 'core:inscription_saas' %}" class="btn btn-nav-cta px-4 fw-semibold">Créer un compte</a>
                 </div>
             </div>
         </div>
