@@ -276,6 +276,93 @@ class PlanAbonnement(models.Model):
         return dict(self.DUREE_CHOICES).get(self.duree_mois, f'{self.duree_mois} mois')
 
 
+class ConfigurationLomopay(models.Model):
+    """Clés API LomoPay de la PLATEFORME (une seule ligne, singleton).
+
+    Modifiable depuis le back-office superadmin → Paramètres. Si aucune ligne
+    active n'existe, le module retombe sur les variables d'environnement
+    LOMOPAY_PUBLIC_KEY / LOMOPAY_SECRET_KEY (pratique en local).
+    """
+
+    cle_publique = models.CharField(max_length=120)
+    cle_secrete = models.CharField(max_length=120)
+    actif = models.BooleanField(
+        default=True,
+        help_text="Décocher pour désactiver le paiement en ligne sans effacer les clés.",
+    )
+    cree_le = models.DateTimeField(auto_now_add=True)
+    modifie_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuration LomoPay"
+
+    def save(self, *args, **kwargs):
+        # Singleton : si une ligne existe déjà, on l'écrase plutôt que d'en
+        # créer une seconde — même via objects.create() (qui force un INSERT,
+        # on neutralise donc force_insert : pk étant renseigné, Django fera
+        # un UPDATE).
+        if not self.pk and ConfigurationLomopay.objects.exists():
+            existante = ConfigurationLomopay.objects.first()
+            self.pk = existante.pk
+            self.cree_le = existante.cree_le
+            kwargs.pop('force_insert', False)
+        super().save(*args, **kwargs)
+
+    def cle_masquee(self):
+        """Version masquée de la clé secrète, pour l'affichage back-office."""
+        ske = self.cle_secrete or ''
+        return ske[:8] + '…' + ske[-4:] if len(ske) > 14 else '••••••'
+
+    def __str__(self):
+        return f"LomoPay ({self.cle_publique[:9]}…, {'actif' if self.actif else 'inactif'})"
+
+
+class LomoPayTransaction(models.Model):
+    """Trace d'un paiement d'abonnement initié via LomoPay.
+
+    `external_reference` fait le lien avec LomoPay et est renvoyé tel quel
+    dans le webhook. `evenement_id` mémorise l'idempotence (anti-doublon).
+    """
+
+    STATUTS = (
+        ('PENDING', 'En attente'),
+        ('COMPLETED', 'Payé'),
+        ('FAILED', 'Échoué / annulé'),
+    )
+
+    atelier = models.ForeignKey(
+        Atelier, on_delete=models.CASCADE, related_name='transactions_lomopay',
+    )
+    plan = models.ForeignKey(
+        'PlanAbonnement', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='+',
+    )
+    montant = models.PositiveIntegerField()
+    devise = models.CharField(max_length=3, default='XOF')
+    description = models.CharField(max_length=200, blank=True, default='')
+    external_reference = models.CharField(max_length=64, unique=True)
+    id_lomopay = models.CharField(max_length=64, blank=True, default='')
+    checkout_url = models.URLField(max_length=500, blank=True, default='')
+    methode = models.CharField(max_length=40, blank=True, default='')
+    statut = models.CharField(max_length=10, choices=STATUTS, default='PENDING')
+    evenement_id = models.CharField(
+        max_length=64, blank=True, default='',
+        help_text="Dernier id d'événement webhook traité (anti-doublon).",
+    )
+    cree_le = models.DateTimeField(auto_now_add=True)
+    maj_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-cree_le']
+        verbose_name = "Transaction LomoPay"
+
+    def __str__(self):
+        return (
+            f"{self.external_reference} — {self.atelier.nom} "
+            f"({self.montant} {self.devise}, {self.get_statut_display()})"
+        )
+
+
 class Abonnement(models.Model):
     STATUTS = (
         ('ACTIF', 'Actif'),

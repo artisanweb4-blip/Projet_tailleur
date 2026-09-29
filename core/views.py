@@ -18,11 +18,12 @@ from django.utils import timezone
 
 from .models import (
     Abonnement, Accessoire, CatalogueModele, Client, Commande, Depense,
-    Employe, LigneAccessoire, LigneCommande, Mensuration, MouvementStock,
-    Paie, Paiement, PlanAbonnement, Profil,
+    Employe, LigneAccessoire, LigneCommande, LomoPayTransaction, Mensuration,
+    MouvementStock, Paie, Paiement, PlanAbonnement, Profil,
 )
 from .decorators import droit_requis
 from .expiration import infos_expiration
+from . import lomopay
 from .sauvegarde import (
     chemin_sauvegarde, creer_sauvegarde, lister_sauvegardes,
     restaurer_sauvegarde, supprimer_sauvegarde,
@@ -3127,6 +3128,206 @@ def landing(request):
     })
 
 
+def _duree_jours(plan):
+    """Durée d'un plan en jours : 0 = essai 14 j, sinon N × 30 jours."""
+    duree = getattr(plan, 'duree_mois', None)
+    if duree is None:
+        return 14 if plan.prix_mensuel == 0 else 30
+    return 14 if duree == 0 else 30 * duree
+
+
+def _activer_abonnement(atelier, plan):
+    """Active / renouvelle l'abonnement d'un atelier (mêmes règles que la
+    souscription manuelle) et journalise la transaction LomoPay."""
+    jours = _duree_jours(plan)
+    aujourdhui = timezone.now().date()
+    abonnement = getattr(atelier, 'abonnement', None)
+    if abonnement is None:
+        Abonnement.objects.create(
+            atelier=atelier, plan=plan, statut='ACTIF',
+            date_fin=aujourdhui + timedelta(days=jours),
+        )
+    else:
+        renouvellement = (
+            abonnement.plan_id == plan.id
+            and abonnement.statut == 'ACTIF'
+            and abonnement.date_fin >= aujourdhui
+        )
+        if renouvellement:
+            abonnement.date_fin = abonnement.date_fin + timedelta(days=jours)
+        else:
+            abonnement.plan = plan
+            abonnement.date_fin = aujourdhui + timedelta(days=jours)
+        abonnement.statut = 'ACTIF'
+        abonnement.save()
+
+
+def _journaliser_paiement_loompay(tx):
+    """Inscrit l'encaissement dans le journal des abonnements (superadmin)."""
+    from saas_admin.models import PaiementAbonnement
+    mois = max(1, (getattr(tx.plan, 'duree_mois', 0) or 1))
+    PaiementAbonnement.objects.create(
+        atelier=tx.atelier,
+        montant=Decimal(str(tx.montant)),
+        mode=lomopay.mode_journal_pour_methode(tx.methode),
+        reference=tx.id_lomopay or tx.external_reference,
+        note=f"Paiement en ligne LomoPay — {tx.description or tx.external_reference}",
+        mois_couverts=mois if (tx.plan and tx.plan.duree_mois) else 1,
+        prolonge=False,  # la prolongation est gérée par le webhook ci-dessus
+        enregistre_par=None,
+    )
+
+
+def _finaliser_si_complet(tx, statut_lomopay):
+    """Si le statut LomoPay est « completed » : marque la transaction payée,
+    prolonge l'abonnement et journalise — UNE SEULE FOIS (idempotent)."""
+    if (statut_lomopay == 'completed' and tx.statut != 'COMPLETED'):
+        tx.statut = 'COMPLETED'
+        tx.save(update_fields=['statut', 'maj_le'])
+        if tx.plan is not None:
+            _activer_abonnement(tx.atelier, tx.plan)
+        _journaliser_paiement_loompay(tx)
+        return True
+    return False
+
+
+def _payer_abonnement_en_ligne(request, atelier, plan, post):
+    """Initie un paiement LomoPay pour la durée de la formule choisie et
+    redirige l'atelier vers la page de checkout."""
+    mois = getattr(plan, 'duree_mois', 0) or 0
+    if mois == 0:
+        mois = 1  # prix_mensuel > 0 avec durée « essai » : on facture 1 mois
+    montant = int(plan.prix_mensuel) * mois
+    devise = lomopay.devise_pour_api(atelier.devise)
+    ref = f"ABO-{atelier.pk}-{plan.pk}-{uuid.uuid4().hex[:10].upper()}"
+    description = f"Abonnement {plan.nom} ({mois} mois) — {atelier.nom}"
+    tx = LomoPayTransaction.objects.create(
+        atelier=atelier, plan=plan, montant=montant, devise=devise,
+        description=description, external_reference=ref,
+    )
+    base = request.build_absolute_uri('/')
+    try:
+        donnees = lomopay.creer_paiement(
+            amount=montant, currency=devise, description=description,
+            external_reference=ref,
+            return_url=base + 'lomopay/retour/',
+            webhook_url=base + 'lomopay/webhook/',
+            customer_email=(request.user.email or atelier.email or ''),
+            customer_name=(f"{request.user.first_name} {request.user.last_name}".strip()
+                           or request.user.username),
+        )
+    except lomopay.LomoPayError as e:
+        tx.statut = 'FAILED'
+        tx.save(update_fields=['statut', 'maj_le'])
+        messages.error(
+            request,
+            "Lancement du paiement impossible : "
+            f"{e} Réessayez ou contactez le support."
+        )
+        return redirect('core:mon_abonnement')
+    tx.id_lomopay = donnees.get('id', '')
+    tx.checkout_url = donnees.get('checkout_url', '')
+    tx.save(update_fields=['id_lomopay', 'checkout_url', 'maj_le'])
+    if not tx.checkout_url:
+        messages.error(request, "LomoPay n'a pas renvoyé de lien de paiement.")
+        return redirect('core:mon_abonnement')
+    return redirect(tx.checkout_url)
+
+
+@login_required
+def lomopay_retour(request):
+    """Retour de l'acheteur après le checkout LomoPay.
+
+    Le statut fait foi via le webhook ; on interroge tout de même l'API pour
+    donner un retour immédiat si le webhook n'est pas encore arrivé."""
+    atelier = request.atelier
+    if atelier is None:
+        return redirect('core:connexion')
+    tx = atelier.transactions_lomopay.filter(statut='PENDING').first()
+    if tx is None:
+        messages.info(request, "Aucun paiement en cours.")
+        return redirect('core:mon_abonnement')
+    try:
+        infos = lomopay.infos_paiement(tx.id_lomopay or tx.external_reference)
+        data = infos.get('data', {})
+        statut = data.get('status', 'pending')
+        if statut == 'completed':
+            tx.methode = data.get('method', tx.methode) or tx.methode
+            tx.save(update_fields=['methode', 'maj_le'])
+            _finaliser_si_complet(tx, 'completed')
+            messages.success(
+                request,
+                f"Paiement confirmé ! Votre abonnement "
+                f"« {tx.plan.nom if tx.plan else ''} » est actif. Merci."
+            )
+        elif statut == 'failed':
+            tx.statut = 'FAILED'
+            tx.save(update_fields=['statut', 'maj_le'])
+            messages.error(request, "Le paiement a été annulé ou a échoué.")
+        else:
+            messages.info(
+                request,
+                "Paiement en cours de confirmation. Il sera validé dans "
+                "quelques instants — rechargez la page si besoin."
+            )
+    except lomopay.LomoPayError:
+        messages.info(
+            request,
+            "Paiement en cours de confirmation. Il sera validé "
+            "automatiquement dès notification de LomoPay."
+        )
+    return redirect('core:mon_abonnement')
+
+
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+
+
+@csrf_exempt
+@require_POST
+def lomopay_webhook(request):
+    """Notification de statut LomoPay (signée HMAC-SHA256).
+
+    Sécurité : la clé secrète est verifyée via l'en-tête X-LomoPay-Signature,
+    et l'id d'événement évite tout double traitement (LomoPay rejoue en cas
+    de timeout)."""
+    corps = request.body
+    if not lomopay.signature_valide(corps, request.META.get('HTTP_X_LOMOPAY_SIGNATURE', '')):
+        return HttpResponse('invalid signature', status=401)
+    try:
+        evt = json.loads(corps.decode('utf-8', errors='replace'))
+    except ValueError:
+        return HttpResponse('invalid json', status=400)
+
+    evt_id = evt.get('id', '')
+    data = evt.get('data', {}) or {}
+    if evt.get('type') != 'payment.succeeded':
+        # Événement d'un autre service LomoPay (boost, recharge, vcards) :
+        # on accuse réception sans traiter.
+        return JsonResponse({'ok': True, 'ignores': True})
+
+    ref = data.get('external_reference', '')
+    tx = LomoPayTransaction.objects.filter(external_reference=ref).first()
+    if tx is None:
+        # Paiement inconnu de nous : on répond 200 pour stopper les relances.
+        return JsonResponse({'ok': True, 'inconnu': True})
+    if tx.evenement_id == evt_id and tx.statut == 'COMPLETED':
+        return JsonResponse({'ok': True, 'doublon': True})
+
+    statut = data.get('status', 'pending')
+    if statut == 'completed':
+        tx.methode = data.get('method', '') or tx.methode
+        tx.id_lomopay = data.get('transaction_id', '') or tx.id_lomopay
+        tx.evenement_id = evt_id
+        tx.save(update_fields=['methode', 'id_lomopay', 'evenement_id', 'maj_le'])
+        _finaliser_si_complet(tx, 'completed')
+    elif statut == 'failed':
+        tx.statut = 'FAILED'
+        tx.evenement_id = evt_id
+        tx.save(update_fields=['statut', 'evenement_id', 'maj_le'])
+    return JsonResponse({'ok': True})
+
+
 @login_required
 def mon_abonnement(request):
     """Page « Abonnements & Offres » : abonnement en cours + grille des plans.
@@ -3149,6 +3350,11 @@ def mon_abonnement(request):
         'abonnement_expire': bool(abonnement) and abonnement.date_fin < aujourdhui,
         'plans': PlanAbonnement.objects.filter(actif=True).order_by('prix_mensuel'),
         'aujourdhui': aujourdhui,
+        'paiement_en_ligne': lomopay.est_actif(),
+        'transaction_en_cours': (
+            atelier.transactions_lomopay.filter(statut='PENDING')
+            .select_related('plan').first()
+        ),
     })
 
 
@@ -3176,6 +3382,12 @@ def souscrire_plan(request, plan_id):
     plan = get_object_or_404(PlanAbonnement, pk=plan_id)
     atelier = request.atelier
     aujourdhui = timezone.now().date()
+
+    # Plan payant + LomoPay configuré : on lance le paiement en ligne
+    # au lieu d'activer immédiatement. Le webhook finalisera l'abonnement.
+    if plan.prix_mensuel > 0 and lomopay.est_actif():
+        return _payer_abonnement_en_ligne(request, atelier, plan, request.POST)
+
     duree = getattr(plan, 'duree_mois', None)
     if duree is None:
         jours = 14 if plan.prix_mensuel == 0 else 30

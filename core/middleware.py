@@ -65,6 +65,10 @@ class AbonnementExpireMiddleware:
         '/deconnexion/',
         '/static/',
         '/media/',
+        # Paiement LomoPay : le retour doit être accessible aux boutiques
+        # expirées (sinon elles ne peuvent plus payer !) ; le webhook est
+        # public et hors session.
+        '/lomopay/',
     )
 
     def __init__(self, get_response):

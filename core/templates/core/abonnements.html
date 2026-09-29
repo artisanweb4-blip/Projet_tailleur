@@ -54,6 +54,22 @@
     </div>
 {% endif %}
 
+{% if transaction_en_cours %}
+<div class="alert alert-warning d-flex align-items-center shadow-sm" role="alert">
+    <i class="bi bi-hourglass-split fs-4 me-3"></i>
+    <div class="flex-grow-1">
+        <strong>Paiement en attente :</strong>
+        {{ transaction_en_cours.description }}
+        — {{ transaction_en_cours.montant }} {{ transaction_en_cours.devise }}.
+        {% if transaction_en_cours.checkout_url %}
+        <a href="{{ transaction_en_cours.checkout_url }}" class="alert-link">Reprendre le paiement</a>
+        ou
+        {% endif %}
+        <a href="{% url 'core:lomopay_retour' %}" class="alert-link">actualiser le statut</a>.
+    </div>
+</div>
+{% endif %}
+
 <!-- ============ Grille des offres ============ -->
 <h2 class="h4 text-center mb-4">Nos offres d'abonnement</h2>
 {% if plans %}
@@ -104,9 +120,17 @@
                     <form method="post" action="{% url 'core:souscrire_plan' plan.id %}">
                         {% csrf_token %}
                         {% if abonnement_actuel.plan_id == plan.id and not abonnement_expire %}
-                            <button type="submit" class="btn btn-lg btn-outline-primary w-100">Renouveler (+30 jours)</button>
+                            <button type="submit" class="btn btn-lg btn-outline-primary w-100">
+                                {% if plan.prix_mensuel > 0 and paiement_en_ligne %}Renouveler — payer en ligne{% else %}Renouveler (+{{ plan.duree_libelle }}){% endif %}
+                            </button>
                         {% else %}
-                            <button type="submit" class="btn btn-lg btn-primary w-100">Choisir cette offre</button>
+                            <button type="submit" class="btn btn-lg btn-primary w-100">
+                                {% if plan.prix_mensuel > 0 and paiement_en_ligne %}
+                                    <i class="bi bi-credit-card me-1"></i>Payer en ligne
+                                {% else %}
+                                    {% if plan.prix_mensuel > 0 %}Choisir (paiement à la remise){% else %}Choisir cette offre{% endif %}
+                                {% endif %}
+                            </button>
                         {% endif %}
                     </form>
                     {% else %}
@@ -122,7 +146,12 @@
     {% endfor %}
 </div>
 <p class="text-center text-muted small mb-0">
-            Paiement en ligne (Orange Money, Wave) à venir — la souscription est enregistrée immédiatement pour votre atelier.
+    {% if paiement_en_ligne %}
+        <i class="bi bi-shield-check me-1 text-primary"></i>
+        Paiement en ligne sécurisé via LomoPay — Mobile Money (Orange Money, Wave…) et cartes bancaires.
+    {% else %}
+        Paiement à la remise (espèces, Orange Money, Wave) — la souscription est enregistrée immédiatement par la plateforme.
+    {% endif %}
 </p>
 {% else %}
 <div class="alert alert-secondary text-center">

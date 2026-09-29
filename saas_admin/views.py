@@ -598,13 +598,50 @@ def changer_statut_utilisateur(request, user_id):
 @superadmin_required
 def superadmin_parametres(request):
     if request.method == 'POST':
-        messages.success(request, "Les paramètres globaux ont été mis à jour avec succès.")
+        if request.POST.get('action') == 'lomopay':
+            _enregistrer_cles_lomopay(request)
+        else:
+            messages.success(request, "Les paramètres globaux ont été mis à jour avec succès.")
         return redirect('saas_admin:superadmin_parametres')
 
+    from core.models import ConfigurationLomopay
     context = {
         'active_tab': 'parametres',
+        'lomopay_config': ConfigurationLomopay.objects.first(),
     }
     return render(request, 'saas_admin/parametres.html', context)
+
+
+def _enregistrer_cles_lomopay(request):
+    """Crée ou met à jour la configuration LomoPay de la plateforme.
+
+    Si une clé publique est déjà enregistrée et que les champs sont laissés
+    vides, on ne touche à rien (les clés sont masquées à l'écran) ; la case
+    « actif » seule est appliquée."""
+    from core.models import ConfigurationLomopay
+    cle_publique = (request.POST.get('cle_publique') or '').strip()
+    cle_secrete = (request.POST.get('cle_secrete') or '').strip()
+    actif = request.POST.get('lomopay_actif') == 'on'
+    cfg = ConfigurationLomopay.objects.first()
+    if cfg is None:
+        if not cle_publique or not cle_secrete:
+            messages.error(request, "Renseignez la clé publique ET la clé secrète pour activer LomoPay.")
+            return
+        ConfigurationLomopay.objects.create(
+            cle_publique=cle_publique, cle_secrete=cle_secrete, actif=actif)
+        messages.success(request, "Clés LomoPay enregistrées — paiement en ligne désormais disponible.")
+        return
+    # Mise à jour : champs vides = conserver la valeur en place
+    if cle_publique:
+        cfg.cle_publique = cle_publique
+    if cle_secrete:
+        cfg.cle_secrete = cle_secrete
+    cfg.actif = actif
+    cfg.save()
+    messages.success(
+        request,
+        "Configuration LomoPay mise à jour "
+        f"(paiement en ligne {'activé' if actif else 'désactivé'}).")
 
 # ==========================================
 # SAUVEGARDES SYSTÈME (super-admin)
