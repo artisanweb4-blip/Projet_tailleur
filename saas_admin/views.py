@@ -624,8 +624,10 @@ def _enregistrer_cles_lomopay(request):
     actif = request.POST.get('lomopay_actif') == 'on'
     cfg = ConfigurationLomopay.objects.first()
     if cfg is None:
-        if not cle_publique or not cle_secrete:
-            messages.error(request, "Renseignez la clé publique ET la clé secrète pour activer LomoPay.")
+        # La clé publique est facultative : l'API LomoPay n'exige que
+        # X-Secret-Key (mesuré en test live 2026-09-29).
+        if not cle_secrete:
+            messages.error(request, "Renseignez au moins la clé secrète (sk_…) pour activer LomoPay.")
             return
         ConfigurationLomopay.objects.create(
             cle_publique=cle_publique, cle_secrete=cle_secrete, actif=actif)

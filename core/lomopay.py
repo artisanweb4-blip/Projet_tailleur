@@ -26,6 +26,9 @@ import urllib.request
 
 BASE = 'https://lomopay.net/api/v1'
 TIMEOUT = 25
+# User-Agent déclaré : sans lui, le pare-feu (Cloudflare err. 1010) rejette
+# l'agent urllib par défaut de Python — mesuré en test live 2026-09-29.
+USER_AGENT = 'TailleurGestionSaaS/1.0 (+https://lomopay.net)'
 
 
 class LomoPayError(Exception):
@@ -41,10 +44,11 @@ def get_config():
     cfg = ConfigurationLomopay.objects.filter(actif=True).first()
     if cfg is not None:
         return cfg
-    # Secours : variables d'environnement
+    # Secours : variables d'environnement. La clé publique est facultative :
+    # l'API accepte X-Secret-Key seule (mesuré en test live 2026-09-29).
     pk = os.environ.get('LOMOPAY_PUBLIC_KEY', '').strip()
     sk = os.environ.get('LOMOPAY_SECRET_KEY', '').strip()
-    if pk and sk:
+    if sk:
         class _Cfg:  # simple adaptateur
             cle_publique, cle_secrete, actif = pk, sk, True
         return _Cfg()
@@ -69,6 +73,10 @@ def appel_api(chemin, methode='GET', payload=None):
     req.add_header('X-Public-Key', cfg.cle_publique)
     req.add_header('X-Secret-Key', cfg.cle_secrete)
     req.add_header('Accept', 'application/json')
+    # Sans User-Agent explicite, le pare-feu de lomopay.net (Cloudflare,
+    # erreur 1010) bloque l'agent urllib par défaut de Python. Mesuré en
+    # test live 2026-09-29 : 403 sans UA, 200 avec UA identifié.
+    req.add_header('User-Agent', USER_AGENT)
     if donnees is not None:
         req.add_header('Content-Type', 'application/json')
     try:

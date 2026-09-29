@@ -314,7 +314,9 @@ class ConfigurationLomopay(models.Model):
         return ske[:8] + '…' + ske[-4:] if len(ske) > 14 else '••••••'
 
     def __str__(self):
-        return f"LomoPay ({self.cle_publique[:9]}…, {'actif' if self.actif else 'inactif'})"
+        pk = self.cle_publique or ''
+        identifiant = (pk[:9] + '…') if pk else 'clé secrète seule'
+        return f"LomoPay ({identifiant}, {'actif' if self.actif else 'inactif'})"
 
 
 class LomoPayTransaction(models.Model):

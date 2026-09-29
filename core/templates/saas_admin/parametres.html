@@ -97,13 +97,13 @@
                 <input type="hidden" name="action" value="lomopay">
                 <div class="row g-3">
                     <div class="col-lg-6">
-                        <label class="form-label small fw-semibold">Clé publique (pk_live_… / pk_test_…)</label>
+                        <label class="form-label small fw-semibold">Clé publique (pk_live_… / pk_test_…) — optionnelle</label>
                         <input type="text" name="cle_publique" class="form-control" autocomplete="off"
-                               placeholder="pk_live_…">
+                               placeholder="pk_live_… (vérifie la clé, LomoPay n'exige que la clé secrète)">
                         {% if lomopay_config %}<div class="form-text small">Actuelle : <code>{{ lomopay_config.cle_publique|slice:':9' }}…</code> — laisser vide pour conserver.</div>{% endif %}
                     </div>
                     <div class="col-lg-6">
-                        <label class="form-label small fw-semibold">Clé secrète (sk_live_… / sk_test_…)</label>
+                        <label class="form-label small fw-semibold">Clé secrète (sk_live_… / sk_test_…) — requise</label>
                         <input type="password" name="cle_secrete" class="form-control" autocomplete="new-password"
                                placeholder="sk_live_…">
                         {% if lomopay_config %}<div class="form-text small">Actuelle : <code>{{ lomopay_config.cle_masquee }}</code> — laisser vide pour conserver.</div>{% endif %}
