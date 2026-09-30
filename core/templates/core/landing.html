@@ -278,6 +278,8 @@
         .cta-band::before {
             content: ""; position: absolute; inset: 0;
             background: radial-gradient(420px 240px at 80% 20%, rgba(96,165,250,.25), transparent 60%);
+            pointer-events: none;
+        }
         /* ===== Captures produit (0043) ===== */
         .carousel-pro {
             background: linear-gradient(150deg, #0b1220 0%, #12264f 60%, #1d4ed8 135%);
@@ -311,8 +313,6 @@
             transition: transform .4s ease;
         }
         .cta-visual:hover { transform: rotate(0deg) scale(1.015); }
-            pointer-events: none;
-        }
         .cta-band .badge { background: rgba(96,165,250,.18); border: 1px solid rgba(147,197,253,.35); color: #bfdbfe; }
 
         .footer-rich { background: #0b1220; color: #94a3b8; }
