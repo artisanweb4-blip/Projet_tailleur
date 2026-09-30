@@ -1,8 +1,14 @@
+{% load static %}
 {# {% load static %}
 {% load trad %} #}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <link rel="icon" type="image/x-icon" href="{% static 'core/img/brand/favicon.ico' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'core/img/brand/favicon-32.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'core/img/brand/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="192x192" href="{% static 'core/img/brand/icon-192.png' %}">
+    <meta name="theme-color" content="#2563eb">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% if current_atelier %}{{ current_atelier.nom }}{% else %}TailleurPro{% endif %} - Tableau de bord{% endblock %}</title>
