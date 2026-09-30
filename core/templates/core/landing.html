@@ -291,7 +291,11 @@
         }
         .carousel-pro .carousel-inner { border-radius: 14px; overflow: hidden;
             box-shadow: 0 18px 40px -18px rgba(2,6,23,.65); }
-        .carousel-pro .carousel-item img { width: 100%; display: block; }
+        .carousel-pro .carousel-item img {
+            width: 100%; height: auto; display: block;
+            /* qualité 0043b : image entière (pas de rognage), texte fin net */
+            image-rendering: auto; aspect-ratio: 1907 / 825;
+        }
         .carousel-pro .carousel-indicators { position: static; margin-top: 16px; margin-bottom: 0; }
         .carousel-pro .carousel-indicators [data-bs-target] {
             width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.45);
@@ -382,7 +386,7 @@
                         </div>
                         <img src="{% static 'core/img/landing/hero-tableau-de-bord.webp' %}"
                              alt="Tableau de bord TailleurPro : chiffre d'affaires, commandes en cours, graphiques — sur ordinateur et mobile"
-                             class="img-fluid rounded-3 w-100" style="display:block;" fetchpriority="high">
+                             class="img-fluid rounded-3 w-100" style="display:block;height:auto;" fetchpriority="high">
                     </div>
                 </div>
             </div>
