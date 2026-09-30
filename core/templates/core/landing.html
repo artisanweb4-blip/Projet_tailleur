@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -277,6 +278,35 @@
         .cta-band::before {
             content: ""; position: absolute; inset: 0;
             background: radial-gradient(420px 240px at 80% 20%, rgba(96,165,250,.25), transparent 60%);
+        /* ===== Captures produit (0043) ===== */
+        .carousel-pro {
+            background: linear-gradient(150deg, #0b1220 0%, #12264f 60%, #1d4ed8 135%);
+            border-radius: 24px; padding: 28px 28px 46px;
+            box-shadow: 0 30px 60px -25px rgba(15, 23, 42, .45);
+            position: relative; overflow: hidden;
+        }
+        .carousel-pro::before {
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background: radial-gradient(420px 200px at 12% 0%, rgba(147,197,253,.28), transparent 62%);
+        }
+        .carousel-pro .carousel-inner { border-radius: 14px; overflow: hidden;
+            box-shadow: 0 18px 40px -18px rgba(2,6,23,.65); }
+        .carousel-pro .carousel-item img { width: 100%; display: block; }
+        .carousel-pro .carousel-indicators { position: static; margin-top: 16px; margin-bottom: 0; }
+        .carousel-pro .carousel-indicators [data-bs-target] {
+            width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,.45);
+        }
+        .carousel-pro .carousel-indicators .active { background: #fff; }
+        .carousel-caption-pro {
+            text-align: center; color: #e2e8f0; font-size: .92rem; padding-top: 12px;
+        }
+        .carousel-caption-pro strong { color: #ffffff; }
+        .cta-visual {
+            transform: rotate(2.5deg); border: 6px solid rgba(255,255,255,.14);
+            border-radius: 20px; box-shadow: 0 34px 70px -28px rgba(0,0,0,.55);
+            transition: transform .4s ease;
+        }
+        .cta-visual:hover { transform: rotate(0deg) scale(1.015); }
             pointer-events: none;
         }
         .cta-band .badge { background: rgba(96,165,250,.18); border: 1px solid rgba(147,197,253,.35); color: #bfdbfe; }
@@ -302,6 +332,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav mx-auto my-3 my-lg-0">
                     <li class="nav-item"><a class="nav-link nav-link-pro" href="#features">Fonctionnalités</a></li>
+                    <li class="nav-item"><a class="nav-link nav-link-pro" href="#apercu">Aperçu</a></li>
                     <li class="nav-item"><a class="nav-link nav-link-pro" href="#fonctionnement">Comment ça marche</a></li>
                     <li class="nav-item"><a class="nav-link nav-link-pro" href="#tarifs">Tarifs</a></li>
                     <li class="nav-item"><a class="nav-link nav-link-pro" href="#contact">Contact</a></li>
@@ -343,35 +374,15 @@
                 <!-- Preview Mockup -->
                 <div class="col-lg-6">
                     <div class="dashboard-mockup">
-                        <div class="d-flex align-items-center mb-3 px-2">
+                        <div class="d-flex align-items-center mb-2 px-2">
                             <span class="badge bg-danger rounded-circle p-1 me-1"></span>
                             <span class="badge bg-warning rounded-circle p-1 me-1"></span>
                             <span class="badge bg-success rounded-circle p-1 me-2"></span>
-                            <small class="text-muted">Tableau de bord - Atelier Dakar Couture</small>
+                            <small class="text-muted">Tableau de bord — TailleurPro</small>
                         </div>
-                        <div class="bg-light p-4 rounded text-dark">
-                            <div class="row g-3 mb-3">
-                                <div class="col-6">
-                                    <div class="bg-white p-3 rounded shadow-sm border-start border-primary border-4">
-                                        <small class="text-muted d-block">Commandes en cours</small>
-                                        <strong class="fs-4">24 tenues</strong>
-                                    </div>
-                                </div>
-                                <div class="col-6">
-                                    <div class="bg-white p-3 rounded shadow-sm border-start border-success border-4">
-                                        <small class="text-muted d-block">Recette du mois</small>
-                                        <strong class="fs-4">850 000 F</strong>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="bg-white p-3 rounded shadow-sm">
-                                <h6 class="mb-2">Dernière mesure enregistrée</h6>
-                                <p class="mb-1 text-muted small"><i class="bi bi-person me-1"></i> Amadou Diallo - Boubou 3 pièces</p>
-                                <span class="badge bg-primary-subtle text-primary">Épaule: 48cm</span>
-                                <span class="badge bg-primary-subtle text-primary">Poitrine: 102cm</span>
-                                <span class="badge bg-primary-subtle text-primary">Longueur: 110cm</span>
-                            </div>
-                        </div>
+                        <img src="{% static 'core/img/landing/hero-tableau-de-bord.webp' %}"
+                             alt="Tableau de bord TailleurPro : chiffre d'affaires, commandes en cours, graphiques — sur ordinateur et mobile"
+                             class="img-fluid rounded-3 w-100" style="display:block;" fetchpriority="high">
                     </div>
                 </div>
             </div>
@@ -447,6 +458,54 @@
                         <p class="text-muted mb-0">
                             Gardez une visibilité claire sur les acomptes versés et le solde restant à régler par chaque client.
                         </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Aperçu de l'application -->
+    <section id="apercu" class="py-5">
+        <div class="container py-5">
+            <div class="text-center max-width-600 mx-auto mb-5 reveal">
+                <span class="text-primary fw-bold text-uppercase">Aperçu</span>
+                <h2 class="fw-bold fs-1 mt-2">L'application en images</h2>
+                <p class="text-muted">Une interface claire, en français, pensée pour les ateliers — sur ordinateur comme sur mobile.</p>
+            </div>
+            <div class="row justify-content-center reveal">
+                <div class="col-lg-10">
+                    <div class="carousel-pro">
+                        <div id="carouselApercu" class="carousel slide" data-bs-ride="carousel">
+                            {# les indicateurs sont générés en JS pour rester synchronisés #}
+                            <div class="carousel-inner">
+                                <div class="carousel-item active">
+                                    <img src="{% static 'core/img/landing/apercu-clients.webp' %}"
+                                         alt="TAILLEUR PRO — écran Clients & mensurations : statistiques, recherche et actions en un clic">
+                                    <div class="carousel-caption-pro"><strong>Clients & mensurations</strong> — fiches détaillées, mesures enregistrées, réutilisées à chaque commande.</div>
+                                </div>
+                                <div class="carousel-item">
+                                    <img src="{% static 'core/img/landing/apercu-commandes.webp' %}" loading="lazy"
+                                         alt="TailleurPro — écran Commandes : suivi du chiffre d'affaires, encaissements, restes à recouvrer">
+                                    <div class="carousel-caption-pro"><strong>Commandes</strong> — du dépôt du tissu à la livraison, aucune échéance ne vous échappe.</div>
+                                </div>
+                                <div class="carousel-item">
+                                    <img src="{% static 'core/img/landing/apercu-comptabilite.webp' %}" loading="lazy"
+                                         alt="TailleurPro — écran Dépenses & comptabilité : revenus, charges et résultat nets du mois">
+                                    <div class="carousel-caption-pro"><strong>Comptabilité</strong> — revenus, charges et bénéfice du mois en un coup d'œil.</div>
+                                </div>
+                                <div class="carousel-item">
+                                    <img src="{% static 'core/img/landing/apercu-abonnements.webp' %}" loading="lazy"
+                                         alt="TailleurPro — écran Abonnements & Offres : formules et paiement en ligne Mobile Money">
+                                    <div class="carousel-caption-pro"><strong>Abonnements</strong> — changement de formule et paiement Mobile Money sans quitter l'appli.</div>
+                                </div>
+                                <div class="carousel-item">
+                                    <img src="{% static 'core/img/landing/apercu-parametres.webp' %}" loading="lazy"
+                                         alt="TailleurPro — écran Paramètres : atelier, comptes d'accès et rôles administrateur/gestionnaire">
+                                    <div class="carousel-caption-pro"><strong>Paramètres</strong> — équipe, rôles et sauvegardes sous contrôle total.</div>
+                                </div>
+                            </div>
+                            <div class="carousel-indicators" id="indicateursApercu"></div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -553,20 +612,29 @@
     <!-- Bandeau CTA -->
     <section class="py-5">
         <div class="container py-3 reveal">
-            <div class="cta-band text-center">
-                <span class="badge rounded-pill px-3 py-2 mb-3"><i class="bi bi-rocket-takeoff me-1"></i>Rejoignez les ateliers déjà numérisés</span>
-                <h2 class="fw-bold fs-1 mb-3">Prêt à dire adieu aux carnets perdus ?</h2>
-                <p class="fs-5 mb-4" style="color:#cbd5e1;">Essayez TailleurPro gratuitement pendant 14 jours.<br class="d-none d-md-block"> Votre compte est créé en moins de 5 minutes.</p>
-                <div class="d-flex flex-wrap gap-3 justify-content-center">
-                    <a href="{% url 'core:inscription_saas' %}" class="btn btn-custom-primary btn-lg px-4">
-                        Commencer l'essai gratuit <i class="bi bi-arrow-right ms-1"></i>
-                    </a>
-                    <a href="{% url 'core:connexion' %}" class="btn btn-outline-light btn-lg px-4">J'ai déjà un compte</a>
-                </div>
-                <div class="mt-4 small" style="color:#94a3b8;">
-                    <i class="bi bi-check-circle-fill me-1"></i>Sans carte bancaire
-                    <span class="mx-2">·</span>
-                    <i class="bi bi-check-circle-fill me-1"></i>Annulable à tout moment
+            <div class="cta-band">
+                <div class="row align-items-center gy-4">
+                    <div class="col-lg-6 text-center text-lg-start">
+                        <span class="badge rounded-pill px-3 py-2 mb-3"><i class="bi bi-rocket-takeoff me-1"></i>Rejoignez les ateliers déjà numérisés</span>
+                        <h2 class="fw-bold fs-1 mb-3">Prêt à dire adieu aux carnets perdus ?</h2>
+                        <p class="fs-5 mb-4" style="color:#cbd5e1;">Essayez TailleurPro gratuitement pendant 14 jours.<br class="d-none d-md-block"> Votre compte est créé en moins de 5 minutes.</p>
+                        <div class="d-flex flex-wrap gap-3 justify-content-center justify-content-lg-start">
+                            <a href="{% url 'core:inscription_saas' %}" class="btn btn-custom-primary btn-lg px-4">
+                                Commencer l'essai gratuit <i class="bi bi-arrow-right ms-1"></i>
+                            </a>
+                            <a href="{% url 'core:connexion' %}" class="btn btn-outline-light btn-lg px-4">J'ai déjà un compte</a>
+                        </div>
+                        <div class="mt-4 small" style="color:#94a3b8;">
+                            <i class="bi bi-check-circle-fill me-1"></i>Sans carte bancaire
+                            <span class="mx-2">·</span>
+                            <i class="bi bi-check-circle-fill me-1"></i>Annulable à tout moment
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <img src="{% static 'core/img/landing/banniere-inscription.webp' %}" loading="lazy"
+                             alt="Création d'un compte TailleurPro : formulaire « Lancer mon Atelier en Ligne » avec essai de 14 jours inclus"
+                             class="img-fluid cta-visual w-100">
+                    </div>
                 </div>
             </div>
         </div>
@@ -709,6 +777,23 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Indicateurs du carrousel « Aperçu » synchronisés avec les slides (0043)
+        (function () {
+            var items = document.querySelectorAll('#carouselApercu .carousel-item');
+            var zone = document.getElementById('indicateursApercu');
+            if (!zone || !items.length) return;
+            items.forEach(function (_, i) {
+                var b = document.createElement('button');
+                b.type = 'button';
+                b.setAttribute('data-bs-target', '#carouselApercu');
+                b.setAttribute('data-bs-slide-to', i);
+                b.setAttribute('aria-label', 'Capture ' + (i + 1));
+                if (i === 0) { b.className = 'active'; b.setAttribute('aria-current', 'true'); }
+                zone.appendChild(b);
+            });
+        })();
+    </script>
     <script>
         // Apparition douce au défilement (dégradé gracieux : visible sans JS si non supporté)
         (function () {
