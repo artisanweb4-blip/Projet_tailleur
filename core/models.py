@@ -272,6 +272,21 @@ class PlanAbonnement(models.Model):
         return [f.strip() for f in self.fonctionnalites_exclues.splitlines() if f.strip()]
 
     @property
+    def total_a_payer(self):
+        """Montant total à régler pour la formule (prix × durée)."""
+        duree = self.duree_mois or 0
+        return int(self.prix_mensuel or 0) * (duree if duree > 0 else 0)
+
+    @property
+    def economie_realisee(self):
+        """Économie vs mensualités simples (tarif de base Pro 15 000 F)."""
+        REFERENCE = 15000
+        duree = self.duree_mois or 0
+        if duree > 1 and self.prix_mensuel and int(self.prix_mensuel) < REFERENCE:
+            return (REFERENCE - int(self.prix_mensuel)) * duree
+        return 0
+
+    @property
     def duree_libelle(self):
         return dict(self.DUREE_CHOICES).get(self.duree_mois, f'{self.duree_mois} mois')
 

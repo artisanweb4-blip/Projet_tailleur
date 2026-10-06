@@ -25,3 +25,8 @@ Thumbs.db
 .env
 # Sauvegardes de données (runtime)
 sauvegardes/
+
+# Artefacts de livraison Arena
+*.zip
+LIRE*.txt
+patches/

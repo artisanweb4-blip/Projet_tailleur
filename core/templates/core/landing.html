@@ -1,4 +1,5 @@
 {% load static %}
+{% load trad %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -591,6 +592,14 @@
                                 <span class="badge bg-light text-primary border fw-semibold">
                                     <i class="bi bi-calendar3 me-1"></i>Durée : {{ plan.duree_libelle }}
                                 </span>
+                                {% if plan.prix_mensuel > 0 and plan.duree_mois > 0 %}
+                                <div class="small mt-2">
+                                    <strong>{{ plan.total_a_payer|montant_fr }} FCFA</strong> au total
+                                    {% if plan.economie_realisee > 0 %}
+                                    <span class="badge bg-success-subtle text-success ms-1">−{{ plan.economie_realisee|montant_fr }} FCFA d'économie</span>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
                             </div>
                         </div>
                         <ul class="list-unstyled mb-4">
@@ -668,7 +677,7 @@
                             </div>
                             <div>
                                 <h6 class="fw-bold mb-1">Adresse</h6>
-                                <p class="text-muted mb-0 small">Dakar, Sénégal / Bamako, Mali</p>
+                                <p class="text-muted mb-0 small">Bamako/ Mali</p>
                             </div>
                         </div>
 
@@ -678,7 +687,7 @@
                             </div>
                             <div>
                                 <h6 class="fw-bold mb-1">Téléphone & WhatsApp</h6>
-                                <p class="text-muted mb-0 small">+221 77 000 00 00 / +223 70 00 00 00</p>
+                                <p class="text-muted mb-0 small">+223 70 53 85 04 / +223 99 93 00 98</p>
                             </div>
                         </div>
 

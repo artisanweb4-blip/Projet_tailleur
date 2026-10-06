@@ -20,3 +20,19 @@ def tr(context, texte):
         if mois_traduit != mots[0]:
             return f'{mois_traduit} {mots[1]}'
     return traduire(texte, langue)
+
+
+@register.filter
+def montant_fr(valeur):
+    """Formate un montant a la francaise : 45000 -> « 45 000 »."""
+    try:
+        n = int(float(valeur))
+    except (TypeError, ValueError):
+        return valeur
+    signe = '-' if n < 0 else ''
+    digits = str(abs(n))
+    groupes = []
+    while digits:
+        groupes.insert(0, digits[-3:])
+        digits = digits[:-3]
+    return signe + '\u202f'.join(groupes)
