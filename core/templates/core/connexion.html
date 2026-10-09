@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#2563eb">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion | SaaS Tailleur</title>
+    <title>Connexion | TailleurPro⁺</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -78,8 +78,8 @@
                 <!-- Brand Logo / Title Above Card -->
 <div class="text-center text-white mb-4">
     <a href="{% url 'core:connexion' %}" class="text-white text-decoration-none d-inline-flex align-items-center gap-2 mb-2">
-        <i class="fa-solid fa-scissors fa-2x text-warning"></i>
-        <span class="h3 fw-bold m-0">TailleurPro</span>
+        <i class="bi bi-scissors fs-2 text-warning"></i>
+        <span class="h3 fw-bold m-0">TailleurPro<sup>+</sup></span>
     </a>
 </div>
 
@@ -121,6 +121,11 @@
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="bi bi-lock"></i></span>
                                     <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required>
+                                    <button type="button" class="btn btn-outline-secondary border-start-0" id="togglePassword"
+                                            title="Afficher / masquer le mot de passe" tabindex="-1"
+                                            aria-label="Afficher ou masquer le mot de passe">
+                                        <i class="bi bi-eye" id="togglePasswordIcon"></i>
+                                    </button>
                                 </div>
                             </div>
 
@@ -143,7 +148,7 @@
                         <!-- Pied de carte -->
                         <div class="text-center mt-4 pt-3 border-top">
                             <span class="text-muted small">Pas encore de compte ?</span>
-                            <a href="{% url 'core:inscription_saas' %}" class="fw-bold text-decoration-none ms-1" style="color: #4f46e5;">Créer un atelier</a>
+                            <a href="{% url 'core:inscription_saas' %}" class="fw-bold text-decoration-none ms-1" style="color: #2b59c3;">Créer un atelier</a>
                         </div>
 
                     </div>
@@ -151,7 +156,7 @@
 
                 <!-- Copyright -->
                 <div class="text-center text-white-50 small mt-4">
-                    &copy; SaaS Tailleur. Tous droits réservés.
+                    &copy; TailleurPro<sup>+</sup>. Tous droits réservés.
                 </div>
 
             </div>
@@ -160,5 +165,21 @@
 
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+    /* Œil « afficher/masquer » le mot de passe : altere le type de l'input
+       password↔text et bascule l'icône œil/œil-barré. */
+    (function () {
+        const btn = document.getElementById('togglePassword');
+        if (!btn) return;
+        btn.addEventListener('click', function () {
+            const champ = document.getElementById('password');
+            const icone = document.getElementById('togglePasswordIcon');
+            const estCache = champ.getAttribute('type') === 'password';
+            champ.setAttribute('type', estCache ? 'text' : 'password');
+            icone.className = estCache ? 'bi bi-eye-slash' : 'bi bi-eye';
+        });
+    })();
+    </script>
 </body>
 </html>

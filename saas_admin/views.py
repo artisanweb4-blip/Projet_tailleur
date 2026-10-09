@@ -23,6 +23,7 @@ from core.models import (
 )
 
 from .models import Facture, FormuleAbonnement, PaiementAbonnement
+import re
 
 
 # --- DÉCORATEUR UNIQUE ET STRICT POUR LE SAAS ---
@@ -416,6 +417,12 @@ def ajouter_abonnement(request):
             duree = 3
         if duree not in dict(PlanAbonnement.DUREE_CHOICES):
             duree = 3
+        try:
+            mois_bonus = int(request.POST.get('mois_bonus') or 0)
+        except ValueError:
+            mois_bonus = 0
+        # Un bonus ne peut pas dépasser la durée elle-même.
+        mois_bonus = max(0, min(mois_bonus, duree))
         PlanAbonnement.objects.create(
             nom=request.POST.get('nom') or 'Nouvelle offre',
             description=request.POST.get('description', ''),
@@ -426,6 +433,7 @@ def ajouter_abonnement(request):
             est_populaire=request.POST.get('est_populaire') == 'on',
             actif=request.POST.get('actif') == 'on',
             duree_mois=duree,
+            mois_bonus=mois_bonus,
             fonctionnalites_incluses=request.POST.get('fonctionnalites_incluses', ''),
             fonctionnalites_exclues=request.POST.get('fonctionnalites_exclues', ''),
         )
@@ -451,8 +459,13 @@ def modifier_abonnement(request, formule_id):
             duree = int(request.POST.get('duree_mois') or formule.duree_mois)
         except ValueError:
             duree = formule.duree_mois
-        if duree in dict(PlanAbonnementDuree := PlanAbonnement.DUREE_CHOICES):
+        if duree in dict(PlanAbonnement.DUREE_CHOICES):
             formule.duree_mois = duree
+        try:
+            mois_bonus = int(request.POST.get('mois_bonus'))
+        except (TypeError, ValueError):
+            mois_bonus = formule.mois_bonus
+        formule.mois_bonus = max(0, min(mois_bonus, formule.duree_mois))
         formule.fonctionnalites_incluses = request.POST.get(
             'fonctionnalites_incluses', formule.fonctionnalites_incluses)
         formule.fonctionnalites_exclues = request.POST.get(
@@ -612,16 +625,51 @@ def superadmin_parametres(request):
     return render(request, 'saas_admin/parametres.html', context)
 
 
+_NETTOYEUR_CARACTERES_INVISIBLES = re.compile(
+    r'[\s\u00A0\u200B\u200C\u200D\u202F\uFEFF]+'
+)
+
+
+def _assainir_cle_api(valeur):
+    """Les copier-coller (WhatsApp, e-mails, documents) transportent souvent
+    des caractères invisibles : espaces insécables U+00A0, ZWSP U+200B, BOM
+    U+FEFF, sauts de ligne… L'API les rejette (« format invalide »).
+    On les supprime tous ici, à la source."""
+    return _NETTOYEUR_CARACTERES_INVISIBLES.sub('', valeur or '')
+
+
+def _format_cle_invalide(vident, prefixes_ok):
+    """Renvoie un message d'erreur explicite si `vident` n'assure pas le
+    format attendu, None sinon. Cas spécial : l'empreinte tronquée (avec
+    «…» ou «...») reste un oubli fréquent de recopie."""
+    if not vident:
+        return None
+    if '\u2026' in vident or '...' in vident:
+        return ("Il semble que vous ayez recopié une version tronquée de la clé "
+                "(avec « … »). Collez la clé COMPLÈTE depuis votre espace API "
+                "LomoPay.")
+    if not any(vident.startswith(p) for p in prefixes_ok):
+        return ("Format de clé non reconnu. Attendu : « "
+                + " » / « ".join(prefixes_ok) + "… ».")
+    return None
+
+
 def _enregistrer_cles_lomopay(request):
     """Crée ou met à jour la configuration LomoPay de la plateforme.
 
     Si une clé publique est déjà enregistrée et que les champs sont laissés
     vides, on ne touche à rien (les clés sont masquées à l'écran) ; la case
-    « actif » seule est appliquée."""
+    « actif » seule est appliquée. La saisie est nettoyée des caractères
+    invisibles et le format sk_/pk_ est validé AVANT enregistrement."""
     from core.models import ConfigurationLomopay
-    cle_publique = (request.POST.get('cle_publique') or '').strip()
-    cle_secrete = (request.POST.get('cle_secrete') or '').strip()
+    cle_publique = _assainir_cle_api(request.POST.get('cle_publique'))
+    cle_secrete = _assainir_cle_api(request.POST.get('cle_secrete'))
     actif = request.POST.get('lomopay_actif') == 'on'
+    erreur = (_format_cle_invalide(cle_publique, ('pk_live_', 'pk_test_'))
+              or _format_cle_invalide(cle_secrete, ('sk_live_', 'sk_test_')))
+    if erreur:
+        messages.error(request, "Clé LomoPay refusée : " + erreur)
+        return
     cfg = ConfigurationLomopay.objects.first()
     if cfg is None:
         # La clé publique est facultative : l'API LomoPay n'exige que

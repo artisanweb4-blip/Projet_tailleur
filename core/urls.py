@@ -135,6 +135,7 @@ urlpatterns = [
     path('abonnement/expire/', views.mon_abonnement, name='abonnement_expire'),
     path('abonnement/<int:plan_id>/souscrire/', views.souscrire_plan, name='souscrire_plan'),
     path('lomopay/retour/', views.lomopay_retour, name='lomopay_retour'),
+    path('lomopay/retour-inscription/', views.lomopay_retour_inscription, name='lomopay_retour_inscription'),
     path('lomopay/webhook/', views.lomopay_webhook, name='lomopay_webhook'),
 
 

@@ -103,8 +103,10 @@
                     {% if plan.prix_mensuel > 0 and plan.duree_mois > 0 %}
                     <div class="small mt-1">
                         <strong>{{ plan.total_a_payer|montant_fr }} FCFA</strong> au total
-                        {% if plan.economie_realisee > 0 %}<span class="text-success fw-semibold">−{{ plan.economie_realisee|montant_fr }} F d'économie</span>{% endif %}
                     </div>
+                    {% if plan.libelle_bonus %}
+                    <div class="small text-success fw-semibold"><i class="bi bi-gift me-1"></i>{{ plan.libelle_bonus }}</div>
+                    {% endif %}
                     {% endif %}
                 </div>
                 <ul class="list-unstyled mt-3 mb-4 text-start mx-auto small">

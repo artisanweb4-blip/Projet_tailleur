@@ -249,6 +249,32 @@ def inscription_saas(request):
         form = InscriptionSaaSForm(request.POST)
         if form.is_valid():
             user, atelier = form.save(plan=plan_choisi)
+
+            # ===== OFFRE PAYANTE : le paiement est le PRÉALABLE de l'accès =====
+            # L'abonnement est créé en statut SUSPENDU (abonnement non
+            # fonctionnel → le middleware renverra vers /abonnement-bloque/ si
+            # l'utilisateur tente de se connecter avant de payer), et on lance
+            # immédiatement le checkout LomoPay. Le webhook (ou le retour)
+            # réactivera l'abonnement ; l'utilisateur arrivera ensuite sur la
+            # page de connexion.
+            if (plan_choisi is not None
+                    and plan_choisi.prix_mensuel > 0
+                    and lomopay.est_actif()):
+                abonnement = getattr(atelier, 'abonnement', None)
+                if abonnement is not None:
+                    abonnement.statut = 'SUSPENDU'
+                    abonnement.save(update_fields=['statut'])
+                lien = _initier_paiement_inscription(
+                    request, user, atelier, plan_choisi)
+                if lien is not None:
+                    return lien
+                # En cas d'erreur LomoPay : le compte reste créé et suspendu ;
+                # l'utilisateur passera par sa page « Abonnement » en se
+                # connectant (elle affiche alors le paiement en attente).
+                if abonnement is not None:
+                    abonnement.statut = 'ACTIF'
+                    abonnement.save(update_fields=['statut'])
+
             messages.success(
                 request,
                 f"Votre atelier « {atelier.nom} » a été créé avec succès. "
@@ -261,6 +287,68 @@ def inscription_saas(request):
     return render(request, 'core/inscription_saas.html', {
         'form': form, 'plan_choisi': plan_choisi,
     })
+
+
+def _initier_paiement_inscription(request, user, atelier, plan):
+    """Lance le checkout LomoPay juste après une inscription (offre payante)
+    et renvoie la redirection vers la page de paiement (ou None en cas
+    d'échec — l'appelant retombe alors sur le flux « connexion » classique).
+
+    Le total facturé = prix mensuel × MOIS PAYÉS (les mois bonus ne sont
+    jamais facturés)."""
+    montant = plan.total_a_payer or int(plan.prix_mensuel)
+    devise = lomopay.devise_pour_api(atelier.devise)
+    ref = f"ABOINIT-{atelier.pk}-{uuid.uuid4().hex[:10].upper()}"
+    description = (
+        f"Abonnement « {plan.nom} » ({plan.duree_libelle}) — {atelier.nom}")
+    tx = LomoPayTransaction.objects.create(
+        atelier=atelier, plan=plan, montant=montant, devise=devise,
+            description=description, external_reference=ref,
+    )
+    base = request.build_absolute_uri('/')
+    from urllib.parse import quote
+    if lomopay.url_publique(base):
+        # La référence identifie PRÉCISÉMENT cette transaction au retour,
+        # même si deux inscriptions se chevauchent.
+        return_url = (base + 'lomopay/retour-inscription/?ref=' + quote(ref))
+        webhook_url = (base + 'lomopay/webhook/')
+    else:
+        # Dev locale : LomoPay refuse les URLs internes — le webhook ne
+        # peut donc pas être joint (voir docstring du client API).
+        return_url = webhook_url = ''
+    try:
+        donnees = lomopay.creer_paiement(
+            amount=montant, currency=devise, description=description,
+            external_reference=ref,
+            return_url=return_url,
+            webhook_url=webhook_url,
+            customer_email=(user.email or atelier.email or ''),
+            customer_name=(f"{user.first_name} {user.last_name}".strip()
+                           or user.username),
+        )
+    except lomopay.LomoPayError as e:
+        tx.statut = 'FAILED'
+        tx.save(update_fields=['statut', 'maj_le'])
+        messages.error(
+            request,
+            "Le compte a été créé mais le lancement du paiement en ligne a "
+            f"échoué : {e} Connectez-vous puis réglez votre abonnement "
+            "depuis « Mon abonnement ».")
+        return None
+    tx.id_lomopay = donnees.get('id', '')
+    tx.checkout_url = donnees.get('checkout_url', '')
+    tx.save(update_fields=['id_lomopay', 'checkout_url', 'maj_le'])
+    if not tx.checkout_url:
+        messages.error(
+            request,
+            "LomoPay n'a pas renvoyé de lien de paiement. Connectez-vous "
+            "puis réglez votre abonnement depuis « Mon abonnement ».")
+        return None
+    messages.info(
+        request,
+        "Votre espace est réservé — réglez votre abonnement pour l'activer, "
+        "puis connectez-vous.")
+    return redirect(tx.checkout_url)
 
 
 def connexion(request):
@@ -3124,7 +3212,7 @@ def landing(request):
     if request.user.is_authenticated:
         return redirect('core:dashboard')
     return render(request, 'core/landing.html', {
-        'plans': PlanAbonnement.objects.filter(actif=True).order_by('prix_mensuel'),
+        'plans': PlanAbonnement.objects.filter(actif=True).order_by('duree_mois', 'prix_mensuel'),
     })
 
 
@@ -3193,25 +3281,41 @@ def _finaliser_si_complet(tx, statut_lomopay):
 
 def _payer_abonnement_en_ligne(request, atelier, plan, post):
     """Initie un paiement LomoPay pour la durée de la formule choisie et
-    redirige l'atelier vers la page de checkout."""
+    redirige l'atelier vers la page de checkout.
+
+    Le total = prix mensuel × MOIS PAYÉS — les mois bonus (offerts) ne
+    sont JAMAIS facturés (ex. 6 mois = 5 × 15 000 = 75 000 F)."""
     mois = getattr(plan, 'duree_mois', 0) or 0
-    if mois == 0:
-        mois = 1  # prix_mensuel > 0 avec durée « essai » : on facture 1 mois
-    montant = int(plan.prix_mensuel) * mois
+    if mois == 0 and int(plan.prix_mensuel) > 0:
+        # prix_mensuel > 0 avec durée « essai » : on facture 1 mois
+        montant = int(plan.prix_mensuel)
+    else:
+        montant = plan.total_a_payer or int(plan.prix_mensuel)
     devise = lomopay.devise_pour_api(atelier.devise)
     ref = f"ABO-{atelier.pk}-{plan.pk}-{uuid.uuid4().hex[:10].upper()}"
-    description = f"Abonnement {plan.nom} ({mois} mois) — {atelier.nom}"
+    libelle = plan.libelle_bonus
+    if libelle:
+        description = f"Abonnement {plan.nom} ({libelle}) — {atelier.nom}"
+    else:
+        description = f"Abonnement {plan.nom} ({plan.duree_libelle}) — {atelier.nom}"
     tx = LomoPayTransaction.objects.create(
         atelier=atelier, plan=plan, montant=montant, devise=devise,
         description=description, external_reference=ref,
     )
     base = request.build_absolute_uri('/')
+    if lomopay.url_publique(base):
+        return_url, webhook_url = (base + 'lomopay/retour/',
+                                   base + 'lomopay/webhook/')
+    else:
+        # Dev locale : LomoPay refuse les URLs internes — privé de webhook
+        # (activation au retour, la page /lomopay/retour/ re-vérifie l'API).
+        return_url = webhook_url = ''
     try:
         donnees = lomopay.creer_paiement(
             amount=montant, currency=devise, description=description,
             external_reference=ref,
-            return_url=base + 'lomopay/retour/',
-            webhook_url=base + 'lomopay/webhook/',
+            return_url=return_url,
+            webhook_url=webhook_url,
             customer_email=(request.user.email or atelier.email or ''),
             customer_name=(f"{request.user.first_name} {request.user.last_name}".strip()
                            or request.user.username),
@@ -3283,6 +3387,55 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 
+def lomopay_retour_inscription(request):
+    """Retour navigateur après le paiement LomoPay d'une NOUVELLE inscription.
+
+    Vue PUBLIQUE (l'utilisateur ne s'est pas encore connecté) : elle
+    s'appuie sur `?ref=` — passée dans l'URL de retour au moment de la
+    création de la transaction — pour identifier le bon paiement sans
+    session. Elle finalise si LomoPay a confirmé, puis envoie vers la page
+    de connexion avec un message clair. Dans tous les cas, le webhook
+    signé finit le travail côté serveur : l'utilisateur ne peut obtenir
+    l'accès qu'en payant vraiment.
+    """
+    ref = request.GET.get('ref', '').strip()
+    tx = None
+    if ref:
+        tx = (LomoPayTransaction.objects
+              .filter(external_reference=ref).first())
+    if tx is None:
+        messages.info(request, "Bienvenue — connectez-vous pour continuer.")
+        return redirect('core:connexion')
+    try:
+        infos = lomopay.infos_paiement(tx.id_lomopay or tx.external_reference)
+        statut = infos.get('data', {}).get('status', 'pending')
+        if statut == 'completed':
+            _finaliser_si_complet(tx, 'completed')
+            messages.success(
+                request,
+                f"Paiement confirmé ! Votre espace « {tx.atelier.nom} » est "
+                "actif. Connectez-vous avec vos identifiants.")
+        elif statut == 'failed':
+            tx.statut = 'FAILED'
+            tx.save(update_fields=['statut', 'maj_le'])
+            messages.error(
+                request,
+                "Le paiement a été annulé. Connectez-vous puis réglez "
+                "l'abonnement depuis « Mon abonnement » pour débloquer "
+                "votre espace.")
+        else:
+            messages.info(
+                request,
+                "Paiement en cours de confirmation — il sera validé sous "
+                "quelques instants. Vous pourrez alors vous connecter.")
+    except lomopay.LomoPayError:
+        messages.info(
+            request,
+            "Paiement en cours de confirmation. Vous pourrez vous "
+            "connecter dès qu'il sera validé.")
+    return redirect('core:connexion')
+
+
 @csrf_exempt
 @require_POST
 def lomopay_webhook(request):
@@ -3348,7 +3501,7 @@ def mon_abonnement(request):
         'abonnement_actuel': abonnement,
         'jours_restants': jours_restants,
         'abonnement_expire': bool(abonnement) and abonnement.date_fin < aujourdhui,
-        'plans': PlanAbonnement.objects.filter(actif=True).order_by('prix_mensuel'),
+        'plans': PlanAbonnement.objects.filter(actif=True).order_by('duree_mois', 'prix_mensuel'),
         'aujourdhui': aujourdhui,
         'paiement_en_ligne': lomopay.est_actif(),
         'transaction_en_cours': (

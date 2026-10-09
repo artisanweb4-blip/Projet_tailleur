@@ -1,4 +1,5 @@
 {% load static %}
+{% load trad %}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -9,7 +10,7 @@
     <meta name="theme-color" content="#2563eb">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Créer mon Atelier - SaaS Tailleur</title>
+    <title>Créer mon Atelier - TailleurPro⁺</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome Icons -->
@@ -89,8 +90,8 @@
             background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
         }
         .badge-trial {
-            background-color: #dcfce7;
-            color: #166534;
+            background-color: #2b59c3;
+            color: #f9f9f9;
             font-size: 0.85rem;
             font-weight: 600;
             padding: 0.35rem 0.75rem;
@@ -118,7 +119,7 @@
             <div class="text-center text-white mb-4">
                 <a href="{% url 'core:connexion' %}" class="text-white text-decoration-none d-inline-flex align-items-center gap-2 mb-2">
                     <i class="fa-solid fa-scissors fa-2x text-warning"></i>
-                    <span class="h3 fw-bold m-0">TailleurPro</span>
+                    <span class="h3 fw-bold m-0">TailleurPro<sup>+</sup></span>
                 </a>
             </div>
 
@@ -133,11 +134,23 @@
                             <i class="fa-solid fa-tags"></i>
                             <span>Offre choisie : <strong>{{ plan_choisi.nom }}</strong>
                                 <small class="text-muted d-none d-sm-inline">
-                                    — {% if plan_choisi.prix_mensuel == 0 %}Gratuit{% else %}{{ plan_choisi.prix_mensuel|floatformat:0 }} FCFA/mois{% endif %}
+                                    — {% if plan_choisi.prix_mensuel == 0 %}Gratuit
+                                    {% else %}{{ plan_choisi.prix_mensuel|floatformat:0 }} FCFA/mois
+                                    {% endif %}
                                     · {{ plan_choisi.duree_libelle }}
                                 </small>
                             </span>
                         </div>
+                        {% if plan_choisi.prix_mensuel > 0 and plan_choisi.total_a_payer > 0 %}
+                        <div class="alert alert-success small py-2 px-3 mb-2 d-inline-flex align-items-center gap-2">
+                            <i class="fa-solid fa-money-bill-wave"></i>
+                            <span>
+                                <strong>{{ plan_choisi.total_a_payer|montant_fr }} FCFA</strong> à régler
+                                {% if plan_choisi.libelle_bonus %} — <strong>{{ plan_choisi.libelle_bonus }}</strong>{% endif %}
+                                <br><small class="text-success-emphasis">Le paiement s'effectue en ligne juste après la création, puis connectez-vous.</small>
+                            </span>
+                        </div>
+                        {% endif %}
                         {% endif %}
                         <span class="badge-trial d-inline-block mb-2">
                             <i class="fa-solid fa-gift me-1"></i> 14 jours d'essai gratuit inclus
@@ -268,6 +281,11 @@
                                 {% if form.password.errors %}
                                     <div class="text-danger small mt-1"><i class="fa-solid fa-circle-exclamation me-1"></i>{{ form.password.errors.0 }}</div>
                                 {% endif %}
+                                <div class="form-text text-muted small mt-1">
+                                    <i class="fa-solid fa-shield-halved me-1"></i>Au moins <strong>8 caractères</strong>, avec
+                                    <strong>une majuscule</strong>, <strong>une minuscule</strong>,
+                                    <strong>un chiffre</strong> et <strong>un caractère spécial</strong> (!, @, #…).
+                                </div>
                             </div>
                             <div class="col-md-6 mb-3">
                                 <label class="form-label fw-semibold text-secondary small">{{ form.confirm_password.label }}</label>
@@ -292,7 +310,7 @@
                     <!-- Pied de carte (CORRIGÉ ICI) -->
                     <div class="text-center mt-4 pt-3 border-top">
                         <span class="text-muted small">Vous avez déjà un compte ?</span>
-                        <a href="{% url 'core:connexion' %}" class="fw-bold text-decoration-none ms-1" style="color: #4f46e5;">Se connecter</a>
+                        <a href="{% url 'core:connexion' %}" class="fw-bold text-decoration-none ms-1" style="color: #2b59c3;">Se connecter</a>
                     </div>
 
                 </div>
@@ -300,7 +318,7 @@
 
             <!-- Liens pied de page -->
             <div class="text-center text-white-50 small mt-4">
-                &copy; {% now "Y" %} SaaS Tailleur. Tous droits réservés.
+                &copy; {% now "Y" %} TailleurPro<sup>+</sup>. Tous droits réservés.
             </div>
 
         </div>

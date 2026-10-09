@@ -49,7 +49,7 @@ class InscriptionSaaSForm(forms.Form):
             'class': 'form-control', 'placeholder': 'jdupont'})
     )
     password = forms.CharField(
-        label="Mot de passe", min_length=6,
+        label="Mot de passe", min_length=8,
         widget=forms.PasswordInput(attrs={
             'class': 'form-control', 'placeholder': '••••••••'})
     )
@@ -235,7 +235,7 @@ class UtilisateurCreationForm(forms.ModelForm):
             'class': 'form-control', 'placeholder': '+223 00 00 00 00'})
     )
     password = forms.CharField(
-        label="Mot de passe", min_length=6,
+        label="Mot de passe", min_length=8,
         widget=forms.PasswordInput(attrs={
             'class': 'form-control', 'placeholder': '6 caractères minimum'})
     )
@@ -320,7 +320,7 @@ class UtilisateurEditionForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'class': 'form-control'})
     )
     nouveau_mot_de_passe = forms.CharField(
-        label="Nouveau mot de passe", required=False, min_length=6,
+        label="Nouveau mot de passe", required=False, min_length=8,
         widget=forms.PasswordInput(attrs={
             'class': 'form-control',
             'placeholder': "Laisser vide pour conserver l'actuel"})

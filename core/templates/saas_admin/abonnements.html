@@ -1,6 +1,6 @@
 {% extends 'saas_admin/base_superadmin.html' %}
 
-{% block title %}Abonnements - Super Admin TailleurPro{% endblock %}
+{% block title %}Abonnements - Super Admin TailleurPro⁺{% endblock %}
 {% block nav_abonnements %}active{% endblock %}
 
 {% block extra_css %}
@@ -107,6 +107,12 @@
                             <i class="bi bi-calendar3 me-1"></i>{{ formule.duree_libelle }}
                         </span>
                     </div>
+                    {% if formule.prix_mensuel > 0 and formule.duree_mois > 0 %}
+                    <div class="small mb-3">
+                        <strong>{{ formule.total_a_payer|floatformat:0 }}</strong> FCFA au total
+                        {% if formule.libelle_bonus %}<span class="text-success fw-semibold ms-1">({{ formule.libelle_bonus }})</span>{% endif %}
+                    </div>
+                    {% endif %}
 
                     <ul class="list-unstyled feature-list mb-4">
                         <li class="d-flex align-items-center gap-2">
@@ -174,7 +180,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Prix mensuel (FCFA)</label>
-                        <input class="form-control" type="number" min="0" step="500" name="prix_mensuel" value="0" required>
+                        <input class="form-control" type="number" min="0" step="500" name="prix_mensuel" value="0" id="add_prix" required>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Description (affichée sur la landing et dans l'application)</label>
@@ -191,12 +197,24 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Durée de l'abonnement</label>
-                        <select class="form-select" name="duree_mois">
+                        <select class="form-select" name="duree_mois" id="add_duree">
                             <option value="0">Période d'essai (14 jours)</option>
                             <option value="3" selected>3 mois</option>
                             <option value="6">6 mois</option>
                             <option value="12">12 mois (annuel)</option>
                         </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Mois offerts (bonus)</label>
+                        <select class="form-select" name="mois_bonus" id="add_bonus">
+                            <option value="0">0 — aucun</option>
+                            <option value="1">1 mois offert (grille 6 mois)</option>
+                            <option value="2">2 mois offerts (grille 12 mois)</option>
+                        </select>
+                        <div class="form-text">Non facturés dans le total.</div>
+                    </div>
+                    <div class="col-12">
+                        <div id="add_recap" class="alert alert-info small mb-0 py-2 px-3 d-none"></div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Fonctionnalités permises</label>
@@ -250,7 +268,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Prix mensuel (FCFA)</label>
-                        <input class="form-control" type="number" min="0" step="500" name="prix_mensuel" value="{{ formule.prix_mensuel|floatformat:0 }}" required>
+                        <input class="form-control" type="number" min="0" step="500" name="prix_mensuel" value="{{ formule.prix_mensuel|floatformat:0 }}" id="edit_prix{{ formule.id }}" required>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Description</label>
@@ -266,12 +284,24 @@
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Durée de l'abonnement</label>
-                        <select class="form-select" name="duree_mois">
+                        <select class="form-select" name="duree_mois" id="edit_duree{{ formule.id }}">
                             <option value="0" {% if formule.duree_mois == 0 %}selected{% endif %}>Période d'essai (14 jours)</option>
                             <option value="3" {% if formule.duree_mois == 3 %}selected{% endif %}>3 mois</option>
                             <option value="6" {% if formule.duree_mois == 6 %}selected{% endif %}>6 mois</option>
                             <option value="12" {% if formule.duree_mois == 12 %}selected{% endif %}>12 mois (annuel)</option>
                         </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Mois offerts (bonus)</label>
+                        <select class="form-select" name="mois_bonus" id="edit_bonus{{ formule.id }}">
+                            <option value="0" {% if formule.mois_bonus == 0 %}selected{% endif %}>0 — aucun</option>
+                            <option value="1" {% if formule.mois_bonus == 1 %}selected{% endif %}>1 mois offert</option>
+                            <option value="2" {% if formule.mois_bonus == 2 %}selected{% endif %}>2 mois offerts</option>
+                        </select>
+                        <div class="form-text">Non facturés dans le total.</div>
+                    </div>
+                    <div class="col-12">
+                        <div id="edit_recap{{ formule.id }}" class="alert alert-info small mb-0 py-2 px-3"></div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Fonctionnalités permises</label>
@@ -335,4 +365,61 @@
     </div>
 </div>
 {% endfor %}
+
+<script>
+/* Récap « X mois facturés + Y offerts → total = prix × facturés » en direct
+   dans les modals de création / édition des offres. Un bonus n'est jamais
+   inclus dans le total. */
+(function () {
+    function froment(montant) {
+        /* format FR : 75000 → "75 000" */
+        return String(Math.round(montant)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202f');
+    }
+    function branche(select, bonus, prix, recap, bonusParDefaut) {
+        const s = document.getElementById(select),
+              b = document.getElementById(bonus),
+              p = document.getElementById(prix),
+              r = document.getElementById(recap);
+        if (!s || !b || !p || !r) return;
+        function maj() {
+            const duree = parseInt(s.value || '0', 10);
+            if (bonusParDefaut !== null && parseInt(b.value || '0', 10) === s._oldBonus) {
+                b.value = String(bonusParDefaut(duree));
+            }
+            const bonus = Math.min(Math.max(0, parseInt(b.value || '0', 10)), duree);
+            const prixM = parseFloat(p.value || '0') || 0;
+            s._oldBonus = parseInt(b.value || '0', 10);
+
+            if (duree === 0 || prixM <= 0) {
+                r.classList.add('d-none');
+                return;
+            }
+            const payes = Math.max(duree - bonus, 1);
+            const total = prixM * payes;
+            let html = '<i class="bi bi-calculator me-2"></i>' +
+                '<strong>' + froment(total) + ' FCFA</strong> à encaisser ' +
+                '(' + prixM.toLocaleString('fr-FR') + '/' +
+                'mois × ' + payes + ' mois payés' +
+                (bonus > 0 ? ' — <strong class="text-success">' + bonus +
+                 ' mois offert' + (bonus > 1 ? 's' : '') + '</strong>' : '') + ')';
+            r.innerHTML = html;
+            r.classList.remove('d-none');
+        }
+        [s, b, p].forEach(el => el.addEventListener('input', maj));
+        s._oldBonus = parseInt(b.value || '0', 10);
+        maj();
+    }
+
+    /* Par défaut : la grille standard (0 bonus sauf 6→1, 12→2) */
+    function bonusParDefaut(duree) {
+        return duree === 6 ? 1 : (duree === 12 ? 2 : 0);
+    }
+    branche('add_duree', 'add_bonus', 'add_prix', 'add_recap', bonusParDefaut);
+    {% for formule in formules %}
+    branche('edit_duree{{ formule.id }}', 'edit_bonus{{ formule.id }}',
+            'edit_prix{{ formule.id }}', 'edit_recap{{ formule.id }}', null);
+    {% endfor %}
+})();
+</script>
+
 {% endblock %}

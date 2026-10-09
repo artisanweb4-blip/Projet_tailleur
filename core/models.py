@@ -252,6 +252,13 @@ class PlanAbonnement(models.Model):
         default=3, choices=DUREE_CHOICES,
         help_text="Période d'essai (14 jours), 3, 6 ou 12 mois.",
     )
+    # Mois OFFERTS (bonus) : ne sont pas facturés.
+    # Ex. durée 6 mois + bonus 1 → 5 mois payés, le 6ᵉ est offert.
+    mois_bonus = models.PositiveSmallIntegerField(
+        default=0,
+        help_text=("Mois offerts (non facturés) au sein de la durée totale. "
+                   "Grille standard : 0 (3 mois), 1 (6 mois), 2 (12 mois)."),
+    )
     # Fonctionnalités affichées sur les cartes d'offres (une par ligne)
     fonctionnalites_incluses = models.TextField(
         blank=True, default='',
@@ -272,23 +279,66 @@ class PlanAbonnement(models.Model):
         return [f.strip() for f in self.fonctionnalites_exclues.splitlines() if f.strip()]
 
     @property
-    def total_a_payer(self):
-        """Montant total à régler pour la formule (prix × durée)."""
+    def mois_factures(self):
+        """Mois réellement payés : durée totale − mois offerts (bonus)."""
         duree = self.duree_mois or 0
-        return int(self.prix_mensuel or 0) * (duree if duree > 0 else 0)
+        if duree == 0:
+            return 0
+        return max(duree - (self.mois_bonus or 0), 1)
+
+    @property
+    def total_a_payer(self):
+        """Montant total à régler : prix mensuel × mois PAYÉS.
+        Les mois bonus ne sont JAMAIS facturés."""
+        duree = self.duree_mois or 0
+        if duree == 0:
+            return int(self.prix_mensuel or 0) if int(self.prix_mensuel or 0) == 0 else 0
+        return int(self.prix_mensuel or 0) * self.mois_factures
 
     @property
     def economie_realisee(self):
-        """Économie vs mensualités simples (tarif de base Pro 15 000 F)."""
-        REFERENCE = 15000
+        """Économie = valeur des mois offerts par rapport au plein tarif."""
+        bonus = (self.mois_bonus or 0)
         duree = self.duree_mois or 0
+        if duree > 0 and bonus > 0 and self.prix_mensuel:
+            return int(self.prix_mensuel) * bonus
+        # Garde-fou grille v2 (prix dégressif sans bonus) : compatibilité
+        # si un client applique le patch sans repasser la migration v3.
+        REFERENCE = 15000
         if duree > 1 and self.prix_mensuel and int(self.prix_mensuel) < REFERENCE:
             return (REFERENCE - int(self.prix_mensuel)) * duree
         return 0
 
     @property
+    def libelle_bonus(self):
+        """« Payez 5 mois, le 6ᵉ est offert » (ou None si pas de bonus)."""
+        bonus = self.mois_bonus or 0
+        duree = self.duree_mois or 0
+        if duree == 0 or bonus == 0:
+            return None
+        payes = self.mois_factures
+        if bonus == 1:
+            return f"Payez {payes} mois — le {duree}ᵉ est offert"
+        return f"Payez {payes} mois — {bonus} mois offerts"
+
+    @property
     def duree_libelle(self):
         return dict(self.DUREE_CHOICES).get(self.duree_mois, f'{self.duree_mois} mois')
+
+    @property
+    def prix_plein(self):
+        """Total théorique « plein tarif » : prix mensuel × durée TOTALE
+        (bonus compris). Sert à afficher le prix barré à côté du prix réel."""
+        duree = self.duree_mois or 0
+        if duree == 0:
+            return 0
+        return int(self.prix_mensuel or 0) * duree
+
+    @property
+    def duree_libelle_court(self):
+        """Libellé compact pour les cartes : « 3 mois », « 12 mois », « 14 jours »."""
+        duree = self.duree_mois or 0
+        return '14 jours' if duree == 0 else f'{duree} mois'
 
 
 class ConfigurationLomopay(models.Model):
