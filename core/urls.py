@@ -134,9 +134,9 @@ urlpatterns = [
     path('abonnement/', views.mon_abonnement, name='mon_abonnement'),
     path('abonnement/expire/', views.mon_abonnement, name='abonnement_expire'),
     path('abonnement/<int:plan_id>/souscrire/', views.souscrire_plan, name='souscrire_plan'),
-    path('lomopay/retour/', views.lomopay_retour, name='lomopay_retour'),
-    path('lomopay/retour-inscription/', views.lomopay_retour_inscription, name='lomopay_retour_inscription'),
-    path('lomopay/webhook/', views.lomopay_webhook, name='lomopay_webhook'),
+    path('saspay/retour/', views.saspay_retour, name='saspay_retour'),
+    path('saspay/retour-inscription/', views.saspay_retour_inscription, name='saspay_retour_inscription'),
+    path('saspay/webhook/', views.saspay_webhook, name='saspay_webhook'),
 
 
     path('ventes-directes/<int:pk>/annuler/', views.annuler_vente_directe, name='annuler_vente_directe'),

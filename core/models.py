@@ -341,16 +341,29 @@ class PlanAbonnement(models.Model):
         return '14 jours' if duree == 0 else f'{duree} mois'
 
 
-class ConfigurationLomopay(models.Model):
-    """Clés API LomoPay de la PLATEFORME (une seule ligne, singleton).
+class ConfigurationSaspay(models.Model):
+    """Clés API SasPay de la PLATEFORME (une seule ligne, singleton).
 
     Modifiable depuis le back-office superadmin → Paramètres. Si aucune ligne
     active n'existe, le module retombe sur les variables d'environnement
-    LOMOPAY_PUBLIC_KEY / LOMOPAY_SECRET_KEY (pratique en local).
+    SASPAY_SECRET_KEY / SASPAY_WEBHOOK_SECRET (pratique en local).
+
+    Deux secrets distincts côté SasPay :
+      * `cle_secrete` (sk_test_/sk_live_) : authentifie nos appels API
+        (Authorization: Bearer …) — jamais exposée côté client ;
+      * `secret_webhook` (signing_secret) : sert UNIQUEMENT à vérifier la
+        signature HMAC des notifications. Il se copie UNE SEULE FOIS à la
+        création du webhook dans le tableau de bord SasPay.
     """
 
-    cle_publique = models.CharField(max_length=120)
     cle_secrete = models.CharField(max_length=120)
+    secret_webhook = models.CharField(
+        max_length=120, blank=True, default='',
+        help_text=("Secret de signature du webhook SasPay (signing_secret), "
+                   "visible UNE SEULE FOIS lors de la création du webhook "
+                   "dans le tableau de bord SasPay. Optionnel : sans lui, "
+                   "l'activation repose sur le retour client + la re-vérification API."),
+    )
     actif = models.BooleanField(
         default=True,
         help_text="Décocher pour désactiver le paiement en ligne sans effacer les clés.",
@@ -359,15 +372,15 @@ class ConfigurationLomopay(models.Model):
     modifie_le = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Configuration LomoPay"
+        verbose_name = "Configuration SasPay"
 
     def save(self, *args, **kwargs):
         # Singleton : si une ligne existe déjà, on l'écrase plutôt que d'en
         # créer une seconde — même via objects.create() (qui force un INSERT,
         # on neutralise donc force_insert : pk étant renseigné, Django fera
         # un UPDATE).
-        if not self.pk and ConfigurationLomopay.objects.exists():
-            existante = ConfigurationLomopay.objects.first()
+        if not self.pk and ConfigurationSaspay.objects.exists():
+            existante = ConfigurationSaspay.objects.first()
             self.pk = existante.pk
             self.cree_le = existante.cree_le
             kwargs.pop('force_insert', False)
@@ -378,17 +391,24 @@ class ConfigurationLomopay(models.Model):
         ske = self.cle_secrete or ''
         return ske[:8] + '…' + ske[-4:] if len(ske) > 14 else '••••••'
 
+    def secret_webhook_masque(self):
+        """Version masquée du secret webhook."""
+        ske = self.secret_webhook or ''
+        if not ske:
+            return '— (non renseigné)'
+        return ske[:6] + '…' + ske[-4:] if len(ske) > 12 else '••••••'
+
     def __str__(self):
-        pk = self.cle_publique or ''
-        identifiant = (pk[:9] + '…') if pk else 'clé secrète seule'
-        return f"LomoPay ({identifiant}, {'actif' if self.actif else 'inactif'})"
+        return (f"SasPay ({'actif' if self.actif else 'inactif'}"
+                f"{', webhook signé' if self.secret_webhook else ''})")
 
 
-class LomoPayTransaction(models.Model):
-    """Trace d'un paiement d'abonnement initié via LomoPay.
+class SasPayTransaction(models.Model):
+    """Trace d'un paiement d'abonnement initié via SasPay.
 
-    `external_reference` fait le lien avec LomoPay et est renvoyé tel quel
-    dans le webhook. `evenement_id` mémorise l'idempotence (anti-doublon).
+    `external_reference` (ABO-… / ABOINIT-…) fait le lien : propagée dans les
+    metadata de la session SasPay, puis lue dans la transaction finale.
+    `evenement_id` mémorise le dernier traitement (anti-doublon webhooks).
     """
 
     STATUTS = (
@@ -398,7 +418,7 @@ class LomoPayTransaction(models.Model):
     )
 
     atelier = models.ForeignKey(
-        Atelier, on_delete=models.CASCADE, related_name='transactions_lomopay',
+        Atelier, on_delete=models.CASCADE, related_name='transactions_saspay',
     )
     plan = models.ForeignKey(
         'PlanAbonnement', null=True, blank=True, on_delete=models.SET_NULL,
@@ -408,20 +428,20 @@ class LomoPayTransaction(models.Model):
     devise = models.CharField(max_length=3, default='XOF')
     description = models.CharField(max_length=200, blank=True, default='')
     external_reference = models.CharField(max_length=64, unique=True)
-    id_lomopay = models.CharField(max_length=64, blank=True, default='')
+    id_saspay = models.CharField(max_length=64, blank=True, default='')
     checkout_url = models.URLField(max_length=500, blank=True, default='')
     methode = models.CharField(max_length=40, blank=True, default='')
     statut = models.CharField(max_length=10, choices=STATUTS, default='PENDING')
     evenement_id = models.CharField(
         max_length=64, blank=True, default='',
-        help_text="Dernier id d'événement webhook traité (anti-doublon).",
+        help_text="Dernier traitement de webhook (anti-doublon).",
     )
     cree_le = models.DateTimeField(auto_now_add=True)
     maj_le = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-cree_le']
-        verbose_name = "Transaction LomoPay"
+        verbose_name = "Transaction SasPay"
 
     def __str__(self):
         return (

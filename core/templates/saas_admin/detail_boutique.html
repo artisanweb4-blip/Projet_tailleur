@@ -277,7 +277,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body row g-3">
                 <div class="col-6"><label class="form-label">Montant (FCFA)</label>
-                    <input class="form-control" type="number" min="0" step="500" name="montant"
+                    <input class="form-control" type="number" min="0" step="100" name="montant"
                            value="{% if abonnement.plan %}{{ abonnement.plan.prix_mensuel|floatformat:0 }}{% endif %}" required></div>
                 <div class="col-6"><label class="form-label">Mode</label>
                     <select class="form-select" name="mode">

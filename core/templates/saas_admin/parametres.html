@@ -75,18 +75,18 @@
     </div>
 </form>
 
-<!-- ============ Paiement en ligne (LomoPay) ============ -->
+<!-- ============ Paiement en ligne (SasPay) ============ -->
 <div class="row g-4 mt-1">
     <div class="col-12">
-        <div class="card-custom p-4 shadow-sm border-start border-4 {% if lomopay_config and lomopay_config.actif %}border-success{% else %}border-secondary{% endif %}">
+        <div class="card-custom p-4 shadow-sm border-start border-4 {% if saspay_config and saspay_config.actif %}border-success{% else %}border-secondary{% endif %}">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
                 <h6 class="fw-bold mb-0">
-                    <i class="bi bi-credit-card-2-front me-2 text-primary"></i>Paiement en ligne — LomoPay
+                    <i class="bi bi-credit-card-2-front me-2 text-primary"></i>Paiement en ligne — SasPay
                 </h6>
-                {% if lomopay_config and lomopay_config.actif %}
+                {% if saspay_config and saspay_config.actif %}
                     <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Activé</span>
-                {% elif lomopay_config %}
-                    <span class="badge bg-secondary">Clés enregistrées, désactivé</span>
+                {% elif saspay_config %}
+                    <span class="badge bg-secondary">Clé enregistrée, désactivé</span>
                 {% else %}
                     <span class="badge bg-warning text-dark">Non configuré</span>
                 {% endif %}
@@ -94,30 +94,32 @@
             <hr class="text-muted opacity-25">
             <form method="POST" action="{% url 'saas_admin:superadmin_parametres' %}">
                 {% csrf_token %}
-                <input type="hidden" name="action" value="lomopay">
+                <input type="hidden" name="action" value="saspay">
                 <div class="row g-3">
-                    <div class="col-lg-6">
-                        <label class="form-label small fw-semibold">Clé publique (pk_live_… / pk_test_…) — optionnelle</label>
-                        <input type="text" name="cle_publique" class="form-control" autocomplete="off"
-                               placeholder="pk_live_… (vérifie la clé, LomoPay n'exige que la clé secrète)">
-                        {% if lomopay_config %}<div class="form-text small">Actuelle : <code>{{ lomopay_config.cle_publique|slice:':9' }}…</code> — laisser vide pour conserver.</div>{% endif %}
-                    </div>
                     <div class="col-lg-6">
                         <label class="form-label small fw-semibold">Clé secrète (sk_live_… / sk_test_…) — requise</label>
                         <input type="password" name="cle_secrete" class="form-control" autocomplete="new-password"
                                placeholder="sk_live_…">
-                        {% if lomopay_config %}<div class="form-text small">Actuelle : <code>{{ lomopay_config.cle_masquee }}</code> — laisser vide pour conserver.</div>{% endif %}
+                        {% if saspay_config %}<div class="form-text small">Actuelle : <code>{{ saspay_config.cle_masquee }}</code> — laisser vide pour conserver.</div>{% endif %}
+                    </div>
+                    <div class="col-lg-6">
+                        <label class="form-label small fw-semibold">Secret du webhook — recommandé</label>
+                        <input type="password" name="secret_webhook" class="form-control" autocomplete="new-password"
+                               placeholder="Secret affiché une seule fois à la création du webhook">
+                        {% if saspay_config %}<div class="form-text small">
+                            {% if saspay_config.secret_webhook %}Actuel : <code>{{ saspay_config.secret_webhook_masque }}</code> — laisser vide pour conserver.{% else %}<span class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Non renseigné — les notifications du webhook seront refusées.</span>{% endif %}
+                        </div>{% endif %}
                     </div>
                     <div class="col-12">
                         <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" role="switch" id="lomopayActif"
-                                   name="lomopay_actif" {% if lomopay_config and lomopay_config.actif %}checked{% endif %}>
-                            <label class="form-check-label fw-semibold" for="lomopayActif">
+                            <input class="form-check-input" type="checkbox" role="switch" id="saspayActif"
+                                   name="saspay_actif" {% if saspay_config and saspay_config.actif %}checked{% endif %}>
+                            <label class="form-check-label fw-semibold" for="saspayActif">
                                 Activer le paiement en ligne
                             </label>
                             <div class="form-text small">
                                 Quand c'est activé, les ateliers payant une formule passent par le
-                                checkout Mobile Money / carte de LomoPay ; l'abonnement est prolongé
+                                checkout Mobile Money / carte de SasPay ; l'abonnement est prolongé
                                 automatiquement à la confirmation. Désactivé, l'ancien comportement
                                 (activation immédiate sans encaissement) s'applique.
                             </div>
@@ -126,15 +128,15 @@
                     <div class="col-12">
                         <div class="alert alert-info py-2 small mb-0">
                             <i class="bi bi-link-45deg me-1"></i>
-                            À configurer côté LomoPay (espace API) :
-                            <span class="text-nowrap"><strong>Webhook</strong> → <code>https://<votre-domaine>/lomopay/webhook/</code></span>
-                            · Signatures vérifiées côté serveur avec votre clé secrète.
+                            À configurer dans le tableau de bord SasPay (<a href="https://app.saspay.me" target="_blank" rel="noopener" class="alert-link">app.saspay.me</a>, section Développeur) :
+                            <span class="text-nowrap"><strong>Webhook</strong> → <code>https://&lt;votre-domaine&gt;/saspay/webhook/</code></span>
+                            · Événement <code>transaction.success</code> · Signatures vérifiées côté serveur avec le secret du webhook.
                         </div>
                     </div>
                 </div>
                 <div class="text-end mt-3">
                     <button type="submit" class="btn btn-primary px-4 fw-semibold">
-                        <i class="bi bi-save me-1"></i> Enregistrer LomoPay
+                        <i class="bi bi-save me-1"></i> Enregistrer SasPay
                     </button>
                 </div>
             </form>

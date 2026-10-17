@@ -18,12 +18,12 @@ from django.utils import timezone
 
 from .models import (
     Abonnement, Accessoire, CatalogueModele, Client, Commande, Depense,
-    Employe, LigneAccessoire, LigneCommande, LomoPayTransaction, Mensuration,
+    Employe, LigneAccessoire, LigneCommande, SasPayTransaction, Mensuration,
     MouvementStock, Paie, Paiement, PlanAbonnement, Profil,
 )
 from .decorators import droit_requis
 from .expiration import infos_expiration
-from . import lomopay
+from . import saspay
 from .sauvegarde import (
     chemin_sauvegarde, creer_sauvegarde, lister_sauvegardes,
     restaurer_sauvegarde, supprimer_sauvegarde,
@@ -254,12 +254,12 @@ def inscription_saas(request):
             # L'abonnement est créé en statut SUSPENDU (abonnement non
             # fonctionnel → le middleware renverra vers /abonnement-bloque/ si
             # l'utilisateur tente de se connecter avant de payer), et on lance
-            # immédiatement le checkout LomoPay. Le webhook (ou le retour)
+            # immédiatement le checkout SasPay. Le webhook (ou le retour)
             # réactivera l'abonnement ; l'utilisateur arrivera ensuite sur la
             # page de connexion.
             if (plan_choisi is not None
                     and plan_choisi.prix_mensuel > 0
-                    and lomopay.est_actif()):
+                    and saspay.est_actif()):
                 abonnement = getattr(atelier, 'abonnement', None)
                 if abonnement is not None:
                     abonnement.statut = 'SUSPENDU'
@@ -268,7 +268,7 @@ def inscription_saas(request):
                     request, user, atelier, plan_choisi)
                 if lien is not None:
                     return lien
-                # En cas d'erreur LomoPay : le compte reste créé et suspendu ;
+                # En cas d'erreur SasPay : le compte reste créé et suspendu ;
                 # l'utilisateur passera par sa page « Abonnement » en se
                 # connectant (elle affiche alors le paiement en attente).
                 if abonnement is not None:
@@ -290,43 +290,37 @@ def inscription_saas(request):
 
 
 def _initier_paiement_inscription(request, user, atelier, plan):
-    """Lance le checkout LomoPay juste après une inscription (offre payante)
+    """Lance le checkout SasPay juste après une inscription (offre payante)
     et renvoie la redirection vers la page de paiement (ou None en cas
     d'échec — l'appelant retombe alors sur le flux « connexion » classique).
 
     Le total facturé = prix mensuel × MOIS PAYÉS (les mois bonus ne sont
     jamais facturés)."""
     montant = plan.total_a_payer or int(plan.prix_mensuel)
-    devise = lomopay.devise_pour_api(atelier.devise)
+    devise = saspay.devise_pour_api(atelier.devise)
     ref = f"ABOINIT-{atelier.pk}-{uuid.uuid4().hex[:10].upper()}"
     description = (
         f"Abonnement « {plan.nom} » ({plan.duree_libelle}) — {atelier.nom}")
-    tx = LomoPayTransaction.objects.create(
+    tx = SasPayTransaction.objects.create(
         atelier=atelier, plan=plan, montant=montant, devise=devise,
             description=description, external_reference=ref,
     )
     base = request.build_absolute_uri('/')
     from urllib.parse import quote
-    if lomopay.url_publique(base):
-        # La référence identifie PRÉCISÉMENT cette transaction au retour,
-        # même si deux inscriptions se chevauchent.
-        return_url = (base + 'lomopay/retour-inscription/?ref=' + quote(ref))
-        webhook_url = (base + 'lomopay/webhook/')
-    else:
-        # Dev locale : LomoPay refuse les URLs internes — le webhook ne
-        # peut donc pas être joint (voir docstring du client API).
-        return_url = webhook_url = ''
+    # La référence identifie PRÉCISÉMENT cette transaction au retour,
+    # même si deux inscriptions se chevauchent. Le webhook SasPay est
+    # configuré dans le tableau de bord (pas dans le payload).
+    return_url = (base + 'saspay/retour-inscription/?ref=' + quote(ref))
     try:
-        donnees = lomopay.creer_paiement(
+        donnees = saspay.creer_checkout(
             amount=montant, currency=devise, description=description,
             external_reference=ref,
             return_url=return_url,
-            webhook_url=webhook_url,
             customer_email=(user.email or atelier.email or ''),
             customer_name=(f"{user.first_name} {user.last_name}".strip()
                            or user.username),
         )
-    except lomopay.LomoPayError as e:
+    except saspay.SasPayError as e:
         tx.statut = 'FAILED'
         tx.save(update_fields=['statut', 'maj_le'])
         messages.error(
@@ -335,13 +329,13 @@ def _initier_paiement_inscription(request, user, atelier, plan):
             f"échoué : {e} Connectez-vous puis réglez votre abonnement "
             "depuis « Mon abonnement ».")
         return None
-    tx.id_lomopay = donnees.get('id', '')
+    tx.id_saspay = donnees.get('id', '')
     tx.checkout_url = donnees.get('checkout_url', '')
-    tx.save(update_fields=['id_lomopay', 'checkout_url', 'maj_le'])
+    tx.save(update_fields=['id_saspay', 'checkout_url', 'maj_le'])
     if not tx.checkout_url:
         messages.error(
             request,
-            "LomoPay n'a pas renvoyé de lien de paiement. Connectez-vous "
+            "SasPay n'a pas renvoyé de lien de paiement. Connectez-vous "
             "puis réglez votre abonnement depuis « Mon abonnement ».")
         return None
     messages.info(
@@ -3226,7 +3220,7 @@ def _duree_jours(plan):
 
 def _activer_abonnement(atelier, plan):
     """Active / renouvelle l'abonnement d'un atelier (mêmes règles que la
-    souscription manuelle) et journalise la transaction LomoPay."""
+    souscription manuelle) et journalise la transaction SasPay."""
     jours = _duree_jours(plan)
     aujourdhui = timezone.now().date()
     abonnement = getattr(atelier, 'abonnement', None)
@@ -3250,37 +3244,37 @@ def _activer_abonnement(atelier, plan):
         abonnement.save()
 
 
-def _journaliser_paiement_loompay(tx):
+def _journaliser_paiement_saspay(tx):
     """Inscrit l'encaissement dans le journal des abonnements (superadmin)."""
     from saas_admin.models import PaiementAbonnement
     mois = max(1, (getattr(tx.plan, 'duree_mois', 0) or 1))
     PaiementAbonnement.objects.create(
         atelier=tx.atelier,
         montant=Decimal(str(tx.montant)),
-        mode=lomopay.mode_journal_pour_methode(tx.methode),
-        reference=tx.id_lomopay or tx.external_reference,
-        note=f"Paiement en ligne LomoPay — {tx.description or tx.external_reference}",
+        mode=saspay.mode_journal_pour_methode(tx.methode),
+        reference=tx.id_saspay or tx.external_reference,
+        note=f"Paiement en ligne SasPay — {tx.description or tx.external_reference}",
         mois_couverts=mois if (tx.plan and tx.plan.duree_mois) else 1,
         prolonge=False,  # la prolongation est gérée par le webhook ci-dessus
         enregistre_par=None,
     )
 
 
-def _finaliser_si_complet(tx, statut_lomopay):
-    """Si le statut LomoPay est « completed » : marque la transaction payée,
+def _finaliser_si_complet(tx, statut_saspay):
+    """Si le statut SasPay vaut « SUCCESS »/« PAID » : marque la transaction payée,
     prolonge l'abonnement et journalise — UNE SEULE FOIS (idempotent)."""
-    if (statut_lomopay == 'completed' and tx.statut != 'COMPLETED'):
+    if (statut_saspay in ('SUCCESS', 'PAID') and tx.statut != 'COMPLETED'):
         tx.statut = 'COMPLETED'
         tx.save(update_fields=['statut', 'maj_le'])
         if tx.plan is not None:
             _activer_abonnement(tx.atelier, tx.plan)
-        _journaliser_paiement_loompay(tx)
+        _journaliser_paiement_saspay(tx)
         return True
     return False
 
 
 def _payer_abonnement_en_ligne(request, atelier, plan, post):
-    """Initie un paiement LomoPay pour la durée de la formule choisie et
+    """Initie un paiement SasPay pour la durée de la formule choisie et
     redirige l'atelier vers la page de checkout.
 
     Le total = prix mensuel × MOIS PAYÉS — les mois bonus (offerts) ne
@@ -3291,36 +3285,32 @@ def _payer_abonnement_en_ligne(request, atelier, plan, post):
         montant = int(plan.prix_mensuel)
     else:
         montant = plan.total_a_payer or int(plan.prix_mensuel)
-    devise = lomopay.devise_pour_api(atelier.devise)
+    devise = saspay.devise_pour_api(atelier.devise)
     ref = f"ABO-{atelier.pk}-{plan.pk}-{uuid.uuid4().hex[:10].upper()}"
     libelle = plan.libelle_bonus
     if libelle:
         description = f"Abonnement {plan.nom} ({libelle}) — {atelier.nom}"
     else:
         description = f"Abonnement {plan.nom} ({plan.duree_libelle}) — {atelier.nom}"
-    tx = LomoPayTransaction.objects.create(
+    tx = SasPayTransaction.objects.create(
         atelier=atelier, plan=plan, montant=montant, devise=devise,
         description=description, external_reference=ref,
     )
     base = request.build_absolute_uri('/')
-    if lomopay.url_publique(base):
-        return_url, webhook_url = (base + 'lomopay/retour/',
-                                   base + 'lomopay/webhook/')
-    else:
-        # Dev locale : LomoPay refuse les URLs internes — privé de webhook
-        # (activation au retour, la page /lomopay/retour/ re-vérifie l'API).
-        return_url = webhook_url = ''
+    # return_url : redirection côté navigateur — valable aussi en dev
+    # locale. Le webhook (tableau de bord SasPay) n'est joignable qu'en
+    # production ; en dev, l'activation se fait au retour (re-vérifiée API).
+    return_url = base + 'saspay/retour/'
     try:
-        donnees = lomopay.creer_paiement(
+        donnees = saspay.creer_checkout(
             amount=montant, currency=devise, description=description,
             external_reference=ref,
             return_url=return_url,
-            webhook_url=webhook_url,
             customer_email=(request.user.email or atelier.email or ''),
             customer_name=(f"{request.user.first_name} {request.user.last_name}".strip()
                            or request.user.username),
         )
-    except lomopay.LomoPayError as e:
+    except saspay.SasPayError as e:
         tx.statut = 'FAILED'
         tx.save(update_fields=['statut', 'maj_le'])
         messages.error(
@@ -3329,157 +3319,191 @@ def _payer_abonnement_en_ligne(request, atelier, plan, post):
             f"{e} Réessayez ou contactez le support."
         )
         return redirect('core:mon_abonnement')
-    tx.id_lomopay = donnees.get('id', '')
+    tx.id_saspay = donnees.get('id', '')
     tx.checkout_url = donnees.get('checkout_url', '')
-    tx.save(update_fields=['id_lomopay', 'checkout_url', 'maj_le'])
+    tx.save(update_fields=['id_saspay', 'checkout_url', 'maj_le'])
     if not tx.checkout_url:
-        messages.error(request, "LomoPay n'a pas renvoyé de lien de paiement.")
+        messages.error(request, "SasPay n'a pas renvoyé de lien de paiement.")
         return redirect('core:mon_abonnement')
     return redirect(tx.checkout_url)
 
 
 @login_required
-def lomopay_retour(request):
-    """Retour de l'acheteur après le checkout LomoPay.
+def saspay_retour(request):
+    """Retour de l'acheteur après le checkout SasPay.
 
     Le statut fait foi via le webhook ; on interroge tout de même l'API pour
     donner un retour immédiat si le webhook n'est pas encore arrivé."""
     atelier = request.atelier
     if atelier is None:
         return redirect('core:connexion')
-    tx = atelier.transactions_lomopay.filter(statut='PENDING').first()
+    tx = atelier.transactions_saspay.filter(statut='PENDING').first()
     if tx is None:
         messages.info(request, "Aucun paiement en cours.")
         return redirect('core:mon_abonnement')
-    try:
-        infos = lomopay.infos_paiement(tx.id_lomopay or tx.external_reference)
-        data = infos.get('data', {})
-        statut = data.get('status', 'pending')
-        if statut == 'completed':
-            tx.methode = data.get('method', tx.methode) or tx.methode
-            tx.save(update_fields=['methode', 'maj_le'])
-            _finaliser_si_complet(tx, 'completed')
-            messages.success(
-                request,
-                f"Paiement confirmé ! Votre abonnement "
-                f"« {tx.plan.nom if tx.plan else ''} » est actif. Merci."
-            )
-        elif statut == 'failed':
-            tx.statut = 'FAILED'
-            tx.save(update_fields=['statut', 'maj_le'])
-            messages.error(request, "Le paiement a été annulé ou a échoué.")
-        else:
-            messages.info(
-                request,
-                "Paiement en cours de confirmation. Il sera validé dans "
-                "quelques instants — rechargez la page si besoin."
-            )
-    except lomopay.LomoPayError:
+    statut = _relire_statut_saspay(tx)
+    if statut == 'SUCCESS':
+        _finaliser_si_complet(tx, 'SUCCESS')
+        messages.success(
+            request,
+            f"Paiement confirmé ! Votre abonnement "
+            f"« {tx.plan.nom if tx.plan else ''} » est actif. Merci."
+        )
+    elif statut in ('FAILED', 'CANCELLED'):
+        tx.statut = 'FAILED'
+        tx.save(update_fields=['statut', 'maj_le'])
+        messages.error(request, "Le paiement a été annulé ou a échoué.")
+    elif statut is None:
         messages.info(
             request,
             "Paiement en cours de confirmation. Il sera validé "
-            "automatiquement dès notification de LomoPay."
+            "automatiquement dès notification de SasPay."
+        )
+    else:
+        messages.info(
+            request,
+            "Paiement en cours de confirmation. Il sera validé dans "
+            "quelques instants — rechargez la page si besoin."
         )
     return redirect('core:mon_abonnement')
+
+
+def _relire_statut_saspay(tx):
+    """Re-vérifie le statut réel d'une transaction PENDING auprès de SasPay.
+
+    Retourne 'SUCCESS' / 'FAILED' ou None en cas d'erreur réseau ou de
+    statut encore indéterminé. Deux appels : le statut de la session de
+    checkout (rapide), puis la vérification de la transaction si connue.
+    """
+    if not tx.id_saspay:
+        return None
+    try:
+        st = saspay.statut_session(tx.id_saspay)
+        data = st.get('data', {}) or {}
+        tstat = (data.get('transaction_status')
+                 or data.get('status') or '').upper()
+        tid = data.get('transaction_id') or data.get('id') or ''
+        if tstat in ('SUCCESS', 'PAID'):
+            # Re-vérification ferme via /payments/{id}/verify/ si dispo.
+            if tid:
+                try:
+                    verif = saspay.verifier_paiement(tid)
+                    vd = verif.get('data', {}) or {}
+                    vstat = (vd.get('status') or '').upper()
+                    if vstat == 'SUCCESS':
+                        tx.methode = vd.get('network', tx.methode) or tx.methode
+                        tx.save(update_fields=['methode', 'maj_le'])
+                        return 'SUCCESS'
+                    return None  # statut encore provisoire
+                except saspay.SasPayError:
+                    return None
+            return 'SUCCESS'
+        if tstat in ('FAILED', 'CANCELLED', 'EXPIRED'):
+            return 'FAILED'
+        return None
+    except saspay.SasPayError:
+        return None
 
 
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 
-def lomopay_retour_inscription(request):
-    """Retour navigateur après le paiement LomoPay d'une NOUVELLE inscription.
+def saspay_retour_inscription(request):
+    """Retour navigateur après le paiement SasPay d'une NOUVELLE inscription.
 
     Vue PUBLIQUE (l'utilisateur ne s'est pas encore connecté) : elle
     s'appuie sur `?ref=` — passée dans l'URL de retour au moment de la
     création de la transaction — pour identifier le bon paiement sans
-    session. Elle finalise si LomoPay a confirmé, puis envoie vers la page
-    de connexion avec un message clair. Dans tous les cas, le webhook
-    signé finit le travail côté serveur : l'utilisateur ne peut obtenir
-    l'accès qu'en payant vraiment.
+    session. Elle finalise seulement si SasPay confirme le paiement, puis
+    envoie vers la page de connexion avec un message clair. Dans tous les
+    cas, le webhook signé fait le travail côté serveur : l'utilisateur ne
+    peut obtenir l'accès qu'en payant vraiment.
     """
     ref = request.GET.get('ref', '').strip()
     tx = None
     if ref:
-        tx = (LomoPayTransaction.objects
+        tx = (SasPayTransaction.objects
               .filter(external_reference=ref).first())
-    if tx is None:
+    if tx is None or tx.statut != 'PENDING':
         messages.info(request, "Bienvenue — connectez-vous pour continuer.")
         return redirect('core:connexion')
-    try:
-        infos = lomopay.infos_paiement(tx.id_lomopay or tx.external_reference)
-        statut = infos.get('data', {}).get('status', 'pending')
-        if statut == 'completed':
-            _finaliser_si_complet(tx, 'completed')
-            messages.success(
-                request,
-                f"Paiement confirmé ! Votre espace « {tx.atelier.nom} » est "
-                "actif. Connectez-vous avec vos identifiants.")
-        elif statut == 'failed':
-            tx.statut = 'FAILED'
-            tx.save(update_fields=['statut', 'maj_le'])
-            messages.error(
-                request,
-                "Le paiement a été annulé. Connectez-vous puis réglez "
-                "l'abonnement depuis « Mon abonnement » pour débloquer "
-                "votre espace.")
-        else:
-            messages.info(
-                request,
-                "Paiement en cours de confirmation — il sera validé sous "
-                "quelques instants. Vous pourrez alors vous connecter.")
-    except lomopay.LomoPayError:
+    statut = _relire_statut_saspay(tx)
+    if statut == 'SUCCESS':
+        _finaliser_si_complet(tx, 'SUCCESS')
+        messages.success(
+            request,
+            f"Paiement confirmé ! Votre espace « {tx.atelier.nom} » est "
+            "actif. Connectez-vous avec vos identifiants.")
+    elif statut == 'FAILED':
+        tx.statut = 'FAILED'
+        tx.save(update_fields=['statut', 'maj_le'])
+        messages.error(
+            request,
+            "Le paiement a été annulé. Connectez-vous puis réglez "
+            "l'abonnement depuis « Mon abonnement » pour débloquer "
+            "votre espace.")
+    else:
         messages.info(
             request,
-            "Paiement en cours de confirmation. Vous pourrez vous "
-            "connecter dès qu'il sera validé.")
+            "Paiement en cours de confirmation — il sera validé sous "
+            "quelques instants. Vous pourrez alors vous connecter.")
     return redirect('core:connexion')
-
 
 @csrf_exempt
 @require_POST
-def lomopay_webhook(request):
-    """Notification de statut LomoPay (signée HMAC-SHA256).
+def saspay_webhook(request):
+    """Notification de statut SasPay (signée HMAC-SHA256).
 
-    Sécurité : la clé secrète est verifyée via l'en-tête X-LomoPay-Signature,
-    et l'id d'événement évite tout double traitement (LomoPay rejoue en cas
-    de timeout)."""
+    Sécurité : l'en-tête X-Webhook-Signature est vérifié (HMAC sha256 de
+    "timestamp.corps" avec le secret du webhook, horodatage ± 5 min) puis
+    le statut est confirmé par une relecture côté serveur
+    (GET /payments/{id}/verify/) — jamais de confiance au seul payload.
+    L'id d'événement évite tout double traitement (rejoue en cas de
+    timeout)."""
     corps = request.body
-    if not lomopay.signature_valide(corps, request.META.get('HTTP_X_LOMOPAY_SIGNATURE', '')):
+    sig = request.META.get('HTTP_X_WEBHOOK_SIGNATURE', '')
+    ts = request.META.get('HTTP_X_WEBHOOK_TIMESTAMP', '')
+    if not saspay.signature_valide(corps, sig, ts):
         return HttpResponse('invalid signature', status=401)
     try:
         evt = json.loads(corps.decode('utf-8', errors='replace'))
     except ValueError:
         return HttpResponse('invalid json', status=400)
 
-    evt_id = evt.get('id', '')
-    data = evt.get('data', {}) or {}
-    if evt.get('type') != 'payment.succeeded':
-        # Événement d'un autre service LomoPay (boost, recharge, vcards) :
-        # on accuse réception sans traiter.
+    if evt.get('event') != 'transaction.success':
+        # Autre événement SasPay : on accuse réception sans traiter.
         return JsonResponse({'ok': True, 'ignores': True})
+    data = evt.get('data', {}) or {}
+    evt_id = evt.get('id', '') or data.get('id', '')
+    tid = data.get('id') or ''
+    if not tid:
+        return HttpResponse('missing id', status=400)
 
-    ref = data.get('external_reference', '')
-    tx = LomoPayTransaction.objects.filter(external_reference=ref).first()
+    # Relecture côté serveur : source de vérité pour le statut, la
+    # référence externe et le réseau (orange_ml, moov_ml, wave, ...).
+    try:
+        verif = saspay.verifier_paiement(tid)
+    except saspay.SasPayError:
+        # 503 => SasPay re-jouera le webhook plus tard.
+        return HttpResponse('upstream error', status=503)
+    vd = verif.get('data', {}) or {}
+    if (vd.get('status') or '').upper() != 'SUCCESS':
+        return JsonResponse({'ok': True, 'statut': vd.get('status')})
+
+    ref = vd.get('external_reference', '') or ''
+    tx = SasPayTransaction.objects.filter(external_reference=ref).first()
     if tx is None:
         # Paiement inconnu de nous : on répond 200 pour stopper les relances.
         return JsonResponse({'ok': True, 'inconnu': True})
     if tx.evenement_id == evt_id and tx.statut == 'COMPLETED':
         return JsonResponse({'ok': True, 'doublon': True})
 
-    statut = data.get('status', 'pending')
-    if statut == 'completed':
-        tx.methode = data.get('method', '') or tx.methode
-        tx.id_lomopay = data.get('transaction_id', '') or tx.id_lomopay
-        tx.evenement_id = evt_id
-        tx.save(update_fields=['methode', 'id_lomopay', 'evenement_id', 'maj_le'])
-        _finaliser_si_complet(tx, 'completed')
-    elif statut == 'failed':
-        tx.statut = 'FAILED'
-        tx.evenement_id = evt_id
-        tx.save(update_fields=['statut', 'evenement_id', 'maj_le'])
+    tx.methode = vd.get('network', '') or tx.methode
+    tx.evenement_id = evt_id
+    tx.save(update_fields=['methode', 'evenement_id', 'maj_le'])
+    _finaliser_si_complet(tx, 'SUCCESS')
     return JsonResponse({'ok': True})
-
 
 @login_required
 def mon_abonnement(request):
@@ -3503,9 +3527,9 @@ def mon_abonnement(request):
         'abonnement_expire': bool(abonnement) and abonnement.date_fin < aujourdhui,
         'plans': PlanAbonnement.objects.filter(actif=True).order_by('duree_mois', 'prix_mensuel'),
         'aujourdhui': aujourdhui,
-        'paiement_en_ligne': lomopay.est_actif(),
+        'paiement_en_ligne': saspay.est_actif(),
         'transaction_en_cours': (
-            atelier.transactions_lomopay.filter(statut='PENDING')
+            atelier.transactions_saspay.filter(statut='PENDING')
             .select_related('plan').first()
         ),
     })
@@ -3536,9 +3560,9 @@ def souscrire_plan(request, plan_id):
     atelier = request.atelier
     aujourdhui = timezone.now().date()
 
-    # Plan payant + LomoPay configuré : on lance le paiement en ligne
+    # Plan payant + SasPay configuré : on lance le paiement en ligne
     # au lieu d'activer immédiatement. Le webhook finalisera l'abonnement.
-    if plan.prix_mensuel > 0 and lomopay.est_actif():
+    if plan.prix_mensuel > 0 and saspay.est_actif():
         return _payer_abonnement_en_ligne(request, atelier, plan, request.POST)
 
     duree = getattr(plan, 'duree_mois', None)

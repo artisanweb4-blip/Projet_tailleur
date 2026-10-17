@@ -611,16 +611,16 @@ def changer_statut_utilisateur(request, user_id):
 @superadmin_required
 def superadmin_parametres(request):
     if request.method == 'POST':
-        if request.POST.get('action') == 'lomopay':
-            _enregistrer_cles_lomopay(request)
+        if request.POST.get('action') == 'saspay':
+            _enregistrer_cles_saspay(request)
         else:
             messages.success(request, "Les paramètres globaux ont été mis à jour avec succès.")
         return redirect('saas_admin:superadmin_parametres')
 
-    from core.models import ConfigurationLomopay
+    from core.models import ConfigurationSaspay
     context = {
         'active_tab': 'parametres',
-        'lomopay_config': ConfigurationLomopay.objects.first(),
+        'saspay_config': ConfigurationSaspay.objects.first(),
     }
     return render(request, 'saas_admin/parametres.html', context)
 
@@ -646,52 +646,61 @@ def _format_cle_invalide(vident, prefixes_ok):
         return None
     if '\u2026' in vident or '...' in vident:
         return ("Il semble que vous ayez recopié une version tronquée de la clé "
-                "(avec « … »). Collez la clé COMPLÈTE depuis votre espace API "
-                "LomoPay.")
+                "(avec « … »). Collez la clé COMPLÈTE depuis votre espace "
+                "Développeur SasPay (app.saspay.me).")
     if not any(vident.startswith(p) for p in prefixes_ok):
         return ("Format de clé non reconnu. Attendu : « "
                 + " » / « ".join(prefixes_ok) + "… ».")
     return None
 
 
-def _enregistrer_cles_lomopay(request):
-    """Crée ou met à jour la configuration LomoPay de la plateforme.
+def _enregistrer_cles_saspay(request):
+    """Crée ou met à jour la configuration SasPay de la plateforme.
 
-    Si une clé publique est déjà enregistrée et que les champs sont laissés
-    vides, on ne touche à rien (les clés sont masquées à l'écran) ; la case
-    « actif » seule est appliquée. La saisie est nettoyée des caractères
-    invisibles et le format sk_/pk_ est validé AVANT enregistrement."""
-    from core.models import ConfigurationLomopay
-    cle_publique = _assainir_cle_api(request.POST.get('cle_publique'))
+    SasPay n'utilise qu'UNE clé secrète (sk_test_/sk_live_) — pas de clé
+    publique — plus un secret de webhook distinct (affiché une seule fois
+    à la création du webhook dans le tableau de bord). Si les champs sont
+    laissés vides, on conserve les valeurs en place (elles sont masquées à
+    l'écran) ; la case « actif » seule est appliquée. La saisie est nettoyée
+    des caractères invisibles et le format sk_ est validé AVANT
+    enregistrement."""
+    from core.models import ConfigurationSaspay
     cle_secrete = _assainir_cle_api(request.POST.get('cle_secrete'))
-    actif = request.POST.get('lomopay_actif') == 'on'
-    erreur = (_format_cle_invalide(cle_publique, ('pk_live_', 'pk_test_'))
-              or _format_cle_invalide(cle_secrete, ('sk_live_', 'sk_test_')))
+    secret_webhook = _assainir_cle_api(request.POST.get('secret_webhook'))
+    actif = request.POST.get('saspay_actif') == 'on'
+    erreur = _format_cle_invalide(cle_secrete, ('sk_live_', 'sk_test_', 'sk_'))
     if erreur:
-        messages.error(request, "Clé LomoPay refusée : " + erreur)
+        messages.error(request, "Clé SasPay refusée : " + erreur)
         return
-    cfg = ConfigurationLomopay.objects.first()
+    cfg = ConfigurationSaspay.objects.first()
     if cfg is None:
-        # La clé publique est facultative : l'API LomoPay n'exige que
-        # X-Secret-Key (mesuré en test live 2026-09-29).
         if not cle_secrete:
-            messages.error(request, "Renseignez au moins la clé secrète (sk_…) pour activer LomoPay.")
+            messages.error(
+                request,
+                "Renseignez au moins la clé secrète (sk_…) pour activer "
+                "SasPay.")
             return
-        ConfigurationLomopay.objects.create(
-            cle_publique=cle_publique, cle_secrete=cle_secrete, actif=actif)
-        messages.success(request, "Clés LomoPay enregistrées — paiement en ligne désormais disponible.")
+        ConfigurationSaspay.objects.create(
+            cle_secrete=cle_secrete, secret_webhook=secret_webhook,
+            actif=actif)
+        messages.success(
+            request,
+            "Clé SasPay enregistrée — paiement en ligne désormais "
+            "disponible. Pensez à créer le webhook dans le tableau de bord "
+            "SasPay (URL affichée sur cette page).")
         return
     # Mise à jour : champs vides = conserver la valeur en place
-    if cle_publique:
-        cfg.cle_publique = cle_publique
     if cle_secrete:
         cfg.cle_secrete = cle_secrete
+    if secret_webhook:
+        cfg.secret_webhook = secret_webhook
     cfg.actif = actif
     cfg.save()
     messages.success(
         request,
-        "Configuration LomoPay mise à jour "
+        "Configuration SasPay mise à jour "
         f"(paiement en ligne {'activé' if actif else 'désactivé'}).")
+
 
 # ==========================================
 # SAUVEGARDES SYSTÈME (super-admin)

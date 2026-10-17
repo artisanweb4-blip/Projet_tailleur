@@ -66,7 +66,7 @@
         <a href="{{ transaction_en_cours.checkout_url }}" class="alert-link">Reprendre le paiement</a>
         ou
         {% endif %}
-        <a href="{% url 'core:lomopay_retour' %}" class="alert-link">actualiser le statut</a>.
+        <a href="{% url 'core:saspay_retour' %}" class="alert-link">actualiser le statut</a>.
     </div>
 </div>
 {% endif %}
@@ -157,7 +157,7 @@
 <p class="text-center text-muted small mb-0">
     {% if paiement_en_ligne %}
         <i class="bi bi-shield-check me-1 text-primary"></i>
-        Paiement en ligne sécurisé via LomoPay — Mobile Money (Orange Money, Wave…) et cartes bancaires.
+        Paiement en ligne sécurisé via SasPay — Mobile Money (Orange Money, Moov, Wave…) et cartes bancaires.
     {% else %}
         Paiement à la remise (espèces, Orange Money, Wave) — la souscription est enregistrée immédiatement par la plateforme.
     {% endif %}

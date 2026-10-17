@@ -180,7 +180,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Prix mensuel (FCFA)</label>
-                        <input class="form-control" type="number" min="0" step="500" name="prix_mensuel" value="0" id="add_prix" required>
+                        <input class="form-control" type="number" min="0" step="100" name="prix_mensuel" value="0" id="add_prix" required>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Description (affichée sur la landing et dans l'application)</label>
@@ -268,7 +268,7 @@
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Prix mensuel (FCFA)</label>
-                        <input class="form-control" type="number" min="0" step="500" name="prix_mensuel" value="{{ formule.prix_mensuel|floatformat:0 }}" id="edit_prix{{ formule.id }}" required>
+                        <input class="form-control" type="number" min="0" step="100" name="prix_mensuel" value="{{ formule.prix_mensuel|floatformat:0 }}" id="edit_prix{{ formule.id }}" required>
                     </div>
                     <div class="col-12">
                         <label class="form-label">Description</label>
