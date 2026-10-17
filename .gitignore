@@ -32,3 +32,5 @@ LIRE*.txt
 patches/
 
 sauvegardes_systeme/
+
+_tmp/
