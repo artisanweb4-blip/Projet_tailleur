@@ -312,18 +312,27 @@
     <div class="modal-dialog">
         <form class="modal-content" method="post" action="{% url 'saas_admin:supprimer_boutique' boutique.id %}">
             {% csrf_token %}
+            <input type="hidden" name="confirmation" value="SUPPRIMER">
             <div class="modal-header"><h5 class="modal-title fw-bold text-danger">Supprimer « {{ boutique.nom }} » ?</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
-                <p class="small">
-                    La suppression est <strong>refusée</strong> si la boutique contient des clients,
-                    commandes ou dépenses : suspendez-la plutôt. Sinon, la boutique, ses membres
-                    et son abonnement sont définitivement supprimés.
+                <div class="alert alert-danger small mb-2">
+                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                    <strong>Action irréversible.</strong> La boutique sera effacée immédiatement
+                    avec <strong>toutes ses données</strong> : clients, commandes, ventes,
+                    dépenses, rendez-vous, membres et abonnement.
+                </div>
+                <p class="small text-muted mb-0">
+                    Pour simplement couper l'accès sans rien perdre, préférez
+                    <strong>suspendre</strong> la boutique — elle garde ses données et peut
+                    être réactivée plus tard.
                 </p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
-                <button type="submit" class="btn btn-danger">Supprimer</button>
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-trash me-1"></i>Supprimer définitivement
+                </button>
             </div>
         </form>
     </div>

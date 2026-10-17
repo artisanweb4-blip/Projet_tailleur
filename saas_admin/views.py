@@ -117,14 +117,14 @@ def superadmin_liste_boutiques(request):
             atelier__in=[b.id for b in boutiques], est_fondateur=True,
         ).select_related('user')
     }
-    kpi = {'total': len(boutiques), 'actives': 0, 'expirees': 0, 'supprimables': 0}
+    kpi = {'total': len(boutiques), 'actives': 0, 'expirees': 0, 'suspendues': 0}
     for boutique in boutiques:
         boutique.proprietaire_user = fondateurs.get(boutique.id)
         boutique.infos_exp = infos_expiration(boutique)
         if boutique.infos_exp['fonctionnelle']:
             kpi['actives'] += 1
-        elif boutique.infos_exp['supprimable']:
-            kpi['supprimables'] += 1
+        elif boutique.infos_exp['statut'] == 'SUSPENDU':
+            kpi['suspendues'] += 1
         else:
             kpi['expirees'] += 1
     return render(request, 'saas_admin/liste_boutiques.html', {
@@ -296,15 +296,10 @@ def reactiver_boutique(request, boutique_id):
 def supprimer_boutique(request, boutique_id):
     atelier = get_object_or_404(Atelier, id=boutique_id)
     if request.method == 'POST':
-        infos = infos_expiration(atelier)
-        if not infos['supprimable']:
-            messages.error(
-                request,
-                f"Suppression refusée : les données de {atelier.nom} sont "
-                f"conservées jusqu'au {infos['echeance']:%d/%m/%Y} (3 mois "
-                f"sans abonnement). Activez un abonnement pour la "
-                f"réactiver, ou revenez après cette date.")
-            return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
+        # Le super-admin peut supprimer TOUTE boutique à tout moment
+        # (plus de délai de conservation bloquant). La seule garde est la
+        # confirmation explicite, car la suppression efface en cascade
+        # clients, commandes, ventes, dépenses, membres et abonnement.
         if request.POST.get('confirmation') != 'SUPPRIMER':
             messages.error(request, "Confirmation requise : tapez SUPPRIMER.")
             return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
@@ -314,8 +309,8 @@ def supprimer_boutique(request, boutique_id):
         User.objects.filter(id__in=users, profil__isnull=True).delete()
         messages.success(
             request,
-            f"Boutique « {nom} » supprimée totalement (données comprises) "
-            f"après la fin du délai de conservation.")
+            f"Boutique « {nom} » supprimée définitivement, avec toutes "
+            f"ses données (clients, commandes, ventes, dépenses, membres).")
         return redirect('saas_admin:superadmin_liste_boutiques')
     return redirect('saas_admin:detail_boutique', boutique_id=atelier.id)
 

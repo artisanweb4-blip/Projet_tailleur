@@ -22,17 +22,11 @@
                         <strong>{{ infos.date_fin|date:"d/m/Y" }}</strong>.
                     {% endif %}
                     <br>
-                    {% tr "Vos données sont conservées en sécurité jusqu'au" %}
-                    <strong>{{ infos.echeance|date:"d/m/Y" }}</strong>
-                    {% if infos and infos.jours_restants > 0 %}
-                        ({% tr "encore" %} {{ infos.jours_restants }} {% tr "jours" %}).
-                    {% else %}
-                        .
-                    {% endif %}
+                    {% tr "Vos données restent conservées en sécurité sur la plateforme." %}
                 </p>
                 <div class="alert alert-light border small text-start">
                     <i class="bi bi-info-circle me-1 text-primary"></i>
-                    {% tr "Pour réactiver la boutique avec toutes ses anciennes données, contactez le gestionnaire de la plateforme avant cette date : un nouvel abonnement peut être activé à tout moment pendant la période de conservation." %}
+                    {% tr "Pour réactiver la boutique avec toutes ses anciennes données, contactez le gestionnaire de la plateforme : un nouvel abonnement peut être activé à tout moment." %}
                 </div>
                 <div class="d-flex justify-content-center gap-2">
                     <a href="{% url 'core:deconnexion' %}" class="btn btn-outline-secondary">
